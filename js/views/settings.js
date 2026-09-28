@@ -62,7 +62,7 @@ export function renderSettings(root, ctx) {
           <li class="${cfg.passwordConfigured ? 'ok' : 'bad'}">APP_PASSWORD trên server: ${cfg.passwordConfigured ? 'đã cấu hình' : cfg.offline ? 'không kết nối được /api (chạy local không có vercel dev?)' : 'CHƯA cấu hình'}</li>
           <li class="${cfg.authOk ? 'ok' : 'bad'}">Mật khẩu trên thiết bị này: ${cfg.authOk ? 'đúng' : 'chưa đúng / chưa nhập'}</li>
           <li class="${cfg.binanceConfigured ? 'ok' : 'bad'}">Binance API key: ${cfg.binanceConfigured ? 'đã cấu hình' : cfg.authOk ? 'CHƯA cấu hình' : '—'}</li>
-          <li class="${cfg.tcbsConfigured ? 'ok' : ''}">TCBS API key: ${cfg.tcbsConfigured ? 'đã cấu hình' : cfg.authOk ? 'chưa cấu hình (không bắt buộc)' : '—'}</li>
+          ${cfg.tcbsConfigured ? '<li class="ok">TCBS API key: đã cấu hình</li>' : ''}
         </ul>
         <p class="muted small">Key Binance chỉ nằm trong Environment Variables của Vercel, trình duyệt không bao giờ thấy.
           Hãy tạo API key <b>chỉ bật quyền Read</b> (Enable Reading).</p>

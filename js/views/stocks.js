@@ -156,6 +156,8 @@ export function renderStocks(root, ctx) {
 function tcbsCard(ctx) {
   const cfg = ctx.serverConfig();
   const t = state.broker?.tcbs;
+  // Chỉ hiện khi đã cấu hình TCBS_API_KEY trên Vercel (hoặc đã có dữ liệu TCBS cũ)
+  if (!cfg.tcbsConfigured && !t) return '';
   const sess = tcbsSession();
   const busy = ctx.tcbsBusy();
   const custody = state.settings.tcbsCustody || '';
@@ -165,7 +167,6 @@ function tcbsCard(ctx) {
     <div class="card" id="tcbs-card">
       <div class="card-head"><h3>TCBS</h3>
         ${sess ? `<span class="tag ok">Đã kết nối đến ${until}</span>` : '<span class="tag">Chưa kết nối</span>'}</div>
-      ${cfg.tcbsConfigured === false ? '<p class="muted small">Chưa có TCBS_API_KEY trong Environment Variables của Vercel — thêm vào rồi Redeploy.</p>' : ''}
       <form id="tcbs-form" class="inline-form">
         <input name="custody" placeholder="Số TK lưu ký (105C…)" value="${esc(custody)}" autocomplete="off" required>
         ${sess ? `<button class="btn primary" ${busy ? 'disabled' : ''}>${busy ? 'Đang tải…' : '↻ Cập nhật'}</button>

@@ -96,7 +96,9 @@ Hạn chế: Binance API không trả lịch sử lệnh của cặp đã bị x
 - **Số dư ngân hàng tự cộng/trừ**: mỗi khoản thu/chi (kể cả lương định kỳ) gắn với một tài khoản ở mục Tiền mặt. Số dư = số chốt lần gần nhất + thu − chi phát sinh sau mốc chốt. Bấm **Sửa số dư** để nhập số thật từ ngân hàng → thành mốc mới, không bị trừ trùng.
 - Dữ liệu thu chi đồng bộ theo từng giao dịch: nhập trên điện thoại và máy tính cùng lúc không bị mất, giao dịch đã xóa không quay lại.
 
-## Chứng khoán TCBS (chỉ đọc)
+## Chứng khoán TCBS (chỉ đọc, tùy chọn)
+
+Ô TCBS chỉ hiện khi Vercel có `TCBS_API_KEY`. Lấy phiên cần mã iOTP 6 số từ app TCInvest.
 
 1. Vercel → Settings → Environment Variables: thêm `TCBS_API_KEY` = API key lấy từ TCBS, rồi Redeploy.
 2. Tab **Chứng khoán** → ô TCBS: nhập số tài khoản lưu ký (105C…) + mã OTP (iOTP) → **Kết nối**.

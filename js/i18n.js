@@ -203,6 +203,7 @@ const TERMS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const RULES = [
+  [/^(.+): phát hiện giờ UTC([+-]\d+), đã quy về UTC$/, '$1: detected UTC$2 times, converted to UTC'],
   [/^Chưa có phí funding [\s\S]*$/, 'No funding fees yet (liquidation fees may also be missing). Trade History files don\'t include them — also import the Transaction History file for the same years; duplicates are skipped automatically.'],
   // TCBS (đặt trước các quy tắc chung vì chuỗi bắt đầu bằng "Cập nhật")
   [/^Gồm (.+) tiền trong TK CK · Giá cập nhật (.+)$/, 'Incl. $1 cash in brokerage · Prices updated $2'],

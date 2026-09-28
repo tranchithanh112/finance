@@ -219,10 +219,17 @@ const RE_REALIZED = /realized|realised|lợi nhuận đã thực hiện|lợi nh
  * Tiếng Việt: Uid, Thời gian, Mã, Bên, Giá, Số lượng, Số tiền, Phí ("0.036 USDT"), Lợi nhuận đã thực hiện, …, ID giao dịch
  * Tiếng Anh: Date(UTC), Symbol, Side, Price, Quantity, Amount, Fee, Realized Profit
  */
+/** Múi giờ ghi trong tiêu đề cột thời gian, vd "Date(UTC+7)" / "Thời gian (UTC+07:00)" → giờ lệch (ms). */
+function headerOffset(h) {
+  const m = String(h || '').match(/utc\s*([+-])\s*(\d{1,2})(?::?(\d{2}))?/i);
+  return m ? (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 3600e3 + Number(m[3] || 0) * 60e3) : 0;
+}
+
 function tradesToIncome(rows, hi) {
   const head = rows[hi].map((h) => h.trim().toLowerCase());
   const col = (re) => head.findIndex((h) => re.test(h));
   const iTime = col(RE_TIME);
+  const tz = headerOffset(rows[hi][iTime]);
   const iSym = col(/^symbol$|^pair$|^mã$|^cặp/);
   const iFee = col(/^fee$|^phí$|^phí giao dịch$/);
   const iFeeAsset = col(/fee ?coin|fee ?asset|tài sản phí/);
@@ -231,8 +238,9 @@ function tradesToIncome(rows, hi) {
   const out = [];
   let skipped = 0;
   for (const r of rows.slice(hi + 1)) {
-    const t = parseTime(r[iTime]);
-    if (t == null) { skipped++; continue; }
+    const t0 = parseTime(r[iTime]);
+    if (t0 == null) { skipped++; continue; }
+    const t = t0 - tz;
     const symbol = iSym >= 0 ? (r[iSym] || '').trim().toUpperCase() : '';
     const quote = (symbol.match(/(USDT|USDC|BUSD|FDUSD|USD)$/) || [])[1] || 'USDT';
     const id = iId >= 0 && r[iId] ? r[iId].trim() : `${t}|${symbol}|${r.join('|')}`;
@@ -268,6 +276,7 @@ export function csvToIncome(text) {
   const iSym = col(/symbol|pair|^mã$|^cặp/);
   const iAcc = col(/account|tài khoản/);
   if (iTime < 0 || iType < 0 || iAmt < 0) throw new Error('Thiếu cột Time / Operation(Type) / Change(Amount)');
+  const tz = headerOffset(rows[hi][iTime]);
 
   const out = [];
   const seen = new Map();
@@ -275,7 +284,8 @@ export function csvToIncome(text) {
   for (const r of rows.slice(hi + 1)) {
     if (iAcc >= 0 && !/futures|\bum\b|\bcm\b|coin-m|usd.?-?m/i.test(r[iAcc] || '')) { skipped++; continue; }
     const type = csvType(r[iType]);
-    const t = parseTime(r[iTime]);
+    const t0 = parseTime(r[iTime]);
+    const t = t0 == null ? null : t0 - tz;
     const amt = Number(String(r[iAmt]).replace(/[^\d.eE+-]/g, ''));
     if (!type || t == null || !Number.isFinite(amt) || amt === 0) { skipped++; continue; }
     const asset = (iAsset >= 0 ? r[iAsset] : 'USDT').trim().toUpperCase() || 'USDT';
@@ -289,6 +299,34 @@ export function csvToIncome(text) {
     out.push([n > 1 ? `${base}#${n}` : base, t, type, amt, asset, symbol, src]);
   }
   return { records: out, skipped };
+}
+
+/**
+ * File CSV xuất theo giờ địa phương (vd UTC+7) nhưng không ghi múi giờ → thời điểm bị lệch so với
+ * dữ liệu API (UTC) và không nhận ra bản trùng. Thử lệch −12…+14 giờ, chọn mức khớp nhiều nhất với
+ * dữ liệu đã có từ NGUỒN KHÁC. Trả về số giờ cần trừ (0 nếu không đủ căn cứ).
+ */
+export function detectOffsetHours(store, records) {
+  const src = (id) => String(id).split(':')[0];
+  const mine = new Set(records.map((r) => src(r[0])));
+  const existing = new Set(store.income.filter((r) => !mine.has(src(r[0]))).map((r) => looseKey(r[1], r[2], r[3], r[4])));
+  if (!existing.size) return 0;
+  let best = 0;
+  let bestN = 0;
+  let zeroN = 0;
+  for (let h = -12; h <= 14; h++) {
+    let n = 0;
+    for (const r of records) if (existing.has(looseKey(r[1] - h * 3600e3, r[2], r[3], r[4]))) n++;
+    if (h === 0) zeroN = n;
+    if (n > bestN) { bestN = n; best = h; }
+  }
+  return best !== 0 && bestN >= 3 && bestN > zeroN * 2 ? best : 0;
+}
+
+/** Dời thời gian các bản ghi CSV đi `hours` giờ (giữ nguyên id để nhập lại vẫn nhận ra trùng). */
+export function shiftRecords(records, hours) {
+  if (!hours) return records;
+  return records.map((r) => [r[0], r[1] - hours * 3600e3, ...r.slice(2)]);
 }
 
 // ================= Tính toán =================

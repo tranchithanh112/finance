@@ -1,6 +1,6 @@
 import { state, local, loadState, commit, onCommit, takeSnapshot } from './store.js';
 import { fetchHoldings, syncHistory, getPriceHistory, bn, ensurePriceHistory, fetchTickerPrices, ensureAllPriceHistory } from './binance.js';
-import { computeFutures, syncFuturesIncome, csvToIncome, mergeIncome, emptyFutures } from './futures.js';
+import { computeFutures, syncFuturesIncome, csvToIncome, mergeIncome, emptyFutures, detectOffsetHours, shiftRecords } from './futures.js';
 import { makePriceLookup } from './pnl.js';
 import { computePnl } from './pnl.js';
 import { cryptoSeries, stockSeries } from './series.js';
@@ -100,7 +100,10 @@ const ctx = {
     let rows = 0;
     for (const file of files) {
       try {
-        const { records } = csvToIncome(await file.text());
+        const parsed = csvToIncome(await file.text()).records;
+        const tz = detectOffsetHours(state.futures, parsed);
+        if (tz) toast(`${file.name}: phát hiện giờ UTC${tz > 0 ? '+' : ''}${tz}, đã quy về UTC`, 'info', 6000);
+        const records = shiftRecords(parsed, tz);
         rows += records.length;
         added += mergeIncome(state.futures, records);
       } catch (e) {

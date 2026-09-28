@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { csvToIncome, mergeIncome, computeFutures, emptyFutures, parseCsv } from '../js/futures.js';
+import { csvToIncome, mergeIncome, computeFutures, emptyFutures, parseCsv, detectOffsetHours, shiftRecords } from '../js/futures.js';
 
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} ≈ ${b}`);
 
@@ -98,4 +98,22 @@ test('file ví: các dòng giống hệt nhau trong cùng giây đều được 
   close(r.byType.COMMISSION, -1.5);
   assert.deepEqual(r.yearly.map((y) => y.year), ['2024']);
   close(r.yearly[0].net, -2.7);
+});
+
+test('CSV giờ UTC+7: đọc múi giờ từ tiêu đề hoặc tự dò theo dữ liệu API', () => {
+  const t = Date.UTC(2026, 6, 1, 3, 0, 0);
+  const api = [0, 1, 2, 3].map((i) => [`um:${i}:FUNDING_FEE:BTCUSDT`, t + i * 8 * 3600e3, 'FUNDING_FEE', -1 - i, 'USDT', 'BTCUSDT', 'um']);
+  const local = (ms) => new Date(ms + 7 * 3600e3).toISOString().slice(0, 19).replace('T', ' ');
+  const body = api.map((r) => `1,${local(r[1])},USDT-Futures,Funding Fee,USDT,${r[3]},`).join('\n');
+  // có ghi múi giờ trong tiêu đề
+  const withTz = csvToIncome(`User_ID,UTC_Time(UTC+7),Account,Operation,Coin,Change,Remark\n${body}`).records;
+  assert.deepEqual(withTz.map((r) => r[1]), api.map((r) => r[1]));
+  // không ghi → tự dò bằng dữ liệu API đã có
+  const store = emptyFutures();
+  mergeIncome(store, api);
+  const raw = csvToIncome(`User_ID,Time,Account,Operation,Coin,Change,Remark\n${body}`).records;
+  assert.equal(detectOffsetHours(store, raw), 7);
+  assert.equal(mergeIncome(store, shiftRecords(raw, 7)), 0);
+  // không có dữ liệu để so → giữ nguyên
+  assert.equal(detectOffsetHours(emptyFutures(), raw), 0);
 });

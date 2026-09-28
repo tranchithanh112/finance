@@ -50,8 +50,9 @@ export function renderOverview(root, ctx) {
         <small>${hasBudget ? `Thu ${vnd(cur.income, { compact: true })} · tiêu ${vnd(cur.spend, { compact: true })}` : 'Nhập thu chi ở tab Thu chi'}</small></div>
       <div class="kpi"><span>Tỷ lệ tiết kiệm</span><b>${H.savingsRate == null ? '—' : fmtPct(H.savingsRate, { sign: false })}</b>
         <small>${H.avg ? `TB ${H.avg.months} tháng gần nhất` : 'Tháng này'}</small></div>
-      <div class="kpi"><span>Quỹ dự phòng</span><b>${H.emergencyMonths == null ? '—' : H.emergencyMonths.toFixed(1) + ' tháng'}</b>
-        <small>Tiền mặt + stablecoin ${fmtMoney(H.liquidUsd, { compact: true })}</small></div>
+      <div class="kpi"><span>Quỹ dự phòng</span>${H.emergencyMonths == null
+        ? `<b>${fmtMoney(H.liquidUsd)}</b><small>Tiền mặt + stablecoin · nhập chi tiêu ở tab Thu chi để tính số tháng</small>`
+        : `<b>${H.emergencyMonths.toFixed(1)} tháng</b><small>Tiền mặt + stablecoin ${fmtMoney(H.liquidUsd, { compact: true })}</small>`}</div>
       <div class="kpi"><span>Lãi/lỗ đầu tư</span><b class="${pnlClass(investPnl)}">${pnl || fut || stocks.length ? fmtMoney(investPnl, { sign: true }) : '—'}</b>
         <small>Spot ${pnl ? fmtMoney(pnl.totals.total, { sign: true, compact: true }) : '—'} · Futures ${fut ? fmtMoney(fut.net + fut.unrealized, { sign: true, compact: true }) : '—'} · CK ${stocks.length ? fmtMoney(stockPnl, { sign: true, compact: true }) : '—'}</small></div>
     </div>

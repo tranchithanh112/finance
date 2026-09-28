@@ -64,7 +64,20 @@ export async function loadState() {
   replaceInPlace(deepMerge(defaultState(), saved || {}));
 }
 
+/** Dọn dữ liệu do bản thử nghiệm (airdrop / Binance Pay) đã ghi vào lịch sử — bản đó đã bị gỡ. */
+function cleanup(obj) {
+  const h = obj.history;
+  if (!h) return obj;
+  const notPay = (r) => !String(r[0]).startsWith('pay:');
+  h.deposits = (h.deposits || []).filter(notPay);
+  h.withdrawals = (h.withdrawals || []).filter(notPay);
+  delete h.rewards;
+  if (h.cursors) { delete h.cursors.rewards; delete h.cursors.pay; }
+  return obj;
+}
+
 function replaceInPlace(obj) {
+  cleanup(obj);
   for (const k of Object.keys(state)) delete state[k];
   Object.assign(state, obj);
 }

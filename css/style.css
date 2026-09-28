@@ -416,14 +416,14 @@ input { min-width: 0; }
   .chips { flex-wrap: nowrap; overflow-x: auto; margin: 0 -15px; padding: 2px 15px 4px; scrollbar-width: none; }
   .chips::-webkit-scrollbar { display: none; }
   .chip { flex: none; }
-  .quick-add .row { display: grid; grid-template-columns: 1fr 1fr; }
+  .quick-add .row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .quick-add .row > * { min-width: 0; width: 100%; }
   .quick-add .row .grow { grid-column: 1 / -1; }
   .quick-add .row .btn.primary { grid-column: 1 / -1; padding: 13px; font-size: 15px; }
   .quick-add .row select { grid-column: 2; }
   .quick-add .row input[type=date]:nth-last-child(2) { grid-column: 1 / -1; }
-  .jars { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .jar { padding: 12px; }
-  .jar-foot { flex-direction: column; gap: 0; }
+  .jars { grid-template-columns: 1fr; gap: 8px; }
+  .jar { padding: 12px 14px; gap: 6px; }
 }
 
 @media (min-width: 721px) {

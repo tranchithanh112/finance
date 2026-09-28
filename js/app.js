@@ -281,7 +281,7 @@ function render() {
   applyCurrency();
   const item = NAV.find((n) => n.id === current);
   $$('#tabs button, #more-panel button').forEach((b) => b.classList.toggle('on', b.dataset.tab === current));
-  $$('#bottom-nav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === current || (b.dataset.more && item?.more)));
+  $$('#bottom-nav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === current || Boolean(b.dataset.more && item?.more)));
   $('#page-title').textContent = item?.label || '';
   $('#fab').hidden = current === 'settings';
   $$('.tab').forEach((s) => { s.hidden = s.id !== `tab-${current}`; });

@@ -1,5 +1,8 @@
 import { isStable, DAY } from './util.js';
 
+// Tiền pháp định khi mua crypto bằng thẻ / P2P: không theo dõi lãi/lỗ
+const FIAT = new Set(['VND', 'EUR', 'GBP', 'AUD', 'TRY', 'BRL', 'RUB', 'UAH', 'NGN', 'INR', 'JPY', 'KRW', 'IDR', 'PHP', 'THB', 'ARS', 'PLN', 'CZK', 'ZAR', 'MXN', 'CAD', 'CHF', 'NZD', 'SGD', 'HKD']);
+
 /**
  * Tính PnL theo phương pháp giá vốn bình quân (average cost), quy đổi USD.
  *
@@ -71,13 +74,17 @@ export function buildEvents(history, usdAt) {
     if (!isStable(from)) add(from, t, -amt, v, 'dust', { id });
     add('BNB', t, bnb, v, 'dust', { id });
   }
-  for (const [id, t, from, fAmt, to, tAmt] of history.converts) {
+  // Convert, Auto-Invest (DCA), stake/unstake, mua bằng fiat: [id, t, from, fromAmt, to, toAmt, kind]
+  for (const [id, t, from, fAmt, to, tAmt, kind = 'convert'] of history.converts) {
+    const external = (a) => isStable(a) || FIAT.has(a);
     let v;
     if (isStable(from)) v = fAmt;
     else if (isStable(to)) v = tAmt;
+    else if (FIAT.has(from)) v = tAmt * (price(to, t) ?? 0);
     else v = fAmt * (price(from, t) ?? 0) || tAmt * (price(to, t) ?? 0);
-    if (!isStable(from)) add(from, t, -fAmt, v, 'convert', { id, other: to });
-    if (!isStable(to)) add(to, t, tAmt, v, 'convert', { id, other: from });
+    const ref = { id, other: kind === 'convert' ? to : from, count: kind === 'autoinvest' || kind === 'fiat' };
+    if (!external(from)) add(from, t, -fAmt, v, kind, { ...ref, other: to });
+    if (!external(to)) add(to, t, tAmt, v, kind, ref);
   }
 
   // cùng thời điểm: nhận vào trước, trả ra sau
@@ -103,7 +110,7 @@ export function computePnl(history, priceHist, holdings, { dustUsd = 1 } = {}) {
     const s = get(e.asset);
     s.first ??= e.t;
     s.last = e.t;
-    if (e.ref?.symbol) s.trades++;
+    if (e.ref?.symbol || (e.ref?.count && e.qty > 0)) s.trades++;
     let realized = 0;
     if (e.qty > 0) {
       s.qty += e.qty;

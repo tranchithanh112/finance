@@ -170,6 +170,8 @@ export async function ensurePriceHistory(asset, fromT, tick) {
 
 // ================= Đồng bộ lịch sử giao dịch =================
 
+const COMMON_QUOTES = new Set(['USDT', 'USDC', 'FDUSD', 'BUSD', 'TUSD', 'USD1', 'U', 'BTC', 'ETH', 'BNB']);
+
 const ROW = (t) => [t.id, t.time, Number(t.price), Number(t.qty), Number(t.quoteQty), Number(t.commission), t.commissionAsset, t.isBuyer ? 1 : 0];
 
 async function fetchSymbolTrades(symbol, signal) {
@@ -251,6 +253,104 @@ async function syncDust(startT, log) {
   log(`Đổi dust sang BNB: ${h.dust.length} bản ghi`);
 }
 
+/** Thêm bản ghi dạng convert [id, time, from, fromAmt, to, toAmt, kind] nếu chưa có. */
+function pushConverts(list) {
+  const h = state.history;
+  const seen = new Set(h.converts.map((c) => String(c[0])));
+  let n = 0;
+  for (const c of list) {
+    if (seen.has(String(c[0])) || !(c[3] > 0) || !(c[5] > 0)) continue;
+    seen.add(String(c[0]));
+    h.converts.push(c);
+    n++;
+  }
+  return n;
+}
+
+/** Auto-Invest / Recurring Buy (DCA): không nằm trong lịch sử lệnh spot. */
+async function syncAutoInvest(startT, log, signal) {
+  const h = state.history;
+  const from = Math.max(h.cursors.autoInvest || startT, Date.parse('2022-01-01'));
+  let n = 0;
+  try {
+    await windows(from, 30 * DAY, async (s, e) => {
+      for (let page = 1; ; page++) {
+        if (signal?.aborted) throw new DOMException('Đã hủy', 'AbortError');
+        const r = await bn('/sapi/v1/lending/auto-invest/history/list', { startTime: s, endTime: e, size: 100, current: page }, { signal });
+        const list = r?.list || [];
+        n += pushConverts(list.filter((x) => String(x.transactionStatus).toUpperCase() === 'SUCCESS').map((x) => [
+          `ai:${x.id}`, Number(x.transactionDateTime), x.sourceAsset, Number(x.sourceAssetAmount),
+          x.targetAsset, Number(x.targetAssetAmount), 'autoinvest',
+        ]));
+        if (list.length < 100) break;
+      }
+    });
+    h.cursors.autoInvest = Date.now() - 2 * DAY;
+    log(`Auto-Invest (DCA): ${n} lần mua mới`);
+  } catch (e) {
+    if (e.name === 'AbortError') throw e;
+    log(`Auto-Invest: bỏ qua (${e.message})`);
+  }
+}
+
+/** Stake/unstake SOL (BNSOL) và ETH (WBETH): coi như hoán đổi theo giá thị trường. */
+async function syncStaking(startT, log, signal) {
+  const h = state.history;
+  const sources = [
+    ['sol', '/sapi/v1/sol-staking/sol/history/stakingHistory', 'stake', '2023-09-01'],
+    ['sol', '/sapi/v1/sol-staking/sol/history/redemptionHistory', 'unstake', '2023-09-01'],
+    ['eth', '/sapi/v1/eth-staking/eth/history/stakingHistory', 'stake', '2020-12-01'],
+    ['eth', '/sapi/v1/eth-staking/eth/history/redemptionHistory', 'unstake', '2020-12-01'],
+  ];
+  for (const [coin, path, kind, launch] of sources) {
+    const key = `${coin}-${kind}`;
+    const from = Math.max(h.cursors[key] || startT, Date.parse(launch));
+    let n = 0;
+    try {
+      await windows(from, 89 * DAY, async (s, e) => {
+        for (let page = 1; ; page++) {
+          if (signal?.aborted) throw new DOMException('Đã hủy', 'AbortError');
+          const r = await bn(path, { startTime: s, endTime: e, size: 100, current: page }, { signal });
+          const rows = r?.rows || [];
+          n += pushConverts(rows.filter((x) => !x.status || /success|paid|complete/i.test(x.status)).map((x) => [
+            `${key}:${x.time}:${x.amount}`, Number(x.time), x.asset, Number(x.amount),
+            x.distributeAsset, Number(x.distributeAmount), kind,
+          ]));
+          if (rows.length < 100) break;
+        }
+      });
+      h.cursors[key] = Date.now() - 2 * DAY;
+      if (n) log(`${coin.toUpperCase()} ${kind}: ${n} bản ghi mới`);
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+      log(`${coin.toUpperCase()} staking: bỏ qua (${e.message})`);
+    }
+  }
+}
+
+/** Mua crypto bằng thẻ / tiền pháp định. */
+async function syncFiatBuys(startT, log) {
+  const h = state.history;
+  let n = 0;
+  try {
+    await windows(Math.max(h.cursors.fiat || startT, Date.parse('2019-01-01')), 89 * DAY, async (s, e) => {
+      for (let page = 1; ; page++) {
+        const r = await bn('/sapi/v1/fiat/payments', { transactionType: 0, beginTime: s, endTime: e, page, rows: 500 });
+        const data = r?.data || [];
+        n += pushConverts(data.filter((x) => /complete/i.test(x.status)).map((x) => [
+          `fiat:${x.orderNo}`, Number(x.createTime), x.fiatCurrency, Number(x.sourceAmount),
+          x.cryptoCurrency, Number(x.obtainAmount), 'fiat',
+        ]));
+        if (data.length < 500) break;
+      }
+    });
+    h.cursors.fiat = Date.now() - 2 * DAY;
+    if (n) log(`Mua bằng fiat: ${n} bản ghi mới`);
+  } catch (e) {
+    log(`Lịch sử mua fiat: bỏ qua (${e.message})`);
+  }
+}
+
 async function syncConverts(startT, log, signal) {
   const h = state.history;
   const seen = new Set(h.converts.map((c) => c[0]));
@@ -288,6 +388,10 @@ export async function syncHistory({ fullScan = false, onProgress = () => {}, sig
   await syncDepositsWithdrawals(startT, log);
   await syncDust(startT, log);
   if (st.includeConvert) await syncConverts(startT, log, signal);
+  log('Tải lịch sử Auto-Invest (DCA), staking, mua fiat…', 8);
+  await syncAutoInvest(startT, log, signal);
+  await syncStaking(startT, log, signal);
+  await syncFiatBuys(startT, log);
 
   // Tập coin ứng viên
   const cand = new Set(st.extraAssets.map((a) => a.toUpperCase()));
@@ -298,9 +402,11 @@ export async function syncHistory({ fullScan = false, onProgress = () => {}, sig
   h.converts.forEach((c) => { cand.add(c[2]); cand.add(c[4]); });
   Object.values(h.meta).forEach(([b, q]) => { if (h.trades[b + q]) cand.add(b); });
 
+  // Coin ứng viên: quét mọi cặp phổ biến (lệnh DCA có thể chạy qua FDUSD/USDC…).
+  // "Quét toàn bộ": thêm mọi cặp có quote trong scanQuotes để tìm coin đã bán hết.
   const quotes = new Set(st.scanQuotes);
-  const symbols = allSymbols.filter(([s, b, q]) =>
-    quotes.has(q) && (fullScan || cand.has(b) || h.trades[s]) && !(isStable(b) && isStable(q)));
+  const symbols = allSymbols.filter(([s, b, q]) => !(isStable(b) && isStable(q)) && (
+    h.trades[s] || (cand.has(b) && (COMMON_QUOTES.has(q) || quotes.has(q))) || (fullScan && quotes.has(q))));
   for (const [s, b, q] of symbols) h.meta[s] = [b, q];
   // Cặp đã có giao dịch nhưng không còn trong exchangeInfo (đã hủy niêm yết) thì bỏ qua — API không trả nữa.
 

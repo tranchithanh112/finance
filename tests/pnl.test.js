@@ -88,3 +88,33 @@ test('số dư thực lớn hơn sổ sách (lãi Earn) -> phần dư giá vốn
   const r = computePnl(h, {}, [{ asset: 'ADA', total: 110, price: 1, value: 110 }]);
   close(r.rows[0].unrealized, 10);
 });
+
+test('DCA Auto-Invest + stake SOL→BNSOL: giá vốn BNSOL đầy đủ, không còn thiếu dữ liệu', () => {
+  const h = empty();
+  const d0 = Math.floor(t0 / DAY);
+  const hist = { SOL: { days: { [d0 + 30]: 150 } } };
+  // 30 ngày DCA: mỗi ngày 10 USDT mua 0.1 SOL (giá 100)
+  for (let i = 0; i < 30; i++) h.converts.push([`ai:${i}`, t0 + i * DAY, 'USDT', 10, 'SOL', 0.1, 'autoinvest']);
+  // stake 3 SOL -> 2.9 BNSOL khi SOL = 150
+  h.converts.push(['sol-stake:1', t0 + 30 * DAY, 'SOL', 3, 'BNSOL', 2.9, 'stake']);
+  const r = computePnl(h, hist, [{ asset: 'BNSOL', total: 2.9, price: 200, value: 580 }]);
+  const sol = r.rows.find((x) => x.asset === 'SOL');
+  const bnsol = r.rows.find((x) => x.asset === 'BNSOL');
+  close(sol.invested, 300);
+  close(sol.realized, 150); // 3 SOL vốn 300, "bán" 450
+  assert.equal(sol.trades, 30);
+  close(bnsol.costBasis, 450);
+  close(bnsol.unrealized, 130);
+  close(bnsol.untrackedQty, 0);
+  close(r.totals.total, 280);
+});
+
+test('mua bằng fiat VND: không coi VND là coin', () => {
+  const h = empty();
+  const d0 = Math.floor(t0 / DAY);
+  h.converts.push(['fiat:1', t0, 'VND', 25000000, 'BTC', 0.02, 'fiat']);
+  const r = computePnl(h, { BTC: { days: { [d0]: 50000 } } }, []);
+  assert.equal(r.rows.find((x) => x.asset === 'VND'), undefined);
+  close(r.rows.find((x) => x.asset === 'BTC').invested, 1000);
+  assert.deepEqual(r.missing, []);
+});

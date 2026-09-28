@@ -16,6 +16,12 @@ const ENDPOINTS = {
   '/sapi/v1/simple-earn/locked/position': { signed: true },
   '/sapi/v1/asset/dribblet': { signed: true },
   '/sapi/v1/convert/tradeFlow': { signed: true },
+  '/sapi/v1/lending/auto-invest/history/list': { signed: true },
+  '/sapi/v1/sol-staking/sol/history/stakingHistory': { signed: true },
+  '/sapi/v1/sol-staking/sol/history/redemptionHistory': { signed: true },
+  '/sapi/v1/eth-staking/eth/history/stakingHistory': { signed: true },
+  '/sapi/v1/eth-staking/eth/history/redemptionHistory': { signed: true },
+  '/sapi/v1/fiat/payments': { signed: true },
   // Futures USDⓈ-M (fapi) và COIN-M (dapi)
   '/fapi/v1/income': { signed: true },
   '/fapi/v3/account': { signed: true },

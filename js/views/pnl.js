@@ -6,6 +6,7 @@ const ui = { filter: 'all', q: '', open: null, sort: 'total' };
 
 const KIND = {
   buy: 'Mua', sell: 'Bán', fee: 'Phí', deposit: 'Nạp', withdraw: 'Rút', dust: 'Dust→BNB', convert: 'Convert',
+  autoinvest: 'DCA (Auto-Invest)', stake: 'Stake', unstake: 'Unstake', fiat: 'Mua bằng fiat',
 };
 
 export function renderPnl(root, ctx) {
@@ -19,7 +20,7 @@ export function renderPnl(root, ctx) {
       <div class="card-head">
         <h3>Đồng bộ lịch sử Binance</h3>
         <small class="muted">Lần cuối: ${timeAgo(h.updatedAt)} · ${tradeCount.toLocaleString()} lệnh · ${Object.keys(h.trades).length} cặp ·
-          ${h.deposits.length} nạp · ${h.withdrawals.length} rút · ${h.converts.length} convert</small>
+          ${h.deposits.length} nạp · ${h.withdrawals.length} rút · ${countKind(h, 'autoinvest')} DCA · ${countKind(h, 'convert')} convert · ${countKind(h, 'stake') + countKind(h, 'unstake')} staking</small>
       </div>
       <p class="muted small">"Đồng bộ nhanh" quét các coin bạn đang giữ / từng nạp / rút / convert + các cặp đã có lệnh.
         "Quét toàn bộ" thử mọi cặp có quote ${esc(state.settings.scanQuotes.join(', '))} để tìm cả coin đã mua rồi bán hết (chậm, vài phút — chỉ cần chạy lần đầu).</p>
@@ -121,6 +122,8 @@ export function renderPnl(root, ctx) {
   }
   bind(root, ctx);
 }
+
+const countKind = (h, k) => h.converts.filter((c) => (c[6] || 'convert') === k).length;
 
 function detail(r) {
   const ev = [...r.events].reverse().slice(0, 300);

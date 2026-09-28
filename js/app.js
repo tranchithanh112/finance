@@ -84,7 +84,7 @@ const ctx = {
         if (q) Object.assign(f, { lastPrice: q.price, prevClose: q.prevClose, lastPriceAt: Date.now(), name: f.name || q.name });
       }
       if (data.quotes['VND=X']) state.fx = { USDVND: data.quotes['VND=X'].price, updatedAt: Date.now() };
-      const errs = Object.keys(data.errors || {});
+      const errs = Object.keys(data.errors || {}).filter((s) => s !== 'VND=X');
       snapshot();
       commit();
       if (errs.length) toast(`Không lấy được giá: ${errs.join(', ')}`, 'error', 7000);
@@ -243,3 +243,7 @@ async function init() {
 }
 
 init();
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}

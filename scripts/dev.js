@@ -16,7 +16,7 @@ if (fs.existsSync(envFile)) {
   }
 }
 
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 
 function enhance(req, res, url, body) {
   req.query = Object.fromEntries(url.searchParams);

@@ -160,6 +160,9 @@ const EXACT = {
   'File JSON không đúng định dạng': 'Invalid JSON file', 'Chưa kết nối Dropbox / Google Drive': 'Dropbox / Google Drive not connected',
   'Chưa có Dropbox App Key': 'Missing Dropbox App Key', 'Chưa có Google Client ID': 'Missing Google Client ID',
 
+  // ---- futures theo năm
+  'Theo năm': 'By year', 'Năm': 'Year', 'Đối chiếu với báo cáo PnL của Binance': 'Compare with Binance PnL report',
+
   // ---- TCBS
   'Chưa kết nối': 'Not connected', 'Số TK lưu ký (105C…)': 'Custody account no. (105C…)', 'Mã OTP (iOTP)': 'OTP code (iOTP)',
   'Kết nối': 'Connect', '↻ Cập nhật': '↻ Update', 'Ngắt kết nối': 'Disconnect', 'Đang tải…': 'Loading…',
@@ -200,6 +203,7 @@ const TERMS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const RULES = [
+  [/^Chưa có phí funding [\s\S]*$/, 'No funding fees yet (liquidation fees may also be missing). Trade History files don\'t include them — also import the Transaction History file for the same years; duplicates are skipped automatically.'],
   // TCBS (đặt trước các quy tắc chung vì chuỗi bắt đầu bằng "Cập nhật")
   [/^Gồm (.+) tiền trong TK CK · Giá cập nhật (.+)$/, 'Incl. $1 cash in brokerage · Prices updated $2'],
   [/^Cập nhật (.+) · (\d+) tiểu khoản · (\d+) mã · tiền (.+)$/, 'Updated $1 · $2 sub-accounts · $3 symbols · cash $4'],

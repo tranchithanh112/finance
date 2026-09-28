@@ -77,3 +77,25 @@ test('csvToIncome đọc file lịch sử khớp lệnh tiếng Việt (Trade Hi
   assert.equal(mergeIncome(store, records), 6);
   assert.equal(mergeIncome(store, records), 0);
 });
+
+test('file ví: các dòng giống hệt nhau trong cùng giây đều được giữ, nhập lại không trùng', () => {
+  const csv = 'User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n'
+    + '1,2024-01-01 10:00:00,USDT-Futures,Fee,USDT,-0.5,\n'
+    + '1,2024-01-01 10:00:00,USDT-Futures,Fee,USDT,-0.5,\n'
+    + '1,2024-01-01 10:00:00,USDT-Futures,Funding Fee,USDT,-1.2,\n';
+  const { records } = csvToIncome(csv);
+  assert.equal(records.length, 3);
+  const store = emptyFutures();
+  assert.equal(mergeIncome(store, records), 3);
+  assert.equal(mergeIncome(store, records), 0);
+  // file khớp lệnh cùng thời điểm: 2 khoản phí khớp đúng 2 bản ghi cũ, không thêm
+  const trade = 'Thời gian,Mã,Bên,Giá,Số lượng,Phí,Lợi nhuận đã thực hiện,ID giao dịch\n'
+    + '2024-01-01 10:00:00,BTCUSDT,SELL,1,1,0.5 USDT,0,a\n'
+    + '2024-01-01 10:00:00,BTCUSDT,SELL,1,1,0.5 USDT,0,b\n'
+    + '2024-01-01 10:00:00,BTCUSDT,SELL,1,1,0.5 USDT,0,c\n';
+  assert.equal(mergeIncome(store, csvToIncome(trade).records), 1);
+  const r = computeFutures(store, () => 1, null);
+  close(r.byType.COMMISSION, -1.5);
+  assert.deepEqual(r.yearly.map((y) => y.year), ['2024']);
+  close(r.yearly[0].net, -2.7);
+});

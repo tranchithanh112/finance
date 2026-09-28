@@ -47,3 +47,14 @@ test('dữ liệu nhập tay: bên sửa sau cùng thắng', () => {
   assert.equal(mergeStates(a, b).cash[0].name, 'mới');
   assert.equal(mergeStates(b, a).cash[0].name, 'mới');
 });
+
+test('xóa dữ liệu futures không bị đồng bộ kéo về lại', () => {
+  const rec = ['csv:1', 1, 'REALIZED_PNL', -5, 'USDT', 'BTCUSDT', 'csv'];
+  const cloud = { futures: { income: [rec], cursors: {}, account: null, updatedAt: 1 } };
+  const cleared = { futures: { income: [], cursors: {}, account: null, updatedAt: 1, resetAt: 100 } };
+  assert.deepEqual(mergeStates(cleared, cloud).futures.income, []);
+  assert.deepEqual(mergeStates(cloud, cleared).futures.income, []);
+  // nhập lại sau khi xóa thì vẫn giữ
+  const reimported = { futures: { income: [rec], cursors: {}, account: null, updatedAt: 2, resetAt: 100 } };
+  assert.equal(mergeStates(reimported, cloud).futures.income.length, 1);
+});

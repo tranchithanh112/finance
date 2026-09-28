@@ -48,11 +48,15 @@ function mergeHistory(a = {}, b = {}) {
 
 function mergeFutures(a = {}, b = {}) {
   const newerAcc = (a.account?.updatedAt || 0) >= (b.account?.updatedAt || 0) ? a.account : b.account;
+  // Người dùng bấm "Xóa dữ liệu futures" ở 1 máy → bỏ dữ liệu của bên chưa biết lần xóa đó
+  const resetAt = Math.max(a.resetAt || 0, b.resetAt || 0);
+  const alive = (x) => (x.resetAt || 0) >= resetAt;
   return {
     ...b,
     ...a,
-    income: byKey([a.income, b.income], (r) => r[0]).sort((p, q) => p[1] - q[1]),
-    cursors: mergeCursors(a.cursors, b.cursors),
+    resetAt,
+    income: byKey([alive(a) ? a.income : [], alive(b) ? b.income : []], (r) => r[0]).sort((p, q) => p[1] - q[1]),
+    cursors: alive(a) && alive(b) ? mergeCursors(a.cursors, b.cursors) : (alive(a) ? a.cursors : b.cursors) || {},
     account: newerAcc ?? null,
     updatedAt: Math.max(a.updatedAt || 0, b.updatedAt || 0),
   };

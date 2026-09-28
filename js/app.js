@@ -119,7 +119,7 @@ const ctx = {
 
   clearFutures() {
     if (!confirm('Xóa toàn bộ lịch sử futures đã tải / nhập?')) return;
-    state.futures = { ...emptyFutures(), account: state.futures.account };
+    state.futures = { ...emptyFutures(), account: state.futures.account, resetAt: Date.now() };
     futCache = null;
     commit();
     render();

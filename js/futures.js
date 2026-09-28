@@ -49,28 +49,37 @@ export function csvType(s) {
 const looseKey = (t, type, amount, asset) => `${Math.floor(t / 1000)}|${type}|${Number(amount).toFixed(8)}|${asset}`;
 
 export function emptyFutures() {
-  return { income: [], cursors: {}, account: null, updatedAt: 0 };
+  return { income: [], cursors: {}, account: null, updatedAt: 0, resetAt: 0 };
 }
 
-/** Thêm bản ghi vào kho, bỏ bản trùng. Trả về số bản ghi mới. */
+/**
+ * Thêm bản ghi vào kho, bỏ bản trùng. Trả về số bản ghi mới.
+ *  - Trùng id → bỏ.
+ *  - Cùng khoản từ NGUỒN KHÁC (CSV ↔ API ↔ file khớp lệnh): khớp theo (giây, loại, số tiền, tài sản),
+ *    mỗi bản ghi cũ chỉ khớp được 1 lần → 2 khoản giống hệt nhau vẫn được giữ đủ 2.
+ */
 export function mergeIncome(store, records) {
-  const keys = new Set(store.income.map((r) => r[0]));
-  const loose = new Map(store.income.map((r, i) => [looseKey(r[1], r[2], r[3], r[4]), i]));
-  let added = 0;
   const src = (id) => String(id).split(':')[0];
+  const keys = new Set(store.income.map((r) => r[0]));
+  const loose = new Map(); // looseKey -> [index bản ghi cũ chưa được khớp]
+  store.income.forEach((r, i) => {
+    const lk = looseKey(r[1], r[2], r[3], r[4]);
+    (loose.get(lk) || loose.set(lk, []).get(lk)).push(i);
+  });
+  let added = 0;
   for (const r of records) {
     if (keys.has(r[0])) continue;
     const lk = looseKey(r[1], r[2], r[3], r[4]);
-    // chỉ coi là trùng khi khác nguồn (CSV ↔ API); cùng nguồn đã có id riêng cho từng dòng
-    if (loose.has(lk) && src(store.income[loose.get(lk)][0]) !== src(r[0])) {
-      // Cùng giao dịch từ nguồn khác (CSV ↔ API): bổ sung symbol nếu thiếu
-      const ex = store.income[loose.get(lk)];
-      if (!ex[5] && r[5]) ex[5] = r[5];
+    const cands = loose.get(lk) || [];
+    const j = cands.findIndex((i) => src(store.income[i][0]) !== src(r[0]));
+    if (j >= 0) {
+      const ex = store.income[cands[j]];
+      if (!ex[5] && r[5]) ex[5] = r[5]; // bổ sung symbol nếu thiếu
+      cands.splice(j, 1);
       continue;
     }
     store.income.push(r);
     keys.add(r[0]);
-    loose.set(lk, store.income.length - 1);
     added++;
   }
   store.income.sort((a, b) => a[1] - b[1]);
@@ -261,6 +270,7 @@ export function csvToIncome(text) {
   if (iTime < 0 || iType < 0 || iAmt < 0) throw new Error('Thiếu cột Time / Operation(Type) / Change(Amount)');
 
   const out = [];
+  const seen = new Map();
   let skipped = 0;
   for (const r of rows.slice(hi + 1)) {
     if (iAcc >= 0 && !/futures|\bum\b|\bcm\b|coin-m|usd.?-?m/i.test(r[iAcc] || '')) { skipped++; continue; }
@@ -271,7 +281,12 @@ export function csvToIncome(text) {
     const asset = (iAsset >= 0 ? r[iAsset] : 'USDT').trim().toUpperCase() || 'USDT';
     const symbol = iSym >= 0 ? (r[iSym] || '').trim().toUpperCase() : '';
     const src = /coin/i.test(r[iAcc] || '') ? 'cm' : 'csv';
-    out.push([`csv:${looseKey(t, type, amt, asset)}|${symbol}`, t, type, amt, asset, symbol, src]);
+    // Nhiều dòng giống hệt nhau trong cùng giây (vd phí của nhiều lần khớp) là các khoản KHÁC nhau:
+    // dòng đầu giữ id cũ (tương thích dữ liệu đã nhập), các dòng sau thêm #2, #3…
+    const base = `csv:${looseKey(t, type, amt, asset)}|${symbol}`;
+    const n = (seen.get(base) || 0) + 1;
+    seen.set(base, n);
+    out.push([n > 1 ? `${base}#${n}` : base, t, type, amt, asset, symbol, src]);
   }
   return { records: out, skipped };
 }
@@ -282,6 +297,7 @@ export function computeFutures(store, usdAt, account, priceNow = () => 0) {
   const byType = Object.fromEntries(Object.keys(TYPES).map((k) => [k, 0]));
   const bySym = {};
   const monthly = new Map();
+  const yearly = new Map();
   const timeline = [];
   const missing = new Set();
   let net = 0;
@@ -298,6 +314,10 @@ export function computeFutures(store, usdAt, account, priceNow = () => 0) {
     s.last = t;
     const m = new Date(t).toISOString().slice(0, 7);
     monthly.set(m, (monthly.get(m) || 0) + usd);
+    const y = m.slice(0, 4);
+    const yr = yearly.get(y) || yearly.set(y, { year: y, net: 0, ...Object.fromEntries(Object.keys(TYPES).map((k) => [k, 0])) }).get(y);
+    yr[type] += usd;
+    yr.net += usd;
     timeline.push([t, net]);
   }
   const unrealized = (account?.positions || []).reduce((a, p) => {
@@ -308,6 +328,7 @@ export function computeFutures(store, usdAt, account, priceNow = () => 0) {
   return {
     net, byType, symbols, unrealized,
     monthly: [...monthly.entries()].sort((a, b) => a[0].localeCompare(b[0])),
+    yearly: [...yearly.values()].sort((a, b) => a.year.localeCompare(b.year)),
     timeline,
     missing: [...missing],
     first: store.income[0]?.[1] || null,

@@ -63,11 +63,27 @@ export function renderFutures(root, ctx) {
       <div class="kpi"><span>Vị thế đang mở</span><b class="${pnlClass(r.unrealized)}">${pos.length ? fmtMoney(r.unrealized, { sign: true }) : '—'}</b><small>${pos.length} vị thế</small></div>
     </div>
 
+    ${!t.FUNDING_FEE ? `<div class="alert">Chưa có phí funding (và có thể thiếu phí thanh lý). File lịch sử khớp lệnh (Trade History) không chứa các khoản này —
+      hãy nhập thêm file Lịch sử giao dịch ví (Transaction History) của cùng các năm; phần trùng được tự bỏ qua.</div>` : ''}
+
     ${r.missing.length ? `<div class="alert">Không có giá lịch sử cho: <b>${esc(r.missing.join(', '))}</b> (được tính 0).</div>` : ''}
 
     <div class="grid2">
       <div class="card"><h3>Lãi/lỗ cộng dồn</h3><div class="chart"><canvas id="fu-line"></canvas></div></div>
       <div class="card"><h3>Theo tháng</h3><div class="chart"><canvas id="fu-month"></canvas></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Theo năm</h3><small class="muted">Đối chiếu với báo cáo PnL của Binance</small></div>
+      <div class="table-wrap"><table class="tbl">
+        <thead><tr><th>Năm</th><th class="r">Đóng lệnh</th><th class="r">Phí</th><th class="r">Funding</th><th class="r">Thanh lý</th><th class="r">Tổng</th></tr></thead>
+        <tbody>${r.yearly.map((y) => `<tr><td><b>${y.year}</b></td>
+          <td class="r ${pnlClass(y.REALIZED_PNL)}">${fmtMoney(y.REALIZED_PNL, { sign: true })}</td>
+          <td class="r ${pnlClass(y.COMMISSION + y.REBATE)}">${fmtMoney(y.COMMISSION + y.REBATE, { sign: true })}</td>
+          <td class="r ${pnlClass(y.FUNDING_FEE)}">${fmtMoney(y.FUNDING_FEE, { sign: true })}</td>
+          <td class="r ${pnlClass(y.LIQUIDATION)}">${fmtMoney(y.LIQUIDATION, { sign: true })}</td>
+          <td class="r ${pnlClass(y.net)}"><b>${fmtMoney(y.net, { sign: true })}</b></td></tr>`).join('')}</tbody>
+      </table></div>
     </div>
 
     ${pos.length ? positionsCard(pos) : ''}

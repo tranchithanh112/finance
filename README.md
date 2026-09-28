@@ -96,6 +96,18 @@ Hạn chế: Binance API không trả lịch sử lệnh của cặp đã bị x
 - **Số dư ngân hàng tự cộng/trừ**: mỗi khoản thu/chi (kể cả lương định kỳ) gắn với một tài khoản ở mục Tiền mặt. Số dư = số chốt lần gần nhất + thu − chi phát sinh sau mốc chốt. Bấm **Sửa số dư** để nhập số thật từ ngân hàng → thành mốc mới, không bị trừ trùng.
 - Dữ liệu thu chi đồng bộ theo từng giao dịch: nhập trên điện thoại và máy tính cùng lúc không bị mất, giao dịch đã xóa không quay lại.
 
+## Chứng khoán TCBS (chỉ đọc)
+
+1. Vercel → Settings → Environment Variables: thêm `TCBS_API_KEY` = API key lấy từ TCBS, rồi Redeploy.
+2. Tab **Chứng khoán** → ô TCBS: nhập số tài khoản lưu ký (105C…) + mã OTP (iOTP) → **Kết nối**.
+3. App đọc tất cả tiểu khoản thường/margin: cổ phiếu, ETF, giá vốn, giá hiện tại và tiền trong tài khoản.
+   Số liệu được lưu và đồng bộ lên cloud; giá trị tính vào mảng Chứng khoán ở Tổng quan.
+
+- Mỗi phiên TCBS tối đa 8 giờ, TCBS chỉ cho lấy phiên 10 lần/ngày → hết hạn thì nhập OTP mới. Trong phiên,
+  nút ↻ ở thanh trên cùng tự cập nhật luôn danh mục TCBS.
+- API key nằm trên Vercel; phiên (JWT) được mã hóa bằng APP_PASSWORD + key trước khi gửi về trình duyệt,
+  và proxy `/api/tcbs` chỉ cho gọi các API đọc (hồ sơ, danh mục, tiền, sổ lệnh) — không đặt lệnh được.
+
 ## Chạy local
 
 ```bash

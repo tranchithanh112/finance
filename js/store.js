@@ -18,6 +18,7 @@ export function defaultState() {
       extraAssets: ['BTC', 'ETH', 'BNSOL', 'USDC', 'SUI', 'LINK', 'TAO', 'OP', 'U', 'USD1', 'HYPE', 'BNB'],
       includeConvert: true,
       fxManual: null,
+      tcbsCustody: '', // số tài khoản lưu ký TCBS (105C…)
     },
     crypto: { holdings: [], updatedAt: 0 },
     history: {
@@ -36,6 +37,7 @@ export function defaultState() {
       funds: [], // { ticker, name, currency, source: 'yahoo'|'manual', manualPrice, lastPrice, prevClose, lastPriceAt }
       txs: [], // { id, ticker, date, units (âm = bán), price, fee }
     },
+    broker: { tcbs: null, updatedAt: 0 }, // danh mục + tiền đọc từ TCBS (chỉ đọc)
     fx: { USDVND: 25500, updatedAt: 0 },
     cash: [], // { id, name, amount, currency }
     budget: defaultBudget(), // thu chi cá nhân (VND)

@@ -157,6 +157,15 @@ const EXACT = {
   'Giao diện: theo hệ thống': 'Mode: follow system', 'Giao diện: sáng': 'Mode: light', 'Giao diện: tối': 'Mode: dark',
   'File JSON không đúng định dạng': 'Invalid JSON file', 'Chưa kết nối Dropbox / Google Drive': 'Dropbox / Google Drive not connected',
   'Chưa có Dropbox App Key': 'Missing Dropbox App Key', 'Chưa có Google Client ID': 'Missing Google Client ID',
+
+  // ---- TCBS
+  'Chưa kết nối': 'Not connected', 'Số TK lưu ký (105C…)': 'Custody account no. (105C…)', 'Mã OTP (iOTP)': 'OTP code (iOTP)',
+  'Kết nối': 'Connect', '↻ Cập nhật': '↻ Update', 'Ngắt kết nối': 'Disconnect', 'Đang tải…': 'Loading…',
+  'Đã kết nối TCBS': 'TCBS connected', 'Đã cập nhật danh mục TCBS': 'TCBS portfolio updated',
+  'Chưa có TCBS_API_KEY trong Environment Variables của Vercel — thêm vào rồi Redeploy.': 'TCBS_API_KEY is missing from Vercel Environment Variables — add it and redeploy.',
+  'Tài khoản chưa có cổ phiếu — mua xong bấm Cập nhật là số liệu tự hiện.': 'No stocks in the account yet — after buying, tap Update and they will appear.',
+  'Nhập số tài khoản lưu ký TCBS trước': 'Enter your TCBS custody account number first',
+  'Phiên TCBS đã hết hạn, hãy nhập OTP mới': 'TCBS session expired, enter a new OTP',
 };
 
 // Danh mục & hũ mặc định (xuất hiện chen trong chuỗi, vd "🍜 Ăn uống", "Hũ Thiết yếu")
@@ -174,6 +183,9 @@ const TERMS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const RULES = [
+  // TCBS (đặt trước các quy tắc chung vì chuỗi bắt đầu bằng "Cập nhật")
+  [/^Gồm (.+) tiền trong TK CK · Giá cập nhật (.+)$/, 'Incl. $1 cash in brokerage · Prices updated $2'],
+  [/^Cập nhật (.+) · (\d+) tiểu khoản · (\d+) mã · tiền (.+)$/, 'Updated $1 · $2 sub-accounts · $3 symbols · cash $4'],
   // thời gian tương đối & đơn vị
   [/(\d+) phút trước/g, '$1 min ago'], [/(\d+) giờ trước/g, '$1 h ago'], [/(\d+) ngày trước/g, '$1 d ago'],
   [/vừa xong/g, 'just now'], [/chưa bao giờ/g, 'never'],
@@ -246,6 +258,10 @@ const RULES = [
   [/^Đã nhập (\d+) bản ghi futures mới \((\d+) trùng \/ đã có\)$/, 'Imported $1 new futures records ($2 duplicates)'],
   // chứng khoán
   [/^Sửa mã (.+)$/, 'Edit $1'],
+  [/^Đã kết nối đến (.+)$/, 'Connected until $1'],
+  [/^Chỉ đọc danh mục và tiền, [\s\S]*$/, 'Read-only: holdings and cash, never places orders. A TCBS session lasts up to 8 hours; when it expires, enter a new OTP (TCBS allows 10 sessions a day). Loaded data is kept and synced to the cloud.'],
+  [/^TCBS API key: (.+)$/, (m, v) => 'TCBS API key: ' + ({ 'đã cấu hình': 'configured', 'chưa cấu hình (không bắt buộc)': 'not configured (optional)' }[v] || v)],
+  [/^TCBS: (.+)$/, (m, v) => 'TCBS: ' + tr(v)],
   [/^Mã Yahoo: [\s\S]*$/, 'Yahoo symbols: US stocks/ETFs as-is (VOO, VTI, QQQ); for Vietnam exchanges add'],
   [/^Xóa (.+) và toàn bộ giao dịch của mã này\?$/, 'Delete $1 and all its transactions?'],
   [/^Không lấy được giá: (.+)$/, 'Could not fetch prices: $1'], [/^Lỗi lấy giá: (.+)$/, 'Price error: $1'],

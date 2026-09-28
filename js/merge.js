@@ -74,6 +74,7 @@ export function mergeStates(local, remote) {
     updatedAt: Math.max(local.updatedAt || 0, remote.updatedAt || 0),
     crypto: newer('crypto'),
     fx: newer('fx'),
+    broker: newer('broker'),
     history: mergeHistory(local.history, remote.history),
     futures: mergeFutures(local.futures, remote.futures),
     budget: mergeBudget(local.budget, remote.budget),

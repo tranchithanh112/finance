@@ -1,6 +1,8 @@
 import { state, commit } from '../store.js';
-import { stockPositions, fxRate } from '../calc.js';
+import { stockPositions, fxRate, brokerCashUSD } from '../calc.js';
+import { tcbsSession, tcbsLogout, tcbsCash } from '../tcbs.js';
 import { donut } from '../charts.js';
+import { locale as getLocale } from '../i18n.js';
 import { esc, fmtMoney, fmtNative, fmtQty, fmtPct, fmtDate, pnlClass, uid, timeAgo, todayKey, toast } from '../util.js';
 
 let editing = null; // ticker đang sửa
@@ -8,6 +10,7 @@ let editing = null; // ticker đang sửa
 export function renderStocks(root, ctx) {
   const pos = stockPositions();
   const value = pos.reduce((a, p) => a + p.valueUSD, 0);
+  const bCash = brokerCashUSD();
   const cost = pos.reduce((a, p) => a + p.costUSD, 0);
   const unreal = pos.reduce((a, p) => a + p.unrealizedUSD, 0);
   const real = pos.reduce((a, p) => a + p.realizedUSD, 0);
@@ -18,12 +21,14 @@ export function renderStocks(root, ctx) {
 
   root.innerHTML = `
     <div class="kpis">
-      <div class="kpi hero"><span>Giá trị chứng khoán / quỹ</span><b>${fmtMoney(value)}</b><small>Giá cập nhật ${timeAgo(lastQuote)}</small></div>
+      <div class="kpi hero"><span>Giá trị chứng khoán / quỹ</span><b>${fmtMoney(value + bCash)}</b><small>${bCash ? `Gồm ${fmtMoney(bCash)} tiền trong TK CK · ` : ''}Giá cập nhật ${timeAgo(Math.max(lastQuote, state.broker?.updatedAt || 0))}</small></div>
       <div class="kpi"><span>Vốn đang nắm</span><b>${fmtMoney(cost)}</b></div>
       <div class="kpi"><span>Lãi/lỗ chưa chốt</span><b class="${pnlClass(unreal)}">${fmtMoney(unreal, { sign: true })}</b><small>${cost ? fmtPct(unreal / cost) : ''}</small></div>
       <div class="kpi"><span>Đã chốt</span><b class="${pnlClass(real)}">${fmtMoney(real, { sign: true })}</b></div>
       <div class="kpi"><span>Hôm nay</span><b class="${pnlClass(day)}">${fmtMoney(day, { sign: true })}</b><small>USD/VND ${Math.round(fxRate()).toLocaleString('vi-VN')}</small></div>
     </div>
+
+    ${tcbsCard(ctx)}
 
     <div class="grid2 wide-right">
       <div class="card"><h3>Phân bổ</h3>${pos.some((p) => p.valueUSD > 0) ? '<div class="chart"><canvas id="st-donut"></canvas></div>' : '<p class="empty">Chưa có vị thế.</p>'}</div>
@@ -54,7 +59,7 @@ export function renderStocks(root, ctx) {
           <th class="r">Giá trị</th><th class="r">Tỷ trọng</th><th class="r">Lãi/lỗ</th><th class="r">%</th><th></th></tr></thead>
         <tbody>${pos.map((p) => `
           <tr>
-            <td><b>${esc(p.ticker)}</b><div class="sub">${esc(p.name || '')}</div></td>
+            <td><b>${esc(p.ticker)}</b>${p.broker ? ' <span class="tag ok">TCBS</span>' : ''}<div class="sub">${esc(p.name || '')}</div></td>
             <td class="r">${fmtQty(p.units)}</td>
             <td class="r">${fmtNative(p.avg, p.currency)}</td>
             <td class="r">${fmtNative(p.price, p.currency)}${p.source === 'manual' ? '<div class="sub">nhập tay</div>' : ''}</td>
@@ -62,8 +67,8 @@ export function renderStocks(root, ctx) {
             <td class="r">${value ? fmtPct(p.valueUSD / value, { sign: false }) : ''}</td>
             <td class="r ${pnlClass(p.totalUSD)}">${fmtMoney(p.totalUSD, { sign: true })}</td>
             <td class="r ${pnlClass(p.unrealized)}">${p.cost ? fmtPct(p.unrealized / p.cost) : '—'}</td>
-            <td class="r nowrap"><button class="link" data-edit="${esc(p.ticker)}">Sửa</button>
-              <button class="link danger" data-del="${esc(p.ticker)}">Xóa</button></td>
+            <td class="r nowrap">${p.broker ? '' : `<button class="link" data-edit="${esc(p.ticker)}">Sửa</button>
+              <button class="link danger" data-del="${esc(p.ticker)}">Xóa</button>`}</td>
           </tr>`).join('') || '<tr><td colspan="9" class="empty">Chưa có mã nào — thêm ở form phía trên.</td></tr>'}
         </tbody>
       </table></div>
@@ -97,7 +102,8 @@ export function renderStocks(root, ctx) {
 
   if (pos.some((p) => p.valueUSD > 0)) donut(root.querySelector('#st-donut'), pos.map((p) => ({ label: p.ticker, value: p.valueUSD })));
 
-  root.querySelector('#st-quotes').onclick = () => ctx.refreshQuotes(true);
+  root.querySelector('#st-quotes').onclick = () => { ctx.refreshQuotes(true); ctx.syncTcbs({ quiet: true }); };
+  bindTcbs(root, ctx);
   root.querySelector('#fund-cancel')?.addEventListener('click', () => { editing = null; ctx.rerender(); });
 
   root.querySelector('#fund-form').onsubmit = (e) => {
@@ -144,5 +150,52 @@ export function renderStocks(root, ctx) {
       commit({ edit: true });
       ctx.rerender();
     };
+  });
+}
+
+function tcbsCard(ctx) {
+  const cfg = ctx.serverConfig();
+  const t = state.broker?.tcbs;
+  const sess = tcbsSession();
+  const busy = ctx.tcbsBusy();
+  const custody = state.settings.tcbsCustody || '';
+  const holdings = (t?.accounts || []).reduce((a, x) => a + x.holdings.length, 0);
+  const until = sess ? new Date(sess.exp).toLocaleTimeString(getLocale(), { hour: '2-digit', minute: '2-digit' }) : '';
+  return `
+    <div class="card" id="tcbs-card">
+      <div class="card-head"><h3>TCBS</h3>
+        ${sess ? `<span class="tag ok">Đã kết nối đến ${until}</span>` : '<span class="tag">Chưa kết nối</span>'}</div>
+      ${cfg.tcbsConfigured === false ? '<p class="muted small">Chưa có TCBS_API_KEY trong Environment Variables của Vercel — thêm vào rồi Redeploy.</p>' : ''}
+      <form id="tcbs-form" class="inline-form">
+        <input name="custody" placeholder="Số TK lưu ký (105C…)" value="${esc(custody)}" autocomplete="off" required>
+        ${sess ? `<button class="btn primary" ${busy ? 'disabled' : ''}>${busy ? 'Đang tải…' : '↻ Cập nhật'}</button>
+          <button type="button" class="btn" id="tcbs-logout">Ngắt kết nối</button>`
+          : `<input name="otp" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="Mã OTP (iOTP)" autocomplete="one-time-code" required>
+          <button class="btn primary" ${busy ? 'disabled' : ''}>Kết nối</button>`}
+      </form>
+      ${t ? `<p class="muted small">Cập nhật ${timeAgo(t.syncedAt)} · ${t.accounts.length} tiểu khoản · ${holdings} mã · tiền ${fmtNative(tcbsCash(t), 'VND')}</p>
+        ${holdings ? '' : '<p class="muted small">Tài khoản chưa có cổ phiếu — mua xong bấm Cập nhật là số liệu tự hiện.</p>'}` : ''}
+      <p class="muted small">Chỉ đọc danh mục và tiền, không đặt lệnh. Mỗi phiên TCBS kéo dài tối đa 8 giờ; hết hạn thì nhập OTP mới
+        (TCBS giới hạn 10 lần lấy phiên/ngày). Số liệu đã tải vẫn được giữ và đồng bộ lên cloud.</p>
+    </div>`;
+}
+
+function bindTcbs(root, ctx) {
+  const form = root.querySelector('#tcbs-form');
+  if (!form) return;
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(form));
+    const code = f.custody.trim().toUpperCase();
+    if (code !== state.settings.tcbsCustody) {
+      state.settings.tcbsCustody = code;
+      commit({ edit: true });
+    }
+    if (f.otp !== undefined) ctx.tcbsLogin(f.otp);
+    else ctx.syncTcbs();
+  };
+  root.querySelector('#tcbs-logout')?.addEventListener('click', () => {
+    tcbsLogout();
+    ctx.rerender();
   });
 }

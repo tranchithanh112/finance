@@ -18,5 +18,6 @@ export default function handler(req, res) {
     passwordConfigured: Boolean(expected),
     authOk,
     binanceConfigured: authOk ? Boolean(process.env.BINANCE_API_KEY && process.env.BINANCE_API_SECRET) : undefined,
+    tcbsConfigured: authOk ? Boolean(process.env.TCBS_API_KEY) : undefined,
   });
 }

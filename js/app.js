@@ -18,6 +18,7 @@ import { renderSettings } from './views/settings.js';
 import { renderFutures } from './views/futures.js';
 import { renderBudget } from './views/budget.js';
 import { generateRecurring, setAnchor } from './budget.js';
+import { fetchTcbs, tcbsLogin, tcbsSession } from './tcbs.js';
 
 const VIEWS = {
   overview: renderOverview,
@@ -37,6 +38,7 @@ let futCache = null;
 let futBusy = '';
 let syncing = { running: false, pct: 0, msg: '' };
 let abort = null;
+let tcbsBusy = false;
 
 // ================= Actions =================
 
@@ -140,6 +142,35 @@ const ctx = {
     } catch (e) {
       toast(`Binance: ${e.message}`, 'error', 8000);
     }
+    render();
+  },
+
+  tcbsBusy: () => tcbsBusy,
+
+  async tcbsLogin(otp) {
+    try {
+      await tcbsLogin(otp);
+      toast('Đã kết nối TCBS', 'ok');
+    } catch (e) {
+      toast(`TCBS: ${e.message}`, 'error', 8000);
+      return render();
+    }
+    return ctx.syncTcbs();
+  },
+
+  async syncTcbs({ quiet = false } = {}) {
+    if (tcbsBusy || !tcbsSession() || !state.settings.tcbsCustody) return;
+    tcbsBusy = true;
+    render();
+    try {
+      state.broker = { tcbs: await fetchTcbs(state.settings.tcbsCustody), updatedAt: Date.now() };
+      snapshot();
+      commit();
+      if (!quiet) toast('Đã cập nhật danh mục TCBS', 'ok');
+    } catch (e) {
+      if (!quiet || !e.expired) toast(`TCBS: ${e.message}`, 'error', 8000);
+    }
+    tcbsBusy = false;
     render();
   },
 
@@ -438,7 +469,7 @@ async function init() {
     const btn = $('#btn-refresh');
     btn.disabled = true;
     btn.classList.add('spin');
-    await Promise.all([ctx.refreshCrypto(), ctx.refreshQuotes()]);
+    await Promise.all([ctx.refreshCrypto(), ctx.refreshQuotes(), ctx.syncTcbs({ quiet: true })]);
     btn.disabled = false;
     btn.classList.remove('spin');
   };
@@ -476,6 +507,7 @@ async function init() {
     const stale = Date.now() - (state.crypto.updatedAt || 0) > 5 * 60000;
     if (stale) ctx.refreshCrypto({ quiet: true });
     if (state.stocks.funds.length) ctx.refreshQuotes(false);
+    if (Date.now() - (state.broker?.updatedAt || 0) > 5 * 60000) ctx.syncTcbs({ quiet: true });
   }
 }
 

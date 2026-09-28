@@ -2,8 +2,8 @@ import { state, local, loadState, commit, onCommit, takeSnapshot } from './store
 import { fetchHoldings, syncHistory, getPriceHistory, bn, ensurePriceHistory, fetchTickerPrices, ensureAllPriceHistory } from './binance.js';
 import { computeFutures, syncFuturesIncome, csvToIncome, mergeIncome, emptyFutures, detectOffsetHours, shiftRecords, fileNameOffsetHours } from './futures.js';
 import { makePriceLookup } from './pnl.js';
-import { computePnl } from './pnl.js';
-import { cryptoSeries, stockSeries } from './series.js';
+import { computePnl, buildEvents } from './pnl.js';
+import { cryptoSeries, stockSeries, reconcileWithWallet } from './series.js';
 import { totals, fxRate, toUSD, fundPrice } from './calc.js';
 import * as sync from './sync.js';
 import { $, $$, toast, setDisplayCurrency, isStable, esc, isPrivate, setPrivate } from './util.js';
@@ -58,6 +58,31 @@ const ctx = {
     return pnlCache;
   },
   invalidatePnl() { pnlCache = null; futCache = null; },
+
+  /** Bỏ phần coin mà lịch sử có nhưng ví không có (coi như đã rời ví, không lãi/lỗ). */
+  dropGap(asset) {
+    const h = state.crypto.holdings.find((x) => x.asset === asset);
+    const held = h ? h.total - (h.futures || 0) : 0;
+    const { events } = buildEvents(state.history, makePriceLookup(priceHist));
+    const fix = reconcileWithWallet(events.filter((e) => e.asset === asset), new Map([[asset, held]]))
+      .find((e) => e.ref?.reconcile && e.qty < 0);
+    if (!fix) return toast('Không còn phần dư để bỏ', 'info');
+    const qty = -fix.qty;
+    if (!confirm(`Bỏ ${qty.toPrecision(6)} ${asset} khỏi lịch sử (coi như đã rời ví từ ${new Date(fix.t).toISOString().slice(0, 10)}, không tính lãi/lỗ)?`)) return;
+    (state.history.adjust ||= []).push([`adj:${asset}:${Date.now()}`, fix.t, asset, qty]);
+    pnlCache = null;
+    commit({ edit: true });
+    render();
+  },
+
+  undoAdjust(id) {
+    const r = (state.history.adjust || []).find((x) => x[0] === id);
+    if (!r) return;
+    r[4] = 'x';
+    pnlCache = null;
+    commit({ edit: true });
+    render();
+  },
   /** Giá trị coin & vốn theo ngày, dựng lại từ lịch sử (cache cùng PnL). */
   cryptoSeries() {
     const p = ctx.pnl();

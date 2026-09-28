@@ -161,7 +161,7 @@ const EXACT = {
   'Chưa có Dropbox App Key': 'Missing Dropbox App Key', 'Chưa có Google Client ID': 'Missing Google Client ID',
 
   // ---- đối chiếu lịch sử với ví
-  'Đối chiếu lịch sử với ví': 'History vs wallet', 'Đổi dust': 'Dust', 'Unstake': 'Unstake', 'Stake': 'Stake', 'Theo lịch sử': 'Per history', 'Trong ví': 'In wallet',
+  'Đối chiếu lịch sử với ví': 'History vs wallet', 'Bỏ phần dư': 'Drop excess', 'Đã bỏ:': 'Dropped:', 'Không còn phần dư để bỏ': 'Nothing left to drop', 'Đổi dust': 'Dust', 'Unstake': 'Unstake', 'Stake': 'Stake', 'Theo lịch sử': 'Per history', 'Trong ví': 'In wallet',
   'Chênh lệch': 'Difference', '≈ Giá trị': '≈ Value', 'Lịch sử nhiều hơn ví': 'History above wallet', 'Ví nhiều hơn lịch sử': 'Wallet above history',
 
   // ---- futures theo năm
@@ -207,6 +207,8 @@ const TERMS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const RULES = [
+  [/^Bỏ (\S+) (\S+) khỏi lịch sử \(coi như đã rời ví từ (\S+), không tính lãi\/lỗ\)\?$/, 'Drop $1 $2 from history (treated as having left the wallet since $3, no P&L)?'],
+  [/^([\d.,]+ \S+) \(từ (.+)\)$/, '$1 (since $2)'],
   [/^trong (1T|3T|6T|1N)$/, (m, r) => `in ${{ '1T': '1M', '3T': '3M', '6T': '6M', '1N': '1Y' }[r]}`],
   [/^Lũy kế tới nay:$/, 'Cumulative to date:'],
   [/^Lịch sử nhiều hơn ví (.+?)( · ví nhiều hơn lịch sử (.+))?$/, (m, a, _x, b) => `History above wallet ${a}${b ? ` · wallet above history ${b}` : ''}`],

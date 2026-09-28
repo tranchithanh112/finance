@@ -64,6 +64,8 @@ export function buildEvents(history, usdAt) {
     if (isStable(asset)) continue;
     add(asset, t, amt, amt * (price(asset, t) ?? 0), 'deposit', { id });
   }
+  // Người dùng tự bỏ phần coin dư (lịch sử có nhưng ví không có): coi như đã rời ví, không lãi/lỗ
+  for (const [id, t, asset, amt, del] of history.adjust || []) if (del !== 'x') add(asset, t, -amt, null, 'withdraw', { id, adjust: true });
   for (const [id, t, asset, amt, fee] of history.withdrawals) {
     if (isStable(asset)) continue;
     add(asset, t, -amt, null, 'withdraw', { id });

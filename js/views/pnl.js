@@ -141,7 +141,8 @@ const KIND_LABEL = {
 /** Coin mà số lượng theo lịch sử khác số lượng thật trong ví (lệch ≥ $5). */
 function reconcileCard(pnl) {
   const gaps = pnl.rows.filter((r) => Math.abs(r.gapValue) >= 5).sort((a, b) => Math.abs(b.gapValue) - Math.abs(a.gapValue));
-  if (!gaps.length) return '';
+  const adj = (state.history.adjust || []).filter((r) => r[4] !== 'x');
+  if (!gaps.length && !adj.length) return '';
   const more = gaps.filter((r) => r.gapQty > 0).reduce((a, r) => a + r.gapValue, 0);
   const less = gaps.filter((r) => r.gapQty < 0).reduce((a, r) => a + r.gapValue, 0);
   return `
@@ -149,14 +150,17 @@ function reconcileCard(pnl) {
       <div class="card-head"><h3>Đối chiếu lịch sử với ví</h3>
         <small class="muted">${more ? `Lịch sử nhiều hơn ví ${fmtMoney(more)}` : ''}${more && less ? ' · ' : ''}${less ? `ví nhiều hơn lịch sử ${fmtMoney(-less)}` : ''}</small></div>
       <div class="table-wrap"><table class="tbl">
-        <thead><tr><th>Coin</th><th class="r">Theo lịch sử</th><th class="r">Trong ví</th><th class="r">Chênh lệch</th><th class="r">≈ Giá trị</th></tr></thead>
+        <thead><tr><th>Coin</th><th class="r">Theo lịch sử</th><th class="r">Trong ví</th><th class="r">Chênh lệch</th><th class="r">≈ Giá trị</th><th></th></tr></thead>
         <tbody>${gaps.map((r) => `<tr><td><b>${esc(r.asset)}</b>${r.futuresQty ? `<div class="sub">+ ${fmtQty(r.futuresQty)} trong ví futures</div>` : ''}
           <div class="sub">${Object.entries(r.kinds || {}).filter(([, q]) => Math.abs(q) > 1e-9).sort((a, b) => b[1] - a[1])
             .map(([k, q]) => `${tr(KIND_LABEL[k] || k)} ${q > 0 ? '+' : '−'}${fmtQty(Math.abs(q))}`).join(' · ')}</div></td>
           <td class="r">${fmtQty(r.ledgerQty)}</td><td class="r">${fmtQty(r.heldQty)}</td>
           <td class="r ${r.gapQty > 0 ? 'neg' : 'pos'}">${r.gapQty > 0 ? '+' : '−'}${fmtQty(Math.abs(r.gapQty))}</td>
-          <td class="r">${fmtMoney(Math.abs(r.gapValue))}</td></tr>`).join('')}</tbody>
+          <td class="r">${fmtMoney(Math.abs(r.gapValue))}</td>
+          <td class="r nowrap">${r.gapQty > 0 ? `<button class="link" data-drop="${esc(r.asset)}">Bỏ phần dư</button>` : ''}</td></tr>`).join('')}</tbody>
       </table></div>
+      ${adj.length ? `<p class="small"><b>Đã bỏ:</b> ${adj.map((r) => `${fmtQty(r[3])} ${esc(r[2])} (từ ${fmtDate(r[1])})
+        <button class="link danger" data-undo-adj="${esc(r[0])}">Hủy</button>`).join(' · ')}</p>` : ''}
       <p class="muted small"><b>Lịch sử nhiều hơn ví</b>: coin đã rời ví qua kênh app không đọc được (rút khỏi Auto-Invest, Binance Pay, chuyển sang ví Futures COIN-M / Margin, bán P2P, quà tặng…) —
         biểu đồ "Giá trị vs vốn" vẫn tính số coin này nên cao hơn thực tế. <b>Ví nhiều hơn lịch sử</b>: lãi Earn, airdrop, nhận Pay… (giá vốn 0, bình thường).</p>
     </div>`;
@@ -196,6 +200,8 @@ function bind(root, ctx) {
   on('#pnl-sync', () => ctx.syncHistory(false));
   on('#pnl-full', () => ctx.syncHistory(true));
   on('#pnl-cancel', () => ctx.cancelSync());
+  root.querySelectorAll('[data-drop]').forEach((b) => { b.onclick = () => ctx.dropGap(b.dataset.drop); });
+  root.querySelectorAll('[data-undo-adj]').forEach((b) => { b.onclick = () => ctx.undoAdjust(b.dataset.undoAdj); });
   root.querySelectorAll('[data-filter]').forEach((b) => { b.onclick = () => { ui.filter = b.dataset.filter; ctx.rerender(); }; });
   root.querySelectorAll('[data-sort]').forEach((b) => { b.onclick = () => { ui.sort = b.dataset.sort; ctx.rerender(); }; });
   root.querySelectorAll('tr[data-asset]').forEach((tr) => {

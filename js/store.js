@@ -27,6 +27,7 @@ export function defaultState() {
       checked: {}, // SYMBOL -> lần quét cuối
       deposits: [], // [id, time, asset, amount]
       withdrawals: [], // [id, time, asset, amount, fee]
+      adjust: [], // [id, time, asset, amount] — người dùng bỏ phần coin dư so với ví
       dust: [], // [transId, time, fromAsset, amount, bnbAmount]
       converts: [], // [orderId, time, fromAsset, fromAmount, toAsset, toAmount]
       cursors: {},

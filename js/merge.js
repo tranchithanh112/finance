@@ -19,6 +19,12 @@ function mergeCursors(a = {}, b = {}) {
   return out;
 }
 
+function mergeAdjust(a = [], b = []) {
+  const m = new Map();
+  for (const r of [...b, ...a]) { const ex = m.get(r[0]); if (!ex || r[4] === 'x') m.set(r[0], r); }
+  return [...m.values()];
+}
+
 function mergeHistory(a = {}, b = {}) {
   const trades = {};
   for (const sym of new Set([...Object.keys(a.trades || {}), ...Object.keys(b.trades || {})])) {
@@ -39,6 +45,8 @@ function mergeHistory(a = {}, b = {}) {
     checked,
     deposits: byTime(byKey([a.deposits, b.deposits], (r) => String(r[0]))),
     withdrawals: byTime(byKey([a.withdrawals, b.withdrawals], (r) => String(r[0]))),
+    // điều chỉnh: bản đã xóa có cờ r[4] = 'x' → bên nào cũng giữ bản xóa
+    adjust: mergeAdjust(a.adjust, b.adjust),
     dust: byTime(byKey([a.dust, b.dust], (r) => `${r[0]}:${r[2]}`)),
     converts: byTime(byKey([a.converts, b.converts], (r) => String(r[0]))),
     cursors: mergeCursors(a.cursors, b.cursors),

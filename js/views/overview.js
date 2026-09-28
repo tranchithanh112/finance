@@ -1,10 +1,10 @@
 import { state, commit } from '../store.js';
-import { totals, stockPositions, cryptoHoldings, toUSD, fxRate } from '../calc.js';
+import { totals, stockPositions, cryptoHoldings, toUSD, fxRate, cashBalance } from '../calc.js';
 import { donut, line, bars, PALETTE } from '../charts.js';
 import {
-  monthSummary, recentAverage, healthScore, debtMonthlyVnd, parseAmount, monthKey, localToday, shiftMonth, SPEND_JARS,
+  monthSummary, recentAverage, healthScore, debtMonthlyVnd, parseAmount, setAnchor, monthKey, localToday, shiftMonth, SPEND_JARS,
 } from '../budget.js';
-import { esc, fmtMoney, fmtPct, pnlClass, uid, fmtNative, timeAgo, toast } from '../util.js';
+import { esc, fmtMoney, fmtPct, pnlClass, uid, fmtNative, timeAgo, toast, fmtDate } from '../util.js';
 
 const vnd = (v, o) => fmtMoney(toUSD(v, 'VND'), o);
 
@@ -90,19 +90,24 @@ export function renderOverview(root, ctx) {
 
     <div class="grid2">
       <div class="card">
-        <div class="card-head"><h3>Tiền mặt & tài sản khác</h3><small class="muted">Tính vào quỹ dự phòng</small></div>
+        <div class="card-head"><h3>Tiền mặt & tài sản khác</h3><small class="muted">Tự cộng/trừ theo thu chi · tính vào quỹ dự phòng</small></div>
         <table class="tbl">
           <tbody>
-            ${state.cash.map((c) => `
-              <tr><td>${esc(c.name)}</td><td class="r">${fmtNative(Number(c.amount), c.currency)}</td>
+            ${state.cash.map((c) => {
+              const B = cashBalance(c);
+              return `
+              <tr><td>${esc(c.name)}<div class="sub">${c.anchorAt ? `Chốt ${fmtNative(Number(c.amount), c.currency)} lúc ${fmtDate(c.anchorAt, true)}` : ''}
+                ${B.count ? ` · ${B.delta >= 0 ? '+' : '−'}${fmtNative(Math.abs(B.delta), c.currency)} từ ${B.count} khoản thu chi` : ''}</div></td>
+              <td class="r"><b>${fmtNative(B.balance, c.currency)}</b></td>
               <td class="r nowrap"><button class="link" data-edit-cash="${c.id}">Sửa số dư</button>
-                <button class="link danger" data-del-cash="${c.id}">Xóa</button></td></tr>`).join('') ||
+                <button class="link danger" data-del-cash="${c.id}">Xóa</button></td></tr>`;
+            }).join('') ||
               '<tr><td colspan="3" class="empty">Chưa có — tiền gửi ngân hàng, tiền mặt, vàng…</td></tr>'}
           </tbody>
         </table>
         <form class="inline-form" id="cash-form">
           <input name="name" placeholder="Tên (vd: Tiết kiệm VCB)" required>
-          <input name="amount" type="number" step="any" placeholder="Số tiền" required>
+          <input name="amount" inputmode="decimal" placeholder="Số dư (vd 52tr)" required>
           <select name="currency"><option>VND</option><option>USD</option></select>
           <button class="btn">Thêm</button>
         </form>
@@ -141,7 +146,7 @@ export function renderOverview(root, ctx) {
   donut(root.querySelector('#ov-top'), [
     ...cryptoHoldings().map((h) => ({ label: h.asset, value: h.value })),
     ...stocks.map((p) => ({ label: p.ticker, value: p.valueUSD })),
-    ...state.cash.map((c) => ({ label: c.name, value: toUSD(Number(c.amount), c.currency) })),
+    ...state.cash.map((c) => ({ label: c.name, value: toUSD(cashBalance(c).balance, c.currency) })),
   ]);
   if (hasBudget) {
     bars(root.querySelector('#ov-flow'), months.map((m) => m.slice(5) + '/' + m.slice(2, 4)), [
@@ -163,18 +168,23 @@ export function renderOverview(root, ctx) {
   root.querySelector('#cash-form').onsubmit = (e) => {
     e.preventDefault();
     const f = new FormData(e.target);
-    state.cash.push({ id: uid(), name: f.get('name'), amount: Number(f.get('amount')), currency: f.get('currency') });
+    const c = { id: uid(), name: f.get('name'), currency: f.get('currency') };
+    const n = c.currency === 'VND' ? parseAmount(f.get('amount')) : Number(f.get('amount'));
+    if (!Number.isFinite(n)) return toast('Số tiền không hợp lệ', 'error');
+    setAnchor(c, n);
+    state.cash.push(c);
     commit({ edit: true });
     ctx.rerender();
   };
   root.querySelectorAll('[data-edit-cash]').forEach((btn) => {
     btn.onclick = () => {
       const c = state.cash.find((x) => x.id === btn.dataset.editCash);
-      const v = prompt(`Số dư mới của "${c.name}" (${c.currency}${c.currency === 'VND' ? ', vd 52tr hoặc 52.000.000' : ''})`, c.amount);
+      const cur = Math.round(cashBalance(c).balance * 100) / 100;
+      const v = prompt(`Số dư thực tế hiện tại của "${c.name}" (${c.currency}${c.currency === 'VND' ? ', vd 52tr hoặc 52.000.000' : ''})`, cur);
       if (v == null) return;
       const n = c.currency === 'VND' ? parseAmount(v) : Number(String(v).replace(',', '.'));
       if (!Number.isFinite(n)) return toast('Số không hợp lệ', 'error');
-      c.amount = n;
+      setAnchor(c, n);
       commit({ edit: true });
       ctx.rerender();
     };

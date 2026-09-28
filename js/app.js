@@ -13,7 +13,7 @@ import { renderStocks } from './views/stocks.js';
 import { renderSettings } from './views/settings.js';
 import { renderFutures } from './views/futures.js';
 import { renderBudget } from './views/budget.js';
-import { generateRecurring } from './budget.js';
+import { generateRecurring, setAnchor } from './budget.js';
 
 const VIEWS = {
   overview: renderOverview,
@@ -246,7 +246,11 @@ function refreshPriceHistory() {
 
 /** Thêm các khoản thu/chi định kỳ đến hạn (lương, hóa đơn…). */
 function runRecurring() {
-  if (state.budget && generateRecurring(state.budget)) commit();
+  let changed = false;
+  // Tài khoản tạo trước khi có tính năng tự cộng/trừ: lấy số dư hiện tại làm mốc chốt
+  for (const c of state.cash) if (!c.anchorAt) { setAnchor(c, Number(c.amount) || 0); changed = true; }
+  if (state.budget && generateRecurring(state.budget)) changed = true;
+  if (changed) commit();
 }
 
 function snapshot() {

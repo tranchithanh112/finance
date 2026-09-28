@@ -89,3 +89,23 @@ test('khoản định kỳ nhiều tháng: Netflix 3 tháng/lần', () => {
   generateRecurring(b, '2026-09-28');
   assert.deepEqual(b.txs.map((t) => t.date), ['2026-03-15', '2026-06-15', '2026-09-15']);
 });
+
+test('số dư tài khoản: tự cộng lương, trừ chi sau mốc chốt; chốt lại thì không trừ trùng', async () => {
+  const { accountBalance, setAnchor } = await import('../js/budget.js');
+  const vcb = { id: 'vcb', name: 'VCB', currency: 'VND' };
+  setAnchor(vcb, 50e6, 1000, '2026-09-01');
+  const txs = [
+    { id: 'old', date: '2026-08-05', type: 'income', amount: 20e6, acc: 'vcb', u: 2000 }, // trước mốc (vd lương cũ sinh bù)
+    { id: 'sal', date: '2026-09-05', type: 'income', amount: 20e6, acc: 'vcb', u: 3000 },
+    { id: 'bn', date: '2026-09-05', type: 'expense', amount: 8e6, acc: 'vcb', u: 3001 },
+    { id: 'pho', date: '2026-09-06', type: 'expense', amount: 50e3, acc: 'vcb', u: 4000 },
+    { id: 'cash', date: '2026-09-06', type: 'expense', amount: 30e3, acc: null, u: 4001 }, // không gắn tài khoản
+  ];
+  assert.equal(accountBalance(vcb, txs).balance, 50e6 + 20e6 - 8e6 - 50e3);
+  // cuối ngày 06 đối chiếu ngân hàng: 61.9tr
+  setAnchor(vcb, 61.9e6, 5000, '2026-09-06');
+  assert.equal(accountBalance(vcb, txs).balance, 61.9e6);
+  // nhập thêm khoản chi cùng ngày sau khi chốt → vẫn được trừ
+  txs.push({ id: 'late', date: '2026-09-06', type: 'expense', amount: 100e3, acc: 'vcb', u: 6000 });
+  assert.equal(accountBalance(vcb, txs).balance, 61.8e6);
+});

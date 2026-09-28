@@ -1,6 +1,6 @@
 import { state, local } from './store.js';
 import { isStable } from './util.js';
-import { debtTotalVnd } from './budget.js';
+import { debtTotalVnd, accountBalance } from './budget.js';
 
 export const fxRate = () => Number(state.settings.fxManual) || state.fx.USDVND || 25500;
 
@@ -70,8 +70,13 @@ export function stocksTotal() {
   return stockPositions().reduce((a, p) => a + p.valueUSD, 0);
 }
 
+/** Số dư hiện tại của 1 tài khoản tiền mặt (đã tự cộng/trừ thu chi sau lần chốt). */
+export function cashBalance(c) {
+  return accountBalance(c, state.budget?.txs, fxRate());
+}
+
 export function cashTotal() {
-  return state.cash.reduce((a, c) => a + toUSD(Number(c.amount) || 0, c.currency), 0);
+  return state.cash.reduce((a, c) => a + toUSD(cashBalance(c).balance, c.currency), 0);
 }
 
 export function totals() {

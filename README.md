@@ -87,6 +87,7 @@ Hạn chế: Binance API không trả lịch sử lệnh của cặp đã bị x
 - **Tỷ lệ tiết kiệm** = (thu − tiêu dùng) / thu, lấy trung bình 3 tháng đầy đủ gần nhất.
 - **Quỹ dự phòng** = (tiền mặt & tài sản khác + stablecoin) / chi tiêu dùng trung bình mỗi tháng.
 - **Điểm sức khỏe** (bỏ qua tiêu chí chưa có dữ liệu): tỷ lệ tiết kiệm (25, đạt tối đa khi ≥ 30%), quỹ dự phòng (25, đạt khi ≥ mục tiêu, mặc định 6 tháng), nợ/thu nhập (20, tối đa khi ≤ 10%), mức rủi ro — phần crypto không tính stablecoin trên tổng tài sản (15, tối đa khi ≤ 40%), giữ đúng hạn mức hũ tiêu dùng tháng này (15).
+- **Số dư ngân hàng tự cộng/trừ**: mỗi khoản thu/chi (kể cả lương định kỳ) gắn với một tài khoản ở mục Tiền mặt. Số dư = số chốt lần gần nhất + thu − chi phát sinh sau mốc chốt. Bấm **Sửa số dư** để nhập số thật từ ngân hàng → thành mốc mới, không bị trừ trùng.
 - Dữ liệu thu chi đồng bộ theo từng giao dịch: nhập trên điện thoại và máy tính cùng lúc không bị mất, giao dịch đã xóa không quay lại.
 
 ## Chạy local

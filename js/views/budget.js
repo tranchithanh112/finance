@@ -16,6 +16,23 @@ function defaultDate() {
 
 const EVERY = { 1: 'Hằng tháng', 2: '2 tháng/lần', 3: '3 tháng/lần', 6: '6 tháng/lần', 12: 'Hằng năm' };
 
+/** Tài khoản VND có thể gắn với thu chi; lựa chọn được nhớ trên máy này. */
+const accounts = () => state.cash.filter((c) => c.currency === 'VND');
+function currentAcc() {
+  const list = accounts();
+  let id;
+  try { id = localStorage.getItem('fin.acc'); } catch { /* ignore */ }
+  if (id === 'none') return 'none';
+  return list.some((c) => c.id === id) ? id : list[0]?.id || 'none';
+}
+function accSelect(name, sel) {
+  const list = accounts();
+  if (!list.length) return '';
+  return `<select name="${name}" title="Tự cộng/trừ vào tài khoản">
+    ${list.map((c) => `<option value="${esc(c.id)}" ${c.id === sel ? 'selected' : ''}>🏦 ${esc(c.name)}</option>`).join('')}
+    <option value="none" ${sel === 'none' ? 'selected' : ''}>Không trừ vào tài khoản</option></select>`;
+}
+
 const vnd = (v, opt) => fmtMoney(toUSD(v, 'VND'), opt);
 const monthLabel = (ym) => { const [y, m] = ym.split('-'); return `Tháng ${Number(m)}/${y}`; };
 
@@ -67,6 +84,7 @@ export function renderBudget(root, ctx) {
         <div class="row gap wrap">
           <input name="note" placeholder="Ghi chú (tuỳ chọn)" class="grow">
           <input name="date" type="date" value="${defaultDate()}" required>
+          ${accSelect('acc', currentAcc())}
           <button class="btn primary">Lưu</button>
         </div>
       </form>
@@ -115,7 +133,8 @@ export function renderBudget(root, ctx) {
             const c = cats[t.cat];
             return `<div class="tx"><span class="tx-icon">${c?.icon || '•'}</span>
               <span class="tx-main"><b>${esc(c?.name || t.cat)}</b>${t.note ? `<span class="muted small"> · ${esc(t.note)}</span>` : ''}
-                ${t.id.startsWith('rec:') ? '<span class="tag">định kỳ</span>' : ''}</span>
+                ${t.id.startsWith('rec:') ? '<span class="tag">định kỳ</span>' : ''}
+                ${t.acc && accName(t.acc) ? `<span class="tag">🏦 ${esc(accName(t.acc))}</span>` : ''}</span>
               <span class="tx-amt ${t.type === 'income' ? 'pos' : ''}">${t.type === 'income' ? '+' : '−'}${vnd(t.amount)}</span>
               <button class="link danger" data-del="${esc(t.id)}" aria-label="Xóa">✕</button></div>`;
           }).join('')}</div>`).join('') : '<p class="empty">Chưa có giao dịch trong tháng.</p>'}
@@ -142,6 +161,8 @@ export function renderBudget(root, ctx) {
   bind(root, ctx, b);
 }
 
+const accName = (id) => state.cash.find((c) => c.id === id)?.name;
+
 function configHtml(b, pctSum) {
   const catOpts = (type, sel) => b.categories.filter((c) => c.type === type)
     .map((c) => `<option value="${esc(c.id)}" ${c.id === sel ? 'selected' : ''}>${c.icon || ''} ${esc(c.name)}</option>`).join('');
@@ -157,7 +178,7 @@ function configHtml(b, pctSum) {
     <div class="table-wrap"><table class="tbl mini">
       <thead><tr><th>Khoản</th><th class="r">Số tiền</th><th class="r">Ngày</th><th>Chu kỳ</th><th>Từ tháng</th><th></th></tr></thead>
       <tbody>${b.recurring.map((r) => `<tr>
-        <td>${b.categories.find((c) => c.id === r.cat)?.icon || ''} ${esc(b.categories.find((c) => c.id === r.cat)?.name || r.cat)}${r.note ? ` · ${esc(r.note)}` : ''}</td>
+        <td>${b.categories.find((c) => c.id === r.cat)?.icon || ''} ${esc(b.categories.find((c) => c.id === r.cat)?.name || r.cat)}${r.note ? ` · ${esc(r.note)}` : ''}${r.acc && accName(r.acc) ? ` <span class="tag">🏦 ${esc(accName(r.acc))}</span>` : ''}</td>
         <td class="r ${r.type === 'income' ? 'pos' : ''}">${r.type === 'income' ? '+' : '−'}${vnd(r.amount)}</td>
         <td class="r">${r.day}</td><td>${EVERY[r.every || 1] || `${r.every} tháng`}</td><td>${esc(r.startMonth)}</td>
         <td class="r"><button class="link danger" data-del-rec="${esc(r.id)}">Xóa</button></td></tr>`).join('') ||
@@ -170,6 +191,7 @@ function configHtml(b, pctSum) {
       <select name="every" title="Chu kỳ">${Object.entries(EVERY).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
       <input name="startMonth" type="month" value="${monthKey(localToday())}" title="Tháng trả lần đầu (tính từ đó theo chu kỳ)">
       <input name="note" placeholder="Ghi chú">
+      ${accSelect('acc', currentAcc())}
       <button class="btn">Thêm</button>
     </form>
 
@@ -212,7 +234,12 @@ function bind(root, ctx, b) {
     const v = parseAmount(f.get('amount'));
     if (!(v > 0)) return toast('Số tiền không hợp lệ (vd 45k, 1.2tr, 150000)', 'error');
     if (!ui.cat) return toast('Chọn danh mục', 'error');
-    b.txs.push({ id: uid(), date: f.get('date'), type: ui.type, amount: v, cat: ui.cat, note: String(f.get('note') || '').trim(), u: Date.now() });
+    const acc = f.get('acc') || 'none';
+    try { localStorage.setItem('fin.acc', acc); } catch { /* ignore */ }
+    b.txs.push({
+      id: uid(), date: f.get('date'), type: ui.type, amount: v, cat: ui.cat,
+      note: String(f.get('note') || '').trim(), acc: acc === 'none' ? null : acc, u: Date.now(),
+    });
     ui.month = monthKey(f.get('date'));
     ui.date = f.get('date');
     commit({ edit: true });
@@ -255,7 +282,7 @@ function bind(root, ctx, b) {
     const cat = b.categories.find((c) => c.id === f.cat);
     b.recurring.push({
       id: uid(), type: cat?.type || 'expense', amount: v, cat: f.cat, note: f.note.trim(),
-      day: Math.min(28, Math.max(1, Number(f.day) || 1)), every: Number(f.every) || 1, startMonth: f.startMonth || monthKey(localToday()), active: true,
+      day: Math.min(28, Math.max(1, Number(f.day) || 1)), every: Number(f.every) || 1, acc: f.acc && f.acc !== 'none' ? f.acc : null, startMonth: f.startMonth || monthKey(localToday()), active: true,
     });
     generateRecurring(b);
     saveConfig(b);

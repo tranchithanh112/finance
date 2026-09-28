@@ -38,9 +38,9 @@ export function defaultBudget() {
   return {
     jars: DEFAULT_JARS.map((j) => ({ ...j })),
     categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
-    txs: [], // { id, date:'YYYY-MM-DD', type:'expense'|'income', amount, cat, note, u (sửa lúc) }
+    txs: [], // { id, date:'YYYY-MM-DD', type:'expense'|'income', amount, cat, note, acc (id tài khoản tiền mặt), u (sửa lúc) }
     deleted: {}, // id -> thời điểm xóa (để đồng bộ nhiều máy không "hồi sinh" giao dịch đã xóa)
-    recurring: [], // { id, type, amount, cat, note, day, every (tháng), startMonth:'YYYY-MM', active }
+    recurring: [], // { id, type, amount, cat, note, day, every (tháng), startMonth:'YYYY-MM', acc, active }
     debts: [], // { id, name, balance, rate, monthly, currency }
     emergencyTarget: 6,
     configAt: 0, // lần sửa cấu hình (hũ, danh mục, định kỳ, nợ) gần nhất
@@ -86,7 +86,7 @@ export function generateRecurring(b, today = localToday()) {
       if (date > today) break;
       const id = `rec:${r.id}:${ym}`;
       if (have.has(id) || b.deleted[id]) continue;
-      b.txs.push({ id, date, type: r.type, amount: Number(r.amount), cat: r.cat, note: r.note || '', u: Date.now() });
+      b.txs.push({ id, date, type: r.type, amount: Number(r.amount), cat: r.cat, note: r.note || '', acc: r.acc || null, u: Date.now() });
       have.add(id);
       n++;
     }
@@ -207,4 +207,34 @@ export function mergeBudget(a, b) {
     deleted,
     configAt: Math.max(a.configAt || 0, b.configAt || 0),
   };
+}
+
+// ================= Số dư tài khoản tự cộng / trừ =================
+// Tài khoản (state.cash): { id, name, currency, amount, anchorAt (ms), anchorDate ('YYYY-MM-DD') }
+// amount là số dư "chốt" lần gần nhất người dùng nhập. Số dư hiện tại = amount + thu − chi
+// của các giao dịch gắn với tài khoản và phát sinh SAU mốc chốt (ngày sau, hoặc cùng ngày nhưng nhập sau).
+
+export function afterAnchor(t, c) {
+  if (!c.anchorDate) return false;
+  return t.date > c.anchorDate || (t.date === c.anchorDate && (t.u || 0) > (c.anchorAt || 0));
+}
+
+/** { balance, delta, count } — balance theo đơn vị tiền của tài khoản (giao dịch thu chi luôn là VND). */
+export function accountBalance(c, txs, usdVnd = 25500) {
+  let delta = 0;
+  let count = 0;
+  for (const t of txs || []) {
+    if (t.acc !== c.id || !afterAnchor(t, c)) continue;
+    const v = (Number(t.amount) || 0) * (t.type === 'income' ? 1 : -1);
+    delta += c.currency === 'USD' ? v / usdVnd : v;
+    count++;
+  }
+  return { balance: (Number(c.amount) || 0) + delta, delta, count };
+}
+
+/** Chốt số dư mới (người dùng vừa đối chiếu với ngân hàng). */
+export function setAnchor(c, amount, now = Date.now(), today = localToday()) {
+  c.amount = amount;
+  c.anchorAt = now;
+  c.anchorDate = today;
 }

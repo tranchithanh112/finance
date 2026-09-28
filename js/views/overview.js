@@ -152,7 +152,7 @@ export function renderOverview(root, ctx) {
     bars(root.querySelector('#ov-flow'), months.map((m) => m.slice(5) + '/' + m.slice(2, 4)), [
       { label: 'Thu', data: trend.map((m) => toUSD(m.income, 'VND')), color: PALETTE[2] },
       { label: 'Tiêu dùng', data: trend.map((m) => toUSD(m.spend, 'VND')), color: PALETTE[3] },
-      { label: 'Để dành & đầu tư', data: trend.map((m) => toUSD(m.saved, 'VND')), color: PALETTE[4] },
+      { label: 'Để dành & đầu tư', data: trend.map((m) => toUSD(m.saved, 'VND')), color: PALETTE[1] },
     ]);
   }
   if (state.snapshots.length > 1) {

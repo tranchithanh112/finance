@@ -334,7 +334,7 @@ function applyThemeIcon() {
   const t = theme();
   $('#btn-theme').innerHTML = icon(t === 'light' ? 'sun' : t === 'dark' ? 'moon' : 'auto');
   const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-  document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#060a13' : '#f4f6fa');
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#050c09' : '#f4f5f1');
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
   if (theme() === 'auto') { applyThemeIcon(); render(); }

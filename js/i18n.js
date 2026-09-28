@@ -160,6 +160,10 @@ const EXACT = {
   'File JSON không đúng định dạng': 'Invalid JSON file', 'Chưa kết nối Dropbox / Google Drive': 'Dropbox / Google Drive not connected',
   'Chưa có Dropbox App Key': 'Missing Dropbox App Key', 'Chưa có Google Client ID': 'Missing Google Client ID',
 
+  // ---- đối chiếu lịch sử với ví
+  'Đối chiếu lịch sử với ví': 'History vs wallet', 'Theo lịch sử': 'Per history', 'Trong ví': 'In wallet',
+  'Chênh lệch': 'Difference', '≈ Giá trị': '≈ Value', 'Lịch sử nhiều hơn ví': 'History above wallet', 'Ví nhiều hơn lịch sử': 'Wallet above history',
+
   // ---- futures theo năm
   'Theo năm': 'By year', 'Năm': 'Year', 'Đối chiếu với báo cáo PnL của Binance': 'Compare with Binance PnL report',
 
@@ -203,6 +207,11 @@ const TERMS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const RULES = [
+  [/^Lịch sử nhiều hơn ví (.+?)( · ví nhiều hơn lịch sử (.+))?$/, (m, a, _x, b) => `History above wallet ${a}${b ? ` · wallet above history ${b}` : ''}`],
+  [/^ví nhiều hơn lịch sử (.+)$/, 'Wallet above history $1'],
+  [/^\+ (.+) trong ví futures$/, '+ $1 in futures wallet'],
+  [/^: coin đã rời ví qua kênh [\s\S]*$/, ': coins left the wallet through channels the app cannot read (Auto-Invest redemptions, Binance Pay, transfers to COIN-M futures / Margin, P2P sales, gifts…) — the "Value vs cost" chart still counts them, so it runs higher than reality.'],
+  [/^: lãi Earn, airdrop[\s\S]*$/, ': Earn interest, airdrops, Pay receipts… (zero cost basis, normal).'],
   [/^(.+): phát hiện giờ UTC([+-]\d+), đã quy về UTC$/, '$1: detected UTC$2 times, converted to UTC'],
   [/^Chưa có phí funding [\s\S]*$/, 'No funding fees yet (liquidation fees may also be missing). Trade History files don\'t include them — also import the Transaction History file for the same years; duplicates are skipped automatically.'],
   // TCBS (đặt trước các quy tắc chung vì chuỗi bắt đầu bằng "Cập nhật")

@@ -126,10 +126,33 @@ export function renderPnl(root, ctx) {
       </table></div>
       <p class="muted small">Phương pháp: giá vốn bình quân gia quyền, quy đổi USD theo giá ngày giao dịch. Phí trả bằng BNB tính vào giá vốn coin giao dịch.
         Nạp coin được tính giá vốn theo giá thị trường lúc nạp; rút coin không phát sinh lãi/lỗ. Coin nhận từ Earn/airdrop có giá vốn 0.</p>
-    </div>`;
+    </div>
+    ${reconcileCard(pnl)}`;
 
   bindHistory(root, hist, ctx);
   bind(root, ctx);
+}
+
+/** Coin mà số lượng theo lịch sử khác số lượng thật trong ví (lệch ≥ $5). */
+function reconcileCard(pnl) {
+  const gaps = pnl.rows.filter((r) => Math.abs(r.gapValue) >= 5).sort((a, b) => Math.abs(b.gapValue) - Math.abs(a.gapValue));
+  if (!gaps.length) return '';
+  const more = gaps.filter((r) => r.gapQty > 0).reduce((a, r) => a + r.gapValue, 0);
+  const less = gaps.filter((r) => r.gapQty < 0).reduce((a, r) => a + r.gapValue, 0);
+  return `
+    <div class="card">
+      <div class="card-head"><h3>Đối chiếu lịch sử với ví</h3>
+        <small class="muted">${more ? `Lịch sử nhiều hơn ví ${fmtMoney(more)}` : ''}${more && less ? ' · ' : ''}${less ? `ví nhiều hơn lịch sử ${fmtMoney(-less)}` : ''}</small></div>
+      <div class="table-wrap"><table class="tbl">
+        <thead><tr><th>Coin</th><th class="r">Theo lịch sử</th><th class="r">Trong ví</th><th class="r">Chênh lệch</th><th class="r">≈ Giá trị</th></tr></thead>
+        <tbody>${gaps.map((r) => `<tr><td><b>${esc(r.asset)}</b>${r.futuresQty ? `<div class="sub">+ ${fmtQty(r.futuresQty)} trong ví futures</div>` : ''}</td>
+          <td class="r">${fmtQty(r.ledgerQty)}</td><td class="r">${fmtQty(r.heldQty)}</td>
+          <td class="r ${r.gapQty > 0 ? 'neg' : 'pos'}">${r.gapQty > 0 ? '+' : '−'}${fmtQty(Math.abs(r.gapQty))}</td>
+          <td class="r">${fmtMoney(Math.abs(r.gapValue))}</td></tr>`).join('')}</tbody>
+      </table></div>
+      <p class="muted small"><b>Lịch sử nhiều hơn ví</b>: coin đã rời ví qua kênh app không đọc được (rút khỏi Auto-Invest, Binance Pay, chuyển sang ví Futures COIN-M / Margin, bán P2P, quà tặng…) —
+        biểu đồ "Giá trị vs vốn" vẫn tính số coin này nên cao hơn thực tế. <b>Ví nhiều hơn lịch sử</b>: lãi Earn, airdrop, nhận Pay… (giá vốn 0, bình thường).</p>
+    </div>`;
 }
 
 const countKind = (h, k) => h.converts.filter((c) => (c[6] || 'convert') === k).length;

@@ -158,8 +158,12 @@ export function computePnl(history, priceHist, holdings, { dustUsd = 1 } = {}) {
     const costBasis = heldQty <= s.qty ? avg * heldQty : s.cost;
     const unrealized = hasBasis ? value - costBasis : null;
     const total = hasBasis ? s.realized + (unrealized || 0) : null;
+    // Đối chiếu sổ sách (dựng từ lịch sử) với ví thật: lệch = coin vào/ra qua kênh không có trong lịch sử
+    const priceNow = price || usdAt(a, Date.now()) || 0;
+    const gapQty = s.qty - heldQty;
     rows.push({
       asset: a, heldQty, ledgerQty: s.qty, price, value, avg, costBasis,
+      futuresQty: h?.futures || 0, gapQty, gapValue: gapQty * priceNow, gapCost: gapQty > 0 ? avg * gapQty : 0,
       realized: s.realized, unrealized, total,
       invested: s.invested, proceeds: s.proceeds, fees: s.fees,
       roi: s.invested > 0 && total != null ? total / s.invested : null,

@@ -4,7 +4,7 @@ export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const DAY = 86400000;
 export const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 
-export const STABLES = new Set(['USDT', 'USDC', 'BUSD', 'FDUSD', 'TUSD', 'DAI', 'USDP', 'PAX', 'USD', 'USD1', 'USDS']);
+export const STABLES = new Set(['USDT', 'USDC', 'BUSD', 'FDUSD', 'TUSD', 'DAI', 'USDP', 'PAX', 'USD', 'USD1', 'USDS', 'U']);
 export const isStable = (a) => STABLES.has(a);
 
 export function esc(s) {

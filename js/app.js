@@ -5,7 +5,7 @@ import { makePriceLookup } from './pnl.js';
 import { computePnl } from './pnl.js';
 import { totals, fxRate } from './calc.js';
 import * as sync from './sync.js';
-import { $, $$, toast, setDisplayCurrency } from './util.js';
+import { $, $$, toast, setDisplayCurrency, isStable } from './util.js';
 import { renderOverview } from './views/overview.js';
 import { renderCrypto } from './views/crypto.js';
 import { renderPnl, updateProgress } from './views/pnl.js';
@@ -214,7 +214,7 @@ async function ensureFuturesPrices() {
   const need = new Map();
   for (const r of state.futures.income) {
     const a = r[4];
-    if (!['USDT', 'USDC', 'BUSD', 'FDUSD', 'BNFCR', 'USD1'].includes(a)) need.set(a, Math.min(need.get(a) ?? Infinity, r[1]));
+    if (!isStable(a) && a !== 'BNFCR') need.set(a, Math.min(need.get(a) ?? Infinity, r[1]));
   }
   if (!need.size) return;
   const tick = await fetchTickerPrices();

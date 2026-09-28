@@ -5,7 +5,8 @@ import { makePriceLookup } from './pnl.js';
 import { computePnl } from './pnl.js';
 import { totals, fxRate } from './calc.js';
 import * as sync from './sync.js';
-import { $, $$, toast, setDisplayCurrency, isStable } from './util.js';
+import { $, $$, toast, setDisplayCurrency, isStable, esc } from './util.js';
+import { icon } from './icons.js';
 import { renderOverview } from './views/overview.js';
 import { renderCrypto } from './views/crypto.js';
 import { renderPnl, updateProgress } from './views/pnl.js';
@@ -24,6 +25,17 @@ const VIEWS = {
   stocks: renderStocks,
   settings: renderSettings,
 };
+
+// Điều hướng: 4 mục chính trên thanh dưới (điện thoại), phần còn lại nằm trong "Thêm".
+const NAV = [
+  { id: 'overview', label: 'Tổng quan', short: 'Tổng quan', icon: 'home' },
+  { id: 'budget', label: 'Thu chi', short: 'Thu chi', icon: 'wallet' },
+  { id: 'crypto', label: 'Crypto', short: 'Crypto', icon: 'coins' },
+  { id: 'pnl', label: 'Lịch sử & PnL', short: 'Lãi/lỗ', icon: 'chart' },
+  { id: 'futures', label: 'Futures', icon: 'bolt', more: true },
+  { id: 'stocks', label: 'Chứng khoán', icon: 'trend', more: true },
+  { id: 'settings', label: 'Cài đặt', icon: 'gear', more: true },
+];
 
 let current = 'overview';
 let serverCfg = { offline: true };
@@ -267,7 +279,11 @@ function applyCurrency() {
 
 function render() {
   applyCurrency();
-  $$('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === current));
+  const item = NAV.find((n) => n.id === current);
+  $$('#tabs button, #more-panel button').forEach((b) => b.classList.toggle('on', b.dataset.tab === current));
+  $$('#bottom-nav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === current || (b.dataset.more && item?.more)));
+  $('#page-title').textContent = item?.label || '';
+  $('#fab').hidden = current === 'settings';
   $$('.tab').forEach((s) => { s.hidden = s.id !== `tab-${current}`; });
   try {
     VIEWS[current]($(`#tab-${current}`), ctx);
@@ -279,10 +295,43 @@ function render() {
 }
 
 function go(tab) {
+  $('#more-sheet').hidden = true;
+  if (tab !== current) window.scrollTo({ top: 0 });
   current = VIEWS[tab] ? tab : 'overview';
   if (location.hash !== '#' + current) history.replaceState(null, '', '#' + current);
   render();
 }
+
+function buildNav() {
+  $('#tabs').innerHTML = NAV.map((n) => `<button data-tab="${n.id}">${icon(n.icon)}<span>${esc(n.label)}</span></button>`).join('');
+  $('#bottom-nav').innerHTML = NAV.filter((n) => !n.more)
+    .map((n) => `<button data-tab="${n.id}">${icon(n.icon)}<span>${esc(n.short)}</span></button>`).join('') +
+    `<button data-more="1">${icon('more')}<span>Thêm</span></button>`;
+  $('#more-panel').innerHTML = NAV.filter((n) => n.more)
+    .map((n) => `<button class="sheet-item" data-tab="${n.id}"><span class="ico">${icon(n.icon)}</span>${esc(n.label)}</button>`).join('');
+  $('#fab').innerHTML = icon('plus');
+  $('#btn-refresh').innerHTML = icon('refresh');
+}
+
+// ---- Theme: auto (theo hệ thống) / light / dark
+function theme() {
+  try { return localStorage.getItem('fin.theme') || 'auto'; } catch { return 'auto'; }
+}
+function setTheme(t) {
+  try { localStorage.setItem('fin.theme', t); } catch { /* ignore */ }
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', t);
+  applyThemeIcon();
+}
+function applyThemeIcon() {
+  const t = theme();
+  $('#btn-theme').innerHTML = icon(t === 'light' ? 'sun' : t === 'dark' ? 'moon' : 'auto');
+  const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#0a0e16' : '#f3f5fa');
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
+  if (theme() === 'auto') { applyThemeIcon(); render(); }
+});
 
 function updateSyncPill() {
   const el = $('#sync-status');
@@ -311,13 +360,35 @@ async function init() {
   current = location.hash.slice(1) || 'overview';
   runRecurring();
 
-  $('#tabs').onclick = (e) => { const b = e.target.closest('button[data-tab]'); if (b) go(b.dataset.tab); };
+  buildNav();
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('#tabs button[data-tab], #bottom-nav button[data-tab], #more-panel button[data-tab]');
+    if (b) go(b.dataset.tab);
+  });
+  $('#bottom-nav [data-more]').onclick = () => { $('#more-sheet').hidden = false; };
+  $('#more-sheet').onclick = (e) => { if (e.target.id === 'more-sheet') $('#more-sheet').hidden = true; };
+  $('#fab').onclick = () => {
+    go('budget');
+    const input = document.getElementById('qa-amount');
+    input?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    input?.focus();
+  };
+  $('#btn-theme').onclick = () => {
+    const order = ['auto', 'light', 'dark'];
+    setTheme(order[(order.indexOf(theme()) + 1) % order.length]);
+    toast({ auto: 'Giao diện: theo hệ thống', light: 'Giao diện: sáng', dark: 'Giao diện: tối' }[theme()], 'info', 1500);
+    render();
+  };
+  applyThemeIcon();
   window.onhashchange = () => go(location.hash.slice(1));
   $('#cur-select').onchange = (e) => { state.settings.displayCurrency = e.target.value; commit({ edit: true }); render(); };
-  $('#btn-refresh').onclick = async (e) => {
-    e.currentTarget.disabled = true;
+  $('#btn-refresh').onclick = async () => {
+    const btn = $('#btn-refresh');
+    btn.disabled = true;
+    btn.classList.add('spin');
     await Promise.all([ctx.refreshCrypto(), ctx.refreshQuotes()]);
-    $('#btn-refresh').disabled = false;
+    btn.disabled = false;
+    btn.classList.remove('spin');
   };
   $('#sync-status').onclick = async () => {
     if (!sync.syncEnabled()) return go('settings');

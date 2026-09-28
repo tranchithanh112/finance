@@ -7,6 +7,7 @@ import { totals, fxRate } from './calc.js';
 import * as sync from './sync.js';
 import { $, $$, toast, setDisplayCurrency, isStable, esc } from './util.js';
 import { icon } from './icons.js';
+import { tabOrder, groupOf, lastSub, rememberSub, BOTTOM_MAX } from './nav.js';
 import { renderOverview } from './views/overview.js';
 import { renderCrypto } from './views/crypto.js';
 import { renderPnl, updateProgress } from './views/pnl.js';
@@ -25,17 +26,6 @@ const VIEWS = {
   stocks: renderStocks,
   settings: renderSettings,
 };
-
-// Điều hướng: 4 mục chính trên thanh dưới (điện thoại), phần còn lại nằm trong "Thêm".
-const NAV = [
-  { id: 'overview', label: 'Tổng quan', short: 'Tổng quan', icon: 'home' },
-  { id: 'budget', label: 'Thu chi', short: 'Thu chi', icon: 'wallet' },
-  { id: 'crypto', label: 'Crypto', short: 'Crypto', icon: 'coins' },
-  { id: 'pnl', label: 'Lịch sử & PnL', short: 'Lãi/lỗ', icon: 'chart' },
-  { id: 'futures', label: 'Futures', icon: 'bolt', more: true },
-  { id: 'stocks', label: 'Chứng khoán', icon: 'trend', more: true },
-  { id: 'settings', label: 'Cài đặt', icon: 'gear', more: true },
-];
 
 let current = 'overview';
 let serverCfg = { offline: true };
@@ -208,6 +198,7 @@ const ctx = {
     render();
   },
   cancelSync() { abort?.abort(); },
+  rebuildNav() { buildNav(); render(); },
 
   async smartSync() {
     const r = await sync.smartSync();
@@ -279,14 +270,21 @@ function applyCurrency() {
 
 function render() {
   applyCurrency();
-  const item = NAV.find((n) => n.id === current);
-  $$('#tabs button, #more-panel button').forEach((b) => b.classList.toggle('on', b.dataset.tab === current));
-  $$('#bottom-nav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === current || Boolean(b.dataset.more && item?.more)));
-  $('#page-title').textContent = item?.label || '';
+  const group = groupOf(current);
+  $$('#tabs button, #bottom-nav button, #more-panel button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.tab === group.id || (b.dataset.more === '1' && moreIds.includes(group.id)));
+  });
+  $('#page-title').textContent = group.label;
   $('#fab').hidden = current === 'settings';
   $$('.tab').forEach((s) => { s.hidden = s.id !== `tab-${current}`; });
   try {
-    VIEWS[current]($(`#tab-${current}`), ctx);
+    const root = $(`#tab-${current}`);
+    VIEWS[current](root, ctx);
+    if (group.subs) {
+      root.insertAdjacentHTML('afterbegin', `<div class="subnav seg">${group.subs.map((x) =>
+        `<button data-sub="${x.id}" class="${x.id === current ? 'on' : ''}">${esc(x.label)}</button>`).join('')}</div>`);
+      root.querySelectorAll('[data-sub]').forEach((b) => { b.onclick = () => go(b.dataset.sub); });
+    }
   } catch (e) {
     console.error(e);
     $(`#tab-${current}`).innerHTML = `<div class="alert">Lỗi hiển thị: ${e.message}</div>`;
@@ -298,17 +296,26 @@ function go(tab) {
   $('#more-sheet').hidden = true;
   if (tab !== current) window.scrollTo({ top: 0 });
   current = VIEWS[tab] ? tab : 'overview';
+  rememberSub(groupOf(current).id, current);
   if (location.hash !== '#' + current) history.replaceState(null, '', '#' + current);
   render();
 }
 
+let moreIds = [];
+/** Dựng thanh tab (máy tính), thanh dưới + "Thêm" (điện thoại) theo thứ tự người dùng chọn. */
 function buildNav() {
-  $('#tabs').innerHTML = NAV.map((n) => `<button data-tab="${n.id}">${icon(n.icon)}<span>${esc(n.label)}</span></button>`).join('');
-  $('#bottom-nav').innerHTML = NAV.filter((n) => !n.more)
-    .map((n) => `<button data-tab="${n.id}">${icon(n.icon)}<span>${esc(n.short)}</span></button>`).join('') +
-    `<button data-more="1">${icon('more')}<span>Thêm</span></button>`;
-  $('#more-panel').innerHTML = NAV.filter((n) => n.more)
+  const order = tabOrder();
+  const btn = (n) => `<button data-tab="${n.id}">${icon(n.icon)}<span>${esc(n.short || n.label)}</span></button>`;
+  $('#tabs').innerHTML = order.map((n) => `<button data-tab="${n.id}">${icon(n.icon)}<span>${esc(n.label)}</span></button>`).join('');
+  const bottom = order.length <= BOTTOM_MAX ? order : order.slice(0, BOTTOM_MAX - 1);
+  const more = order.slice(bottom.length);
+  moreIds = more.map((n) => n.id);
+  $('#bottom-nav').style.gridTemplateColumns = `repeat(${bottom.length + (more.length ? 1 : 0)}, 1fr)`;
+  $('#bottom-nav').innerHTML = bottom.map(btn).join('') + (more.length ? `<button data-more="1">${icon('more')}<span>Thêm</span></button>` : '');
+  $('#more-panel').innerHTML = more
     .map((n) => `<button class="sheet-item" data-tab="${n.id}"><span class="ico">${icon(n.icon)}</span>${esc(n.label)}</button>`).join('');
+  const moreBtn = $('#bottom-nav [data-more]');
+  if (moreBtn) moreBtn.onclick = () => { $('#more-sheet').hidden = false; };
   $('#fab').innerHTML = icon('plus');
   $('#btn-refresh').innerHTML = icon('refresh');
 }
@@ -363,9 +370,8 @@ async function init() {
   buildNav();
   document.addEventListener('click', (e) => {
     const b = e.target.closest('#tabs button[data-tab], #bottom-nav button[data-tab], #more-panel button[data-tab]');
-    if (b) go(b.dataset.tab);
+    if (b) go(lastSub(b.dataset.tab));
   });
-  $('#bottom-nav [data-more]').onclick = () => { $('#more-sheet').hidden = false; };
   $('#more-sheet').onclick = (e) => { if (e.target.id === 'more-sheet') $('#more-sheet').hidden = true; };
   $('#fab').onclick = () => {
     go('budget');

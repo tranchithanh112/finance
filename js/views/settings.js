@@ -2,13 +2,29 @@ import { state, local, saveLocal, commit, replaceState } from '../store.js';
 import * as sync from '../sync.js';
 import { esc, toast, downloadFile, timeAgo, todayKey } from '../util.js';
 import { fxRate } from '../calc.js';
+import { tabOrder, setTabOrder, resetTabOrder, BOTTOM_MAX } from '../nav.js';
+import { icon } from '../icons.js';
 
 export function renderSettings(root, ctx) {
   const s = state.settings;
   const cfg = ctx.serverConfig();
   const prov = sync.providerName();
 
+  const order = tabOrder();
   root.innerHTML = `
+    <div class="card">
+      <div class="card-head"><h3>Thứ tự tab</h3><button class="link" id="tab-reset">Mặc định</button></div>
+      <p class="muted small">Lưu riêng trên thiết bị này. Trên điện thoại, ${BOTTOM_MAX} tab đầu nằm ở thanh dưới${order.length > BOTTOM_MAX ? ', còn lại trong "Thêm"' : ''}.</p>
+      <div class="order-list">
+        ${order.map((n, i) => `
+          <div class="order-item">
+            <span class="ico">${icon(n.icon)}</span>
+            <span class="grow"><b>${esc(n.label)}</b>${n.subs ? `<span class="muted small"> · ${n.subs.map((x) => esc(x.label)).join(', ')}</span>` : ''}</span>
+            <button class="icon-btn" data-move="${i}" data-dir="-1" ${i === 0 ? 'disabled' : ''} aria-label="Lên">↑</button>
+            <button class="icon-btn" data-move="${i}" data-dir="1" ${i === order.length - 1 ? 'disabled' : ''} aria-label="Xuống">↓</button>
+          </div>`).join('')}
+      </div>
+    </div>
     <div class="grid2">
       <div class="card">
         <h3>Kết nối server (Vercel)</h3>
@@ -80,6 +96,18 @@ export function renderSettings(root, ctx) {
         </div>
       </div>
     </div>`;
+
+  root.querySelectorAll('[data-move]').forEach((b) => {
+    b.onclick = () => {
+      const ids = order.map((n) => n.id);
+      const i = Number(b.dataset.move);
+      const j = i + Number(b.dataset.dir);
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+      setTabOrder(ids);
+      ctx.rebuildNav();
+    };
+  });
+  root.querySelector('#tab-reset').onclick = () => { resetTabOrder(); ctx.rebuildNav(); };
 
   root.querySelector('#pw-form').onsubmit = async (e) => {
     e.preventDefault();

@@ -326,6 +326,16 @@ input { min-width: 0; }
 .toast.error { border-left-color: var(--neg); }
 @keyframes in { from { transform: translateY(10px); opacity: 0; } }
 
+/* ================= Tab con & thứ tự tab ================= */
+.subnav { display: flex; width: 100%; max-width: 420px; margin: 0 auto 16px; }
+.subnav button { flex: 1; padding: 8px 10px; font-weight: 600; }
+.subnav button.on { color: var(--accent); }
+.order-list { display: grid; gap: 8px; }
+.order-item { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 14px; background: var(--surface-2); }
+.order-item .ico { width: 36px; height: 36px; border-radius: 11px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.order-item .icon-btn { width: 36px; height: 36px; font-size: 16px; }
+.order-item .icon-btn:disabled { opacity: .35; cursor: default; }
+
 /* ================= Mobile navigation ================= */
 .bottom-nav, .fab { display: none; }
 .sheet { position: fixed; inset: 0; z-index: 60; background: rgb(0 0 0 / .4); display: flex; align-items: flex-end; animation: fade .15s; }
@@ -395,6 +405,7 @@ input { min-width: 0; }
     border: 0; background: none; color: var(--muted); font: inherit; font-size: 10.5px; font-weight: 600; cursor: pointer;
     border-radius: 14px;
   }
+  .bottom-nav button span { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.01em; }
   .bottom-nav button svg.i { width: 23px; height: 23px; transition: transform .15s; }
   .bottom-nav button.on { color: var(--accent); }
   .bottom-nav button.on svg.i { transform: translateY(-1px) scale(1.06); }

@@ -1,7 +1,7 @@
 import { fmtMoney } from './util.js';
 
 // Bảng màu phân loại (đã kiểm tra độ tương phản trên nền sáng & tối)
-export const PALETTE = ['#4f7cff', '#f5a524', '#17c3a5', '#e5484d', '#a162f7', '#3fb8f0', '#f76b15', '#8bc34a', '#e93d82', '#94a3b8'];
+export const PALETTE = ['#2455ff', '#e0a82e', '#14b8a6', '#ef4444', '#8b5cf6', '#0ea5e9', '#f97316', '#22c55e', '#ec4899', '#94a3b8'];
 
 const charts = new Map();
 

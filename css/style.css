@@ -179,6 +179,57 @@ input { min-width: 0; }
 .status-list li.ok::before { color: var(--pos); }
 .status-list li.bad::before { color: var(--neg); }
 
+/* ---------- Thu chi ---------- */
+h4 { margin: 18px 0 8px; font-size: 13.5px; font-weight: 600; }
+.month-nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 14px; }
+.month-nav b { min-width: 130px; text-align: center; font-size: 16px; }
+.quick-add form { display: grid; gap: 12px; }
+.seg.full { display: flex; }
+.seg.full button { flex: 1; padding: 8px; font-weight: 600; }
+.amount-row { display: flex; align-items: center; gap: 10px; }
+.amount-row input { flex: 1; font-size: 20px; font-weight: 600; padding: 10px 12px; }
+.grow { flex: 1 1 160px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-size: 13px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  border-radius: 99px; padding: 6px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+}
+.chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip.static { cursor: default; }
+.jars { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.jar { display: grid; gap: 6px; }
+.jar-head, .jar-foot { display: flex; justify-content: space-between; gap: 8px; }
+.jar .bar { height: 10px; }
+.jar-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: end; }
+.jar-form label { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.day { margin-bottom: 8px; }
+.day-head { padding: 6px 0 2px; text-transform: capitalize; }
+.tx { display: grid; grid-template-columns: 28px 1fr auto auto; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.tx-icon { font-size: 18px; text-align: center; }
+.tx-main { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tx-amt { font-weight: 600; white-space: nowrap; }
+
+/* ---------- Sức khỏe tài chính ---------- */
+.health .score { display: flex; align-items: center; gap: 18px; margin-bottom: 14px; }
+.score-ring {
+  --size: 96px; width: var(--size); height: var(--size); border-radius: 50%; flex: none;
+  background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--surface-2) 0);
+  display: grid; place-content: center; text-align: center; position: relative;
+}
+.score-ring::before { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: var(--surface); }
+.score-ring b, .score-ring small { position: relative; }
+.score-ring b { font-size: 28px; line-height: 1; }
+.score-ring small { color: var(--muted); font-size: 11px; }
+.health-parts { display: grid; gap: 8px; }
+.bar-row.wide { grid-template-columns: 170px 1fr 56px; }
+.tips { margin: 14px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; }
+.tips li::marker { color: var(--warn); }
+@media (max-width: 600px) {
+  .bar-row.wide { grid-template-columns: 120px 1fr 48px; }
+  .score-ring { --size: 80px; }
+  .score-ring b { font-size: 22px; }
+}
+
 /* ---------- Toasts ---------- */
 #toasts { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom)); right: 16px; display: grid; gap: 8px; z-index: 100; max-width: min(420px, calc(100vw - 32px)); }
 .toast {

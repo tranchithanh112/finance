@@ -77,3 +77,26 @@ export function line(canvas, labels, datasets, { money = true } = {}) {
     },
   });
 }
+
+/** Biểu đồ cột nhóm (vd thu / chi theo tháng). Giá trị là USD, hiển thị theo tiền tệ đang chọn. */
+export function bars(canvas, labels, datasets) {
+  mount(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: datasets.map((d, i) => ({ backgroundColor: d.color || PALETTE[i], borderRadius: 3, maxBarThickness: 28, ...d })),
+    },
+    options: {
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: { ticks: { color: css('--muted') }, grid: { display: false } },
+        y: { ticks: { color: css('--muted'), callback: (v) => fmtMoney(v, { compact: true }) }, grid: { color: css('--grid') } },
+      },
+      plugins: {
+        legend: { labels: { color: css('--text'), boxWidth: 10 } },
+        tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${fmtMoney(c.raw)}` } },
+      },
+    },
+  });
+}

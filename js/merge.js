@@ -1,3 +1,5 @@
+import { mergeBudget } from './budget.js';
+
 // Gộp dữ liệu của 2 thiết bị (máy này + file trên Dropbox/Drive).
 //  - Lịch sử Binance / futures: chỉ thêm, không sửa → HỢP NHẤT, không bao giờ mất bản ghi.
 //  - Dữ liệu người dùng tự nhập (cài đặt, chứng khoán, tiền mặt): lấy bên có `editedAt` mới hơn.
@@ -74,6 +76,7 @@ export function mergeStates(local, remote) {
     fx: newer('fx'),
     history: mergeHistory(local.history, remote.history),
     futures: mergeFutures(local.futures, remote.futures),
+    budget: mergeBudget(local.budget, remote.budget),
     snapshots: [...snaps.values()].sort((p, q) => p.date.localeCompare(q.date)),
   };
 }

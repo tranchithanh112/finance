@@ -12,9 +12,12 @@ import { renderPnl, updateProgress } from './views/pnl.js';
 import { renderStocks } from './views/stocks.js';
 import { renderSettings } from './views/settings.js';
 import { renderFutures } from './views/futures.js';
+import { renderBudget } from './views/budget.js';
+import { generateRecurring } from './budget.js';
 
 const VIEWS = {
   overview: renderOverview,
+  budget: renderBudget,
   crypto: renderCrypto,
   pnl: renderPnl,
   futures: renderFutures,
@@ -205,6 +208,7 @@ const ctx = {
   },
 
   afterStateReplaced() {
+    runRecurring();
     pnlCache = null;
     futCache = null;
     applyCurrency();
@@ -238,6 +242,11 @@ function refreshPriceHistory() {
     })
     .catch(() => {})
     .finally(() => { priceJob = null; });
+}
+
+/** Thêm các khoản thu/chi định kỳ đến hạn (lương, hóa đơn…). */
+function runRecurring() {
+  if (state.budget && generateRecurring(state.budget)) commit();
 }
 
 function snapshot() {
@@ -296,6 +305,7 @@ async function init() {
   await loadState();
   priceHist = await getPriceHistory();
   current = location.hash.slice(1) || 'overview';
+  runRecurring();
 
   $('#tabs').onclick = (e) => { const b = e.target.closest('button[data-tab]'); if (b) go(b.dataset.tab); };
   window.onhashchange = () => go(location.hash.slice(1));

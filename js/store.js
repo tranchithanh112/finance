@@ -1,5 +1,6 @@
 import { idbGet, idbSet } from './idb.js';
 import { todayKey } from './util.js';
+import { defaultBudget } from './budget.js';
 
 // `state` là dữ liệu được đồng bộ (Dropbox / Google Drive / export JSON).
 // `local` là cấu hình riêng của thiết bị (mật khẩu, token OAuth) — KHÔNG bao giờ sync.
@@ -37,6 +38,7 @@ export function defaultState() {
     },
     fx: { USDVND: 25500, updatedAt: 0 },
     cash: [], // { id, name, amount, currency }
+    budget: defaultBudget(), // thu chi cá nhân (VND)
     snapshots: [], // { date, crypto, stocks, cash, total }
   };
 }
@@ -111,7 +113,7 @@ export const onCommit = (fn) => listeners.add(fn);
 
 export function takeSnapshot(t) {
   const date = todayKey();
-  const snap = { date, crypto: t.crypto, stocks: t.stocks, cash: t.cash, total: t.total };
+  const snap = { date, crypto: t.crypto, stocks: t.stocks, cash: t.cash, debt: t.debt || 0, total: t.total };
   const i = state.snapshots.findIndex((s) => s.date === date);
   if (i >= 0) state.snapshots[i] = snap;
   else state.snapshots.push(snap);

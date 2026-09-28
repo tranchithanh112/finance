@@ -1,5 +1,6 @@
 import { state, local } from './store.js';
 import { isStable } from './util.js';
+import { debtTotalVnd } from './budget.js';
 
 export const fxRate = () => Number(state.settings.fxManual) || state.fx.USDVND || 25500;
 
@@ -78,7 +79,8 @@ export function totals() {
   const stocks = stocksTotal();
   const cash = cashTotal();
   const stable = state.crypto.holdings.filter((h) => isStable(h.asset)).reduce((a, h) => a + h.value, 0);
-  return { crypto, stocks, cash, stable, total: crypto + stocks + cash };
+  const debt = state.budget ? debtTotalVnd(state.budget, fxRate()) / fxRate() : 0;
+  return { crypto, stocks, cash, stable, debt, assets: crypto + stocks + cash, total: crypto + stocks + cash - debt };
 }
 
 export const hasPassword = () => Boolean(local.appPassword);

@@ -2,7 +2,8 @@
 
 Dashboard danh mục đầu tư cá nhân: **crypto trên Binance** + **chứng khoán / quỹ chỉ số** + tiền mặt, không cần build, deploy lên Vercel.
 
-- **Tổng quan**: tổng tài sản, phân bổ theo loại tài sản & theo từng tài sản, lịch sử tổng tài sản theo ngày, tiền mặt / tài sản khác.
+- **Tổng quan — sức khỏe tài chính**: tài sản ròng (trừ nợ), dòng tiền tháng, tỷ lệ tiết kiệm, quỹ dự phòng (số tháng chi tiêu), lãi/lỗ đầu tư, **điểm sức khỏe tài chính 0–100** kèm gợi ý, phân bổ tài sản, tài sản ròng theo thời gian, tiền mặt và nợ.
+- **Thu chi**: ghi thu/chi nhanh (gõ `45k`, `1.2tr`), chia thu nhập vào 4 hũ (Thiết yếu, Tiết kiệm, Đầu tư, Hưởng thụ — tỷ lệ tùy chỉnh), khoản định kỳ tự thêm mỗi tháng (lương, hóa đơn…), biểu đồ chi theo danh mục & 6 tháng gần nhất.
 - **Crypto**: số dư Spot + Funding + Simple Earn, giá trị, tỷ trọng %, giá vốn TB và PnL từng coin.
 - **Lịch sử & PnL**: đọc toàn bộ lịch sử lệnh, nạp/rút, Convert, đổi dust → tính lãi/lỗ **đã chốt + chưa chốt** của từng coin đang giữ, đã thoát hoặc từng nắm giữ; xem chi tiết từng lệnh.
 - **Futures**: lãi/lỗ USDⓈ-M + COIN-M từ trước tới nay (đóng lệnh, phí, funding, thanh lý), theo cặp và theo tháng, vị thế đang mở; ví futures được cộng vào tổng tài sản.
@@ -79,6 +80,14 @@ Hạn chế: Binance API không trả lịch sử lệnh của cặp đã bị x
 - **Đồng bộ qua API** (`/fapi/v1/income`, `/dapi/v1/income`): Binance chỉ trả khoảng 3 tháng gần nhất. App lưu dồn lại nên từ lúc bắt đầu dùng sẽ không mất dữ liệu.
 - **Lịch sử cũ hơn**: trên web Binance vào *Orders → Transaction History → Export* (hoặc *Futures → Transaction History → Export*), chọn CSV, mỗi lần tối đa 1 năm → tab Futures → **Nhập CSV** (chọn được nhiều file). Bản ghi trùng giữa CSV và API tự bỏ qua.
 - Tổng = lãi/lỗ đóng lệnh + phí + funding + thanh lý + hoàn phí. Tiền chuyển vào/ra ví futures không tính. COIN-M quy đổi USD theo giá ngày phát sinh.
+
+## Thu chi & điểm sức khỏe tài chính
+
+- **Tiêu dùng** = chi ở hũ Thiết yếu + Hưởng thụ. Tiền cho vào hũ Tiết kiệm / Đầu tư (gửi tiết kiệm, nạp crypto, mua quỹ) là **để dành**, không phải tiêu.
+- **Tỷ lệ tiết kiệm** = (thu − tiêu dùng) / thu, lấy trung bình 3 tháng đầy đủ gần nhất.
+- **Quỹ dự phòng** = (tiền mặt & tài sản khác + stablecoin) / chi tiêu dùng trung bình mỗi tháng.
+- **Điểm sức khỏe** (bỏ qua tiêu chí chưa có dữ liệu): tỷ lệ tiết kiệm (25, đạt tối đa khi ≥ 30%), quỹ dự phòng (25, đạt khi ≥ mục tiêu, mặc định 6 tháng), nợ/thu nhập (20, tối đa khi ≤ 10%), mức rủi ro — phần crypto không tính stablecoin trên tổng tài sản (15, tối đa khi ≤ 40%), giữ đúng hạn mức hũ tiêu dùng tháng này (15).
+- Dữ liệu thu chi đồng bộ theo từng giao dịch: nhập trên điện thoại và máy tính cùng lúc không bị mất, giao dịch đã xóa không quay lại.
 
 ## Chạy local
 

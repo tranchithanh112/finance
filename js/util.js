@@ -1,3 +1,5 @@
+import { tr, getLang, locale } from './i18n.js';
+
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -25,8 +27,9 @@ export function fmtMoney(usd, { sign = false, compact = false } = {}) {
   const abs = Math.abs(v);
   let s;
   if (money.cur === 'VND') {
-    if (compact && abs >= 1e9) s = (abs / 1e9).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + ' tỷ';
-    else if (compact && abs >= 1e6) s = (abs / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' tr';
+    const en = getLang() === 'en';
+    if (compact && abs >= 1e9) s = (abs / 1e9).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + (en ? 'B ₫' : ' tỷ');
+    else if (compact && abs >= 1e6) s = (abs / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + (en ? 'M ₫' : ' tr');
     else s = abs.toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' ₫';
   } else {
     const d = abs !== 0 && abs < 1 ? 4 : 2;
@@ -68,18 +71,22 @@ export const pnlClass = (n) => (n > 0 ? 'pos' : n < 0 ? 'neg' : '');
 export function fmtDate(t, withTime = false) {
   if (!t) return '—';
   const d = new Date(t);
-  const s = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  return withTime ? s + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : s;
+  const loc = getLang() === 'en' ? 'en-GB' : 'vi-VN';
+  const s = d.toLocaleDateString(loc, { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return withTime ? s + ' ' + d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' }) : s;
 }
 
 export function timeAgo(t) {
-  if (!t) return 'chưa bao giờ';
+  const en = getLang() === 'en';
+  if (!t) return en ? 'never' : 'chưa bao giờ';
   const s = Math.round((Date.now() - t) / 1000);
-  if (s < 60) return 'vừa xong';
-  if (s < 3600) return `${Math.round(s / 60)} phút trước`;
-  if (s < 86400) return `${Math.round(s / 3600)} giờ trước`;
-  return `${Math.round(s / 86400)} ngày trước`;
+  if (s < 60) return en ? 'just now' : 'vừa xong';
+  if (s < 3600) return `${Math.round(s / 60)} ${en ? 'min ago' : 'phút trước'}`;
+  if (s < 86400) return `${Math.round(s / 3600)} ${en ? 'h ago' : 'giờ trước'}`;
+  return `${Math.round(s / 86400)} ${en ? 'd ago' : 'ngày trước'}`;
 }
+
+export { locale };
 
 export const todayKey = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
 
@@ -87,7 +94,7 @@ export function toast(msg, type = 'info', ms = 4000) {
   const box = document.getElementById('toasts');
   const el = document.createElement('div');
   el.className = `toast ${type}`;
-  el.textContent = msg;
+  el.textContent = tr(msg);
   box.appendChild(el);
   setTimeout(() => el.remove(), ms);
 }

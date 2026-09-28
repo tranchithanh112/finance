@@ -7,6 +7,8 @@ import { totals, fxRate } from './calc.js';
 import * as sync from './sync.js';
 import { $, $$, toast, setDisplayCurrency, isStable, esc } from './util.js';
 import { icon } from './icons.js';
+import { tr, translateDom, setLang, getLang } from './i18n.js';
+import { loadPalette } from './charts.js';
 import { tabOrder, groupOf, lastSub, rememberSub, BOTTOM_MAX } from './nav.js';
 import { renderOverview } from './views/overview.js';
 import { renderCrypto } from './views/crypto.js';
@@ -200,6 +202,14 @@ const ctx = {
   cancelSync() { abort?.abort(); },
   rebuildNav() { buildNav(); render(); },
 
+  // ---- giao diện: bảng màu, chế độ sáng/tối, ngôn ngữ (lưu riêng từng thiết bị)
+  palette: () => palette(),
+  mode: () => theme(),
+  lang: () => getLang(),
+  setPalette(p) { setPalette(p); render(); },
+  setMode(m) { setTheme(m); render(); },
+  setLang(l) { setLang(l); buildNav(); render(); },
+
   async smartSync() {
     const r = await sync.smartSync();
     if (r === 'pulled' || r === 'merged') {
@@ -270,11 +280,12 @@ function applyCurrency() {
 
 function render() {
   applyCurrency();
+  loadPalette();
   const group = groupOf(current);
   $$('#tabs button, #bottom-nav button, #more-panel button').forEach((b) => {
     b.classList.toggle('on', b.dataset.tab === group.id || (b.dataset.more === '1' && moreIds.includes(group.id)));
   });
-  $('#page-title').textContent = group.label;
+  $('#page-title').textContent = tr(group.label);
   $('#fab').hidden = current === 'settings';
   $$('.tab').forEach((s) => { s.hidden = s.id !== `tab-${current}`; });
   try {
@@ -285,6 +296,7 @@ function render() {
         `<button data-sub="${x.id}" class="${x.id === current ? 'on' : ''}">${esc(x.label)}</button>`).join('')}</div>`);
       root.querySelectorAll('[data-sub]').forEach((b) => { b.onclick = () => go(b.dataset.sub); });
     }
+    translateDom(root);
   } catch (e) {
     console.error(e);
     $(`#tab-${current}`).innerHTML = `<div class="alert">Lỗi hiển thị: ${e.message}</div>`;
@@ -305,8 +317,8 @@ let moreIds = [];
 /** Dựng thanh tab (máy tính), thanh dưới + "Thêm" (điện thoại) theo thứ tự người dùng chọn. */
 function buildNav() {
   const order = tabOrder();
-  const btn = (n) => `<button data-tab="${n.id}">${icon(n.icon)}<span>${esc(n.short || n.label)}</span></button>`;
-  $('#tabs').innerHTML = order.map((n) => `<button data-tab="${n.id}">${icon(n.icon)}<span>${esc(n.label)}</span></button>`).join('');
+  const btn = (n) => `<button data-tab="${n.id}">${icon(n.icon)}<span>${esc(tr(n.short || n.label))}</span></button>`;
+  $('#tabs').innerHTML = order.map((n) => `<button data-tab="${n.id}">${icon(n.icon)}<span>${esc(tr(n.label))}</span></button>`).join('');
   const bottom = order.length <= BOTTOM_MAX ? order : order.slice(0, BOTTOM_MAX - 1);
   const more = order.slice(bottom.length);
   moreIds = more.map((n) => n.id);
@@ -318,6 +330,26 @@ function buildNav() {
   if (moreBtn) moreBtn.onclick = () => { $('#more-sheet').hidden = false; };
   $('#fab').innerHTML = icon('plus');
   $('#btn-refresh').innerHTML = icon('refresh');
+  // chữ tĩnh trong index.html (title, aria-label…)
+  for (const el of document.querySelectorAll('.topbar, #fab, #bottom-nav, #more-panel')) translateDom(el);
+  if (getLang() === 'vi') {
+    // quay về tiếng Việt: khôi phục thuộc tính gốc
+    $('#btn-theme').title = 'Giao diện sáng / tối';
+    $('#btn-refresh').title = 'Làm mới số dư & giá';
+    $('#fab').setAttribute('aria-label', 'Ghi thu chi');
+    $('#cur-select').setAttribute('aria-label', 'Tiền tệ hiển thị');
+  }
+}
+
+// ---- Bảng màu (theme màu): bronze | solana | okx | glass
+function palette() {
+  try { return localStorage.getItem('fin.palette') || 'bronze'; } catch { return 'bronze'; }
+}
+function setPalette(p) {
+  try { localStorage.setItem('fin.palette', p); } catch { /* ignore */ }
+  if (p === 'bronze') document.documentElement.removeAttribute('data-palette');
+  else document.documentElement.setAttribute('data-palette', p);
+  applyThemeIcon();
 }
 
 // ---- Theme: auto (theo hệ thống) / light / dark
@@ -333,8 +365,9 @@ function setTheme(t) {
 function applyThemeIcon() {
   const t = theme();
   $('#btn-theme').innerHTML = icon(t === 'light' ? 'sun' : t === 'dark' ? 'moon' : 'auto');
-  const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-  document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#0e0c0a' : '#f6f2ec');
+  // màu thanh trạng thái điện thoại = màu nền của theme hiện tại
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  if (bg) document.querySelector('meta[name="theme-color"]').setAttribute('content', bg);
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
   if (theme() === 'auto') { applyThemeIcon(); render(); }
@@ -343,9 +376,9 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
 function updateSyncPill() {
   const el = $('#sync-status');
   const name = sync.providerName();
-  el.textContent = name ? `☁ ${name}` : '☁ Chưa sync';
+  el.textContent = name ? `☁ ${name}` : tr('☁ Chưa sync');
   el.classList.toggle('off', !name);
-  el.title = name ? 'Bấm để đồng bộ ngay' : 'Kết nối Dropbox / Google Drive trong Cài đặt';
+  el.title = tr(name ? 'Bấm để đồng bộ ngay' : 'Kết nối Dropbox / Google Drive trong Cài đặt');
 }
 
 // ================= Auto sync =================

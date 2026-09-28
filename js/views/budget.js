@@ -5,6 +5,7 @@ import {
   parseAmount, monthSummary, shiftMonth, monthKey, localToday, catMap, generateRecurring, SPEND_JARS,
 } from '../budget.js';
 import { esc, fmtMoney, fmtPct, uid, toast } from '../util.js';
+import { locale } from '../i18n.js';
 
 const ui = { month: null, type: 'expense', cat: null, showConfig: false, date: null };
 
@@ -128,7 +129,7 @@ export function renderBudget(root, ctx) {
     <div class="card">
       <div class="card-head"><h3>Giao dịch</h3><small class="muted">${S.txs.length} khoản</small></div>
       ${byDay.size ? [...byDay].map(([d, list]) => `
-        <div class="day"><div class="day-head muted small">${new Date(d + 'T00:00').toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}</div>
+        <div class="day"><div class="day-head muted small">${new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'short', day: '2-digit', month: '2-digit' })}</div>
           ${list.map((t) => {
             const c = cats[t.cat];
             return `<div class="tx"><span class="tx-icon">${c?.icon || '•'}</span>

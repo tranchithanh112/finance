@@ -11,6 +11,12 @@ Dashboard danh mục đầu tư cá nhân: **crypto trên Binance** + **chứng 
 - **Đồng bộ** toàn bộ dữ liệu dưới dạng 1 file JSON lên **Dropbox** hoặc **Google Drive**, hoặc xuất/nhập file thủ công.
 - Hiển thị USD hoặc VND (tỷ giá tự động hoặc cố định).
 
+## Giao diện
+
+- **Ngôn ngữ**: Tiếng Việt / English (Cài đặt → Giao diện). Bản tiếng Anh dịch toàn bộ giao diện, thông báo và biểu đồ (`js/i18n.js`).
+- **Theme màu**: Đồng (mặc định), Solana, OKX, Trong suốt (Glass) — mỗi theme có chế độ Tự động / Sáng / Tối (`css/themes.css`).
+- Lựa chọn lưu riêng trên từng thiết bị.
+
 ## Kiến trúc
 
 ```

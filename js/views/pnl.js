@@ -1,6 +1,7 @@
 import { state } from '../store.js';
 import { line, PALETTE } from '../charts.js';
 import { esc, fmtMoney, fmtQty, fmtPrice, fmtPct, fmtDate, pnlClass, timeAgo } from '../util.js';
+import { tr } from '../i18n.js';
 
 const ui = { filter: 'all', q: '', open: null, sort: 'total' };
 
@@ -179,5 +180,5 @@ export function updateProgress(root, { pct, msg }) {
   const bar = root.querySelector('.progress i');
   const m = root.querySelector('#pnl-msg');
   if (bar) bar.style.width = `${pct || 0}%`;
-  if (m) m.textContent = msg || '';
+  if (m) m.textContent = tr(msg || '');
 }

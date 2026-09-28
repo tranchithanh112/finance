@@ -11,7 +11,32 @@ export function renderSettings(root, ctx) {
   const prov = sync.providerName();
 
   const order = tabOrder();
+  const PALETTES = [['bronze', 'Đồng'], ['solana', 'Solana'], ['okx', 'OKX'], ['glass', 'Trong suốt']];
+  const MODES = [['auto', 'Tự động'], ['light', 'Sáng'], ['dark', 'Tối']];
   root.innerHTML = `
+    <div class="card">
+      <h3>Giao diện</h3>
+      <h4>Màu sắc</h4>
+      <div class="theme-grid">
+        ${PALETTES.map(([id, label]) => `
+          <button type="button" class="theme-opt ${ctx.palette() === id ? 'on' : ''}" data-palette="${id}">
+            <span class="sw sw-${id}"><i></i></span><b>${label}</b>
+          </button>`).join('')}
+      </div>
+      <div class="grid2 mt">
+        <div>
+          <h4>Chế độ</h4>
+          <div class="seg">${MODES.map(([id, label]) => `<button type="button" data-mode="${id}" class="${ctx.mode() === id ? 'on' : ''}">${label}</button>`).join('')}</div>
+        </div>
+        <div>
+          <h4>Ngôn ngữ</h4>
+          <div class="seg">
+            <button type="button" data-lang="vi" class="${ctx.lang() === 'vi' ? 'on' : ''}">Tiếng Việt</button>
+            <button type="button" data-lang="en" class="${ctx.lang() === 'en' ? 'on' : ''}">English</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="card">
       <div class="card-head"><h3>Thứ tự tab</h3><button class="link" id="tab-reset">Mặc định</button></div>
       <p class="muted small">Lưu riêng trên thiết bị này. Trên điện thoại, ${BOTTOM_MAX} tab đầu nằm ở thanh dưới${order.length > BOTTOM_MAX ? ', còn lại trong "Thêm"' : ''}.</p>
@@ -108,6 +133,9 @@ export function renderSettings(root, ctx) {
     };
   });
   root.querySelector('#tab-reset').onclick = () => { resetTabOrder(); ctx.rebuildNav(); };
+  root.querySelectorAll('[data-palette]').forEach((b) => { b.onclick = () => ctx.setPalette(b.dataset.palette); });
+  root.querySelectorAll('[data-mode]').forEach((b) => { b.onclick = () => ctx.setMode(b.dataset.mode); });
+  root.querySelectorAll('[data-lang]').forEach((b) => { b.onclick = () => ctx.setLang(b.dataset.lang); });
 
   root.querySelector('#pw-form').onsubmit = async (e) => {
     e.preventDefault();

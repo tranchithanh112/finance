@@ -1,7 +1,15 @@
 import { fmtMoney } from './util.js';
+import { tr } from './i18n.js';
 
-// Bảng màu phân loại (đã kiểm tra độ tương phản trên nền sáng & tối)
+// Bảng màu phân loại — lấy theo theme đang chọn (biến CSS --chart), xem loadPalette()
 export const PALETTE = ['#b8905f', '#e3c48d', '#3aa99f', '#e05a5a', '#8c7b6b', '#5b8def', '#c46f3d', '#4caf7a', '#a06cb4', '#a89b8c'];
+
+/** Cập nhật PALETTE (tại chỗ) theo theme hiện tại; gọi trước mỗi lần render. */
+export function loadPalette() {
+  const v = css('--chart');
+  const list = v ? v.split(',').map((s) => s.trim()).filter(Boolean) : [];
+  if (list.length >= 4) PALETTE.splice(0, PALETTE.length, ...list);
+}
 
 const charts = new Map();
 
@@ -11,6 +19,9 @@ function css(name) {
 
 function mount(canvas, config) {
   if (!window.Chart || !canvas) return;
+  // dịch nhãn (legend / tooltip) theo ngôn ngữ đang chọn
+  config.data.labels = config.data.labels?.map((l) => tr(l));
+  for (const d of config.data.datasets) if (d.label) d.label = tr(d.label);
   charts.get(canvas.id)?.destroy();
   charts.set(canvas.id, new window.Chart(canvas, config));
 }

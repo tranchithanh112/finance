@@ -14,6 +14,8 @@ function defaultDate() {
   return ui.month === monthKey(localToday()) ? localToday() : ui.month + '-01';
 }
 
+const EVERY = { 1: 'Hằng tháng', 2: '2 tháng/lần', 3: '3 tháng/lần', 6: '6 tháng/lần', 12: 'Hằng năm' };
+
 const vnd = (v, opt) => fmtMoney(toUSD(v, 'VND'), opt);
 const monthLabel = (ym) => { const [y, m] = ym.split('-'); return `Tháng ${Number(m)}/${y}`; };
 
@@ -153,19 +155,20 @@ function configHtml(b, pctSum) {
 
     <h4>Khoản định kỳ (tự thêm mỗi tháng)</h4>
     <div class="table-wrap"><table class="tbl mini">
-      <thead><tr><th>Khoản</th><th class="r">Số tiền</th><th class="r">Ngày</th><th>Từ tháng</th><th></th></tr></thead>
+      <thead><tr><th>Khoản</th><th class="r">Số tiền</th><th class="r">Ngày</th><th>Chu kỳ</th><th>Từ tháng</th><th></th></tr></thead>
       <tbody>${b.recurring.map((r) => `<tr>
         <td>${b.categories.find((c) => c.id === r.cat)?.icon || ''} ${esc(b.categories.find((c) => c.id === r.cat)?.name || r.cat)}${r.note ? ` · ${esc(r.note)}` : ''}</td>
         <td class="r ${r.type === 'income' ? 'pos' : ''}">${r.type === 'income' ? '+' : '−'}${vnd(r.amount)}</td>
-        <td class="r">${r.day}</td><td>${esc(r.startMonth)}</td>
+        <td class="r">${r.day}</td><td>${EVERY[r.every || 1] || `${r.every} tháng`}</td><td>${esc(r.startMonth)}</td>
         <td class="r"><button class="link danger" data-del-rec="${esc(r.id)}">Xóa</button></td></tr>`).join('') ||
-        '<tr><td colspan="5" class="empty">Chưa có — vd Lương ngày 5, tiền điện thoại ngày 10.</td></tr>'}</tbody>
+        '<tr><td colspan="6" class="empty">Chưa có — vd Lương ngày 5, Netflix 3 tháng/lần.</td></tr>'}</tbody>
     </table></div>
     <form id="rec-form" class="inline-form">
       <select name="cat"><optgroup label="Thu">${catOpts('income')}</optgroup><optgroup label="Chi">${catOpts('expense')}</optgroup></select>
       <input name="amount" inputmode="decimal" placeholder="Số tiền (vd 15tr)" required>
       <input name="day" type="number" min="1" max="28" value="5" title="Ngày trong tháng (1–28)">
-      <input name="startMonth" type="month" value="${monthKey(localToday())}">
+      <select name="every" title="Chu kỳ">${Object.entries(EVERY).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
+      <input name="startMonth" type="month" value="${monthKey(localToday())}" title="Tháng trả lần đầu (tính từ đó theo chu kỳ)">
       <input name="note" placeholder="Ghi chú">
       <button class="btn">Thêm</button>
     </form>
@@ -252,7 +255,7 @@ function bind(root, ctx, b) {
     const cat = b.categories.find((c) => c.id === f.cat);
     b.recurring.push({
       id: uid(), type: cat?.type || 'expense', amount: v, cat: f.cat, note: f.note.trim(),
-      day: Math.min(28, Math.max(1, Number(f.day) || 1)), startMonth: f.startMonth || monthKey(localToday()), active: true,
+      day: Math.min(28, Math.max(1, Number(f.day) || 1)), every: Number(f.every) || 1, startMonth: f.startMonth || monthKey(localToday()), active: true,
     });
     generateRecurring(b);
     saveConfig(b);

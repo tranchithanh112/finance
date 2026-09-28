@@ -40,7 +40,7 @@ export function defaultBudget() {
     categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
     txs: [], // { id, date:'YYYY-MM-DD', type:'expense'|'income', amount, cat, note, u (sửa lúc) }
     deleted: {}, // id -> thời điểm xóa (để đồng bộ nhiều máy không "hồi sinh" giao dịch đã xóa)
-    recurring: [], // { id, type, amount, cat, note, day, startMonth:'YYYY-MM', active }
+    recurring: [], // { id, type, amount, cat, note, day, every (tháng), startMonth:'YYYY-MM', active }
     debts: [], // { id, name, balance, rate, monthly, currency }
     emergencyTarget: 6,
     configAt: 0, // lần sửa cấu hình (hũ, danh mục, định kỳ, nợ) gần nhất
@@ -79,7 +79,8 @@ export function generateRecurring(b, today = localToday()) {
   let n = 0;
   for (const r of b.recurring) {
     if (r.active === false) continue;
-    for (let ym = r.startMonth; ym <= monthKey(today); ym = shiftMonth(ym, 1)) {
+    const every = Math.max(1, Number(r.every) || 1); // chu kỳ: 1 = hằng tháng, 3 = mỗi quý…
+    for (let ym = r.startMonth; ym <= monthKey(today); ym = shiftMonth(ym, every)) {
       const day = String(Math.min(Math.max(Number(r.day) || 1, 1), 28)).padStart(2, '0');
       const date = `${ym}-${day}`;
       if (date > today) break;

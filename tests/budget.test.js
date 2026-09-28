@@ -82,3 +82,10 @@ test('gộp thu chi 2 máy: không mất khoản nhập, khoản đã xóa khôn
   assert.deepEqual(m.txs.map((t) => t.id), ['phone', 'pc']);
   assert.equal(m.jars[0].pct, 40);
 });
+
+test('khoản định kỳ nhiều tháng: Netflix 3 tháng/lần', () => {
+  const b = defaultBudget();
+  b.recurring.push({ id: 'nf', type: 'expense', amount: 165000, cat: 'fun', day: 15, every: 3, startMonth: '2026-03', active: true });
+  generateRecurring(b, '2026-09-28');
+  assert.deepEqual(b.txs.map((t) => t.date), ['2026-03-15', '2026-06-15', '2026-09-15']);
+});

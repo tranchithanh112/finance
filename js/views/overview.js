@@ -2,7 +2,7 @@ import { state, commit } from '../store.js';
 import { totals, stockPositions, cryptoHoldings, toUSD, fxRate } from '../calc.js';
 import { donut, line, bars, PALETTE } from '../charts.js';
 import {
-  monthSummary, recentAverage, healthScore, debtMonthlyVnd, monthKey, localToday, shiftMonth, SPEND_JARS,
+  monthSummary, recentAverage, healthScore, debtMonthlyVnd, parseAmount, monthKey, localToday, shiftMonth, SPEND_JARS,
 } from '../budget.js';
 import { esc, fmtMoney, fmtPct, pnlClass, uid, fmtNative, timeAgo, toast } from '../util.js';
 
@@ -94,7 +94,8 @@ export function renderOverview(root, ctx) {
           <tbody>
             ${state.cash.map((c) => `
               <tr><td>${esc(c.name)}</td><td class="r">${fmtNative(Number(c.amount), c.currency)}</td>
-              <td class="r"><button class="link danger" data-del-cash="${c.id}">Xóa</button></td></tr>`).join('') ||
+              <td class="r nowrap"><button class="link" data-edit-cash="${c.id}">Sửa số dư</button>
+                <button class="link danger" data-del-cash="${c.id}">Xóa</button></td></tr>`).join('') ||
               '<tr><td colspan="3" class="empty">Chưa có — tiền gửi ngân hàng, tiền mặt, vàng…</td></tr>'}
           </tbody>
         </table>
@@ -165,6 +166,18 @@ export function renderOverview(root, ctx) {
     commit({ edit: true });
     ctx.rerender();
   };
+  root.querySelectorAll('[data-edit-cash]').forEach((btn) => {
+    btn.onclick = () => {
+      const c = state.cash.find((x) => x.id === btn.dataset.editCash);
+      const v = prompt(`Số dư mới của "${c.name}" (${c.currency}${c.currency === 'VND' ? ', vd 52tr hoặc 52.000.000' : ''})`, c.amount);
+      if (v == null) return;
+      const n = c.currency === 'VND' ? parseAmount(v) : Number(String(v).replace(',', '.'));
+      if (!Number.isFinite(n)) return toast('Số không hợp lệ', 'error');
+      c.amount = n;
+      commit({ edit: true });
+      ctx.rerender();
+    };
+  });
   root.querySelectorAll('[data-del-cash]').forEach((btn) => {
     btn.onclick = () => {
       state.cash = state.cash.filter((c) => c.id !== btn.dataset.delCash);

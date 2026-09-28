@@ -166,6 +166,21 @@ const EXACT = {
   'Tài khoản chưa có cổ phiếu — mua xong bấm Cập nhật là số liệu tự hiện.': 'No stocks in the account yet — after buying, tap Update and they will appear.',
   'Nhập số tài khoản lưu ký TCBS trước': 'Enter your TCBS custody account number first',
   'Phiên TCBS đã hết hạn, hãy nhập OTP mới': 'TCBS session expired, enter a new OTP',
+  // ---- biểu đồ theo thời gian
+  'Theo loại': 'By class', '1T': '1M', '3T': '3M', '6T': '6M', '1N': '1Y', 'từ đầu': 'since start',
+  'Mỗi ngày lưu 1 điểm khi bạn mở app / làm mới số dư.': 'One point is saved per day when you open the app / refresh balances.',
+  'Coin đang nắm theo thời gian': 'Coins held over time', 'Tổng ví crypto theo thời gian': 'Crypto wallet over time',
+  'Giá trị vs vốn': 'Value vs cost', 'Tổng ví': 'Wallet total', 'Giá trị coin': 'Coin value',
+  'Danh mục chứng khoán theo thời gian': 'Stock portfolio over time', 'Thêm giao dịch mua để xem biểu đồ.': 'Add a buy transaction to see the chart.',
+  'Chưa đủ dữ liệu — cần ít nhất 2 ngày.': 'Not enough data yet — needs at least 2 days.',
+  'Dựng lại từ lịch sử giao dịch Binance và giá đóng cửa từng ngày; không gồm stablecoin và ví futures. Khoảng cách giữa hai đường là lãi/lỗ chưa chốt.':
+    'Rebuilt from your Binance trade history and daily closing prices; excludes stablecoins and the futures wallet. The gap between the two lines is unrealized P&L.',
+  'Số dư thực tế của ví (gồm stablecoin), mỗi ngày lưu 1 điểm khi bạn mở app.': 'Actual wallet balance (incl. stablecoins), one point saved per day when you open the app.',
+  'Số dư thực tế của ví (gồm stablecoin), mỗi ngày lưu 1 điểm khi bạn mở app. Đồng bộ lịch sử ở tab Lãi/lỗ để xem được từ ngày đầu tiên.':
+    'Actual wallet balance (incl. stablecoins), one point saved per day when you open the app. Sync history in the P&L tab to see it from day one.',
+  'Tính từ các giao dịch bạn nhập và giá đóng cửa từng ngày (Yahoo Finance; mã nhập tay dùng giá giao dịch gần nhất). Khoảng cách giữa hai đường là lãi/lỗ chưa chốt.':
+    'Computed from your transactions and daily closing prices (Yahoo Finance; manual symbols use the latest transaction price). The gap between the two lines is unrealized P&L.',
+
 };
 
 // Danh mục & hũ mặc định (xuất hiện chen trong chuỗi, vd "🍜 Ăn uống", "Hũ Thiết yếu")

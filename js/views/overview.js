@@ -1,6 +1,8 @@
 import { state, commit } from '../store.js';
 import { totals, stockPositions, cryptoHoldings, toUSD, fxRate, cashBalance } from '../calc.js';
-import { donut, line, bars, PALETTE } from '../charts.js';
+import { donut, bars, PALETTE } from '../charts.js';
+import { snapshotSeries } from '../series.js';
+import { historyCard, bindHistory, histMode } from './history-card.js';
 import {
   monthSummary, recentAverage, healthScore, debtMonthlyVnd, parseAmount, setAnchor, monthKey, localToday, shiftMonth, SPEND_JARS,
 } from '../budget.js';
@@ -42,6 +44,22 @@ export function renderOverview(root, ctx) {
   const trend = months.map((m) => monthSummary(b, m));
   const hasBudget = b.txs.length > 0;
 
+  const histRows = snapshotSeries(state.snapshots);
+  const hmode = histMode('overview', 'total');
+  const hist = {
+    id: 'overview', title: 'Tài sản ròng theo thời gian', rows: histRows, key: 'total',
+    modes: [['total', 'Tổng'], ['mix', 'Theo loại']], mode: hmode,
+    note: 'Mỗi ngày lưu 1 điểm khi bạn mở app / làm mới số dư.',
+    series: hmode === 'mix'
+      ? [
+        { key: 'coins', label: 'Crypto', color: PALETTE[0], area: 'stack' },
+        { key: 'stable', label: 'Stablecoin', color: PALETTE[2], area: 'stack' },
+        { key: 'stocks', label: 'Chứng khoán', color: PALETTE[1], area: 'stack' },
+        { key: 'cash', label: 'Tiền mặt & khác', color: PALETTE[9], area: 'stack' },
+      ]
+      : [{ key: 'total', label: 'Tài sản ròng', color: PALETTE[0], area: 'gradient' }],
+  };
+
   root.innerHTML = `
     <div class="kpis">
       <div class="kpi hero"><span>Tài sản ròng</span><b>${fmtMoney(t.total)}</b>
@@ -56,6 +74,8 @@ export function renderOverview(root, ctx) {
       <div class="kpi"><span>Lãi/lỗ đầu tư</span><b class="${pnlClass(investPnl)}">${pnl || fut || stocks.length ? fmtMoney(investPnl, { sign: true }) : '—'}</b>
         <small>Spot ${pnl ? fmtMoney(pnl.totals.total, { sign: true, compact: true }) : '—'} · Futures ${fut ? fmtMoney(fut.net + fut.unrealized, { sign: true, compact: true }) : '—'} · CK ${stocks.length ? fmtMoney(stockPnl, { sign: true, compact: true }) : '—'}</small></div>
     </div>
+
+    ${historyCard(hist)}
 
     <div class="card health">
       <div class="score" style="--p:${health.score ?? 0};--c:${scoreColor}">
@@ -76,11 +96,6 @@ export function renderOverview(root, ctx) {
     <div class="grid2">
       <div class="card"><h3>Phân bổ tài sản</h3><div class="chart"><canvas id="ov-class"></canvas></div></div>
       <div class="card"><h3>Thu chi 6 tháng</h3>${hasBudget ? '<div class="chart"><canvas id="ov-flow"></canvas></div>' : '<p class="empty">Chưa có dữ liệu thu chi.</p>'}</div>
-    </div>
-
-    <div class="card">
-      <div class="card-head"><h3>Tài sản ròng theo thời gian</h3><small class="muted">Mỗi ngày lưu 1 điểm khi bạn mở app</small></div>
-      ${state.snapshots.length > 1 ? '<div class="chart tall"><canvas id="ov-hist"></canvas></div>' : '<p class="empty">Cần ít nhất 2 ngày dữ liệu để vẽ biểu đồ.</p>'}
     </div>
 
     <div class="card">
@@ -155,14 +170,7 @@ export function renderOverview(root, ctx) {
       { label: 'Để dành & đầu tư', data: trend.map((m) => toUSD(m.saved, 'VND')), color: PALETTE[1] },
     ]);
   }
-  if (state.snapshots.length > 1) {
-    const s = state.snapshots;
-    line(root.querySelector('#ov-hist'), s.map((x) => x.date), [
-      { label: 'Tài sản ròng', data: s.map((x) => x.total), fill: true, color: PALETTE[0] },
-      { label: 'Crypto', data: s.map((x) => x.crypto), color: PALETTE[2] },
-      { label: 'Chứng khoán', data: s.map((x) => x.stocks), color: PALETTE[1] },
-    ]);
-  }
+  bindHistory(root, hist, ctx);
 
   // ---- tiền mặt
   root.querySelector('#cash-form').onsubmit = (e) => {

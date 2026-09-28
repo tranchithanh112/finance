@@ -3,7 +3,8 @@ import { fetchHoldings, syncHistory, getPriceHistory, bn, ensurePriceHistory, fe
 import { computeFutures, syncFuturesIncome, csvToIncome, mergeIncome, emptyFutures } from './futures.js';
 import { makePriceLookup } from './pnl.js';
 import { computePnl } from './pnl.js';
-import { totals, fxRate } from './calc.js';
+import { cryptoSeries, stockSeries } from './series.js';
+import { totals, fxRate, toUSD, fundPrice } from './calc.js';
 import * as sync from './sync.js';
 import { $, $$, toast, setDisplayCurrency, isStable, esc, isPrivate, setPrivate } from './util.js';
 import { icon } from './icons.js';
@@ -39,6 +40,9 @@ let futBusy = '';
 let syncing = { running: false, pct: 0, msg: '' };
 let abort = null;
 let tcbsBusy = false;
+// Giá đóng cửa lịch sử của mã CK (Yahoo) — chỉ lưu trên máy, không sync: { ticker: { at, rows: [[ms, close]] } }
+let histTriedAt = 0;
+let stockHist = (() => { try { return JSON.parse(localStorage.getItem('fin.stockHist') || '{}'); } catch { return {}; } })();
 
 // ================= Actions =================
 
@@ -54,6 +58,13 @@ const ctx = {
     return pnlCache;
   },
   invalidatePnl() { pnlCache = null; futCache = null; },
+  /** Giá trị coin & vốn theo ngày, dựng lại từ lịch sử (cache cùng PnL). */
+  cryptoSeries() {
+    const p = ctx.pnl();
+    if (!p) return [];
+    p.series ||= cryptoSeries(state.history, priceHist);
+    return p.series;
+  },
 
   futuresBusy: () => futBusy,
   futuresPnl() {
@@ -174,6 +185,30 @@ const ctx = {
     render();
   },
 
+  /** Giá trị & vốn danh mục CK theo ngày (giao dịch tự nhập + giá lịch sử Yahoo). */
+  stockSeries() {
+    const hist = Object.fromEntries(Object.entries(stockHist).map(([t, h]) => [t, h.rows]));
+    return stockSeries(state.stocks.funds, state.stocks.txs, hist, { toUSD, priceOf: fundPrice });
+  },
+
+  async refreshStockHistory() {
+    const stale = state.stocks.funds.filter((f) => f.source !== 'manual'
+      && state.stocks.txs.some((t) => t.ticker === f.ticker)
+      && Date.now() - (stockHist[f.ticker]?.at || 0) > 12 * 3600e3);
+    if (!stale.length || !local.appPassword || Date.now() - histTriedAt < 60e3) return;
+    histTriedAt = Date.now();
+    try {
+      const r = await fetch(`/api/quote?history=5y&symbols=${encodeURIComponent(stale.map((f) => f.ticker).join(','))}`, {
+        headers: { 'x-app-password': local.appPassword },
+      });
+      const data = await r.json();
+      if (!r.ok) return;
+      for (const f of stale) stockHist[f.ticker] = { at: Date.now(), rows: data.history?.[f.ticker] || stockHist[f.ticker]?.rows || [] };
+      try { localStorage.setItem('fin.stockHist', JSON.stringify(stockHist)); } catch { /* đầy bộ nhớ thì thôi */ }
+      if (current === 'stocks') render();
+    } catch { /* bỏ qua, lần sau thử lại */ }
+  },
+
   async refreshQuotes(showToast = false) {
     const funds = state.stocks.funds.filter((f) => f.source !== 'manual');
     if (!local.appPassword) return;
@@ -192,6 +227,7 @@ const ctx = {
       const errs = Object.keys(data.errors || {}).filter((s) => s !== 'VND=X');
       snapshot();
       commit();
+      ctx.refreshStockHistory();
       if (errs.length) toast(`Không lấy được giá: ${errs.join(', ')}`, 'error', 7000);
       else if (showToast) toast('Đã cập nhật giá', 'ok');
     } catch (e) {

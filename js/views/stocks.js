@@ -1,7 +1,8 @@
 import { state, commit } from '../store.js';
 import { stockPositions, fxRate, brokerCashUSD } from '../calc.js';
 import { tcbsSession, tcbsLogout, tcbsCash } from '../tcbs.js';
-import { donut } from '../charts.js';
+import { donut, PALETTE } from '../charts.js';
+import { historyCard, bindHistory } from './history-card.js';
 import { locale as getLocale } from '../i18n.js';
 import { esc, fmtMoney, fmtNative, fmtQty, fmtPct, fmtDate, pnlClass, uid, timeAgo, todayKey, toast } from '../util.js';
 
@@ -19,6 +20,16 @@ export function renderStocks(root, ctx) {
   const txs = [...state.stocks.txs].sort((a, b) => b.date.localeCompare(a.date));
   const ed = editing && state.stocks.funds.find((f) => f.ticker === editing);
 
+  const hist = {
+    id: 'stocks', title: 'Danh mục chứng khoán theo thời gian', rows: ctx.stockSeries(), key: 'value',
+    note: 'Tính từ các giao dịch bạn nhập và giá đóng cửa từng ngày (Yahoo Finance; mã nhập tay dùng giá giao dịch gần nhất). Khoảng cách giữa hai đường là lãi/lỗ chưa chốt.',
+    empty: 'Thêm giao dịch mua để xem biểu đồ.',
+    series: [
+      { key: 'value', label: 'Giá trị', color: PALETTE[1], area: 'gradient' },
+      { key: 'cost', label: 'Vốn đang nắm', color: PALETTE[4], dash: true },
+    ],
+  };
+
   root.innerHTML = `
     <div class="kpis">
       <div class="kpi hero"><span>Giá trị chứng khoán / quỹ</span><b>${fmtMoney(value + bCash)}</b><small>${bCash ? `Gồm ${fmtMoney(bCash)} tiền trong TK CK · ` : ''}Giá cập nhật ${timeAgo(Math.max(lastQuote, state.broker?.updatedAt || 0))}</small></div>
@@ -29,6 +40,8 @@ export function renderStocks(root, ctx) {
     </div>
 
     ${tcbsCard(ctx)}
+
+    ${historyCard(hist)}
 
     <div class="grid2 wide-right">
       <div class="card"><h3>Phân bổ</h3>${pos.some((p) => p.valueUSD > 0) ? '<div class="chart"><canvas id="st-donut"></canvas></div>' : '<p class="empty">Chưa có vị thế.</p>'}</div>
@@ -102,6 +115,8 @@ export function renderStocks(root, ctx) {
 
   if (pos.some((p) => p.valueUSD > 0)) donut(root.querySelector('#st-donut'), pos.map((p) => ({ label: p.ticker, value: p.valueUSD })));
 
+  bindHistory(root, hist, ctx);
+  ctx.refreshStockHistory();
   root.querySelector('#st-quotes').onclick = () => { ctx.refreshQuotes(true); ctx.syncTcbs({ quiet: true }); };
   bindTcbs(root, ctx);
   root.querySelector('#fund-cancel')?.addEventListener('click', () => { editing = null; ctx.rerender(); });

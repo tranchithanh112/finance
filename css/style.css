@@ -83,6 +83,8 @@
 /* ================= Base ================= */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; }
+/* Tắt phóng to khi chạm đúp (vẫn cho phép kéo cuộn / pinch) */
+html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   background: var(--bg);
   color: var(--text);
@@ -489,3 +491,19 @@ input { min-width: 0; }
   .kpi.hero b { font-size: 24px; }
 }
 #qa-preview:empty { display: none; }
+
+/* ---- Thẻ "tài sản theo thời gian" ---- */
+.hist-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; margin-bottom: 10px; }
+.hist-title h3 { margin: 0 0 4px; }
+.hist-value { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.hist-value b { font-size: 24px; font-weight: 800; letter-spacing: -.025em; font-feature-settings: 'tnum', 'cv11'; }
+.hist-delta { font-weight: 650; font-size: 14px; font-feature-settings: 'tnum'; }
+.hist-value small { font-size: 12px; }
+.hist-controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.hist-controls .seg button { padding: 5px 10px; font-size: 12.5px; }
+.hist-card .chart.tall { height: 280px; }
+@media (max-width: 720px) {
+  .hist-controls { justify-content: flex-start; width: 100%; }
+  .hist-card .chart.tall { height: 240px; }
+  .hist-value b { font-size: 22px; }
+}

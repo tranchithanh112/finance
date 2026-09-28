@@ -115,7 +115,7 @@ export const onCommit = (fn) => listeners.add(fn);
 
 export function takeSnapshot(t) {
   const date = todayKey();
-  const snap = { date, crypto: t.crypto, stocks: t.stocks, cash: t.cash, debt: t.debt || 0, total: t.total };
+  const snap = { date, crypto: t.crypto, stable: t.stable || 0, stocks: t.stocks, cash: t.cash, debt: t.debt || 0, total: t.total };
   const i = state.snapshots.findIndex((s) => s.date === date);
   if (i >= 0) state.snapshots[i] = snap;
   else state.snapshots.push(snap);

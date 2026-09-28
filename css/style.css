@@ -507,3 +507,4 @@ input { min-width: 0; }
   .hist-card .chart.tall { height: 240px; }
   .hist-value b { font-size: 22px; }
 }
+.hist-sub { margin-top: 3px; } .hist-sub b { font-weight: 650; }

@@ -169,7 +169,7 @@ const EXACT = {
   'Nhập số tài khoản lưu ký TCBS trước': 'Enter your TCBS custody account number first',
   'Phiên TCBS đã hết hạn, hãy nhập OTP mới': 'TCBS session expired, enter a new OTP',
   // ---- biểu đồ theo thời gian
-  'Theo loại': 'By class', '1T': '1M', '3T': '3M', '6T': '6M', '1N': '1Y', 'từ đầu': 'since start', 'lãi/lỗ từ đầu': 'P&L since start',
+  'Theo loại': 'By class', '1T': '1M', '3T': '3M', '6T': '6M', '1N': '1Y', 'từ đầu': 'since start', 'chưa chốt': 'unrealized', 'lãi/lỗ từ đầu': 'P&L since start',
   'Mỗi ngày lưu 1 điểm khi bạn mở app / làm mới số dư.': 'One point is saved per day when you open the app / refresh balances.',
   'Coin đang nắm theo thời gian': 'Coins held over time', 'Tổng ví crypto theo thời gian': 'Crypto wallet over time',
   'Giá trị vs vốn': 'Value vs cost', 'Tổng ví': 'Wallet total', 'Giá trị coin': 'Coin value',
@@ -275,6 +275,8 @@ const RULES = [
   [/^Đã nhập (\d+) bản ghi futures mới \((\d+) trùng \/ đã có\)$/, 'Imported $1 new futures records ($2 duplicates)'],
   // chứng khoán
   [/^Sửa mã (.+)$/, 'Edit $1'],
+  [/^Lãi\/lỗ (1T|3T|6T|1N|từ đầu):$/, (m, r) => `P&L ${{ '1T': '1M', '3T': '3M', '6T': '6M', '1N': '1Y', 'từ đầu': 'since start' }[r]}:`],
+  [/^= chưa chốt (.+) · đã chốt (.+)$/, '= unrealized $1 · realized $2'],
   [/^lãi\/lỗ (1T|3T|6T|1N)$/, (m, r) => `P&L ${{ '1T': '1M', '3T': '3M', '6T': '6M', '1N': '1Y' }[r]}`],
   [/^Đã kết nối đến (.+)$/, 'Connected until $1'],
   [/^Chỉ đọc danh mục và tiền, [\s\S]*$/, 'Read-only: holdings and cash, never places orders. A TCBS session lasts up to 8 hours; when it expires, enter a new OTP (Smart OTP in the TCInvest app). Loaded data is kept and synced to the cloud.'],

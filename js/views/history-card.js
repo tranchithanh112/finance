@@ -24,12 +24,26 @@ export function historyCard(opts) {
   const ch = pnl ? periodPnl(view) : rangeChange(view, key);
   if (ch && noPct) ch.pct = null;
   const label = RANGES.find((r) => r[0] === range)?.[1] || '';
+  const rangeText = range === 'all' ? 'từ đầu' : label;
+  let head = '';
+  if (last && pnl) {
+    // Số chính = lãi/lỗ chưa chốt hiện tại (đúng bằng khoảng cách giữa 2 đường);
+    // dòng phụ = lãi/lỗ trong kỳ, tách thành phần chưa chốt thay đổi + đã chốt.
+    const unreal = last.value - last.cost;
+    const first = view[0];
+    const dUnreal = unreal - (first.value - first.cost);
+    head = `<div class="hist-value"><b>${fmtMoney(last[key])}</b>
+        <span class="hist-delta ${pnlClass(unreal)}">${fmtMoney(unreal, { sign: true })}${last.cost > 0 ? ` (${fmtPct(unreal / last.cost)})` : ''}</span>
+        <small class="muted">chưa chốt</small></div>
+      ${ch ? `<div class="hist-sub muted small">Lãi/lỗ ${rangeText}: <b class="${pnlClass(ch.abs)}">${fmtMoney(ch.abs, { sign: true })}</b>
+        = chưa chốt ${fmtMoney(dUnreal, { sign: true, compact: true })} · đã chốt ${fmtMoney(ch.abs - dUnreal, { sign: true, compact: true })}</div>` : ''}`;
+  }
   return `
     <div class="card hist-card" data-hist="${id}">
       <div class="hist-head">
         <div class="hist-title">
           <h3>${title}</h3>
-          ${last ? `<div class="hist-value"><b>${fmtMoney(last[key])}</b>${ch ? `
+          ${pnl ? head : last ? `<div class="hist-value"><b>${fmtMoney(last[key])}</b>${ch ? `
             <span class="hist-delta ${pnlClass(ch.abs)}">${fmtMoney(ch.abs, { sign: true })}${ch.pct != null ? ` (${fmtPct(ch.pct)})` : ''}</span>
             <small class="muted">${pnl ? (range === 'all' ? 'lãi/lỗ từ đầu' : `lãi/lỗ ${label}`) : (range === 'all' ? 'từ đầu' : label)}</small>` : ''}</div>` : ''}
         </div>

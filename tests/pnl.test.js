@@ -1,0 +1,90 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { computePnl } from '../js/pnl.js';
+
+const DAY = 86400000;
+const t0 = Date.UTC(2024, 0, 1);
+const empty = () => ({ trades: {}, meta: {}, deposits: [], withdrawals: [], dust: [], converts: [] });
+const close = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} ≈ ${b}`);
+// [id,time,price,qty,quoteQty,commission,commissionAsset,isBuyer]
+
+test('mua 2 lần, bán 1 phần: giá vốn bình quân + realized/unrealized', () => {
+  const h = empty();
+  h.meta.BTCUSDT = ['BTC', 'USDT'];
+  h.trades.BTCUSDT = { lastId: 3, rows: [
+    [1, t0, 100, 1, 100, 0, 'USDT', 1],
+    [2, t0 + DAY, 200, 1, 200, 0, 'USDT', 1],
+    [3, t0 + 2 * DAY, 300, 1, 300, 0, 'USDT', 0],
+  ] };
+  const r = computePnl(h, {}, [{ asset: 'BTC', total: 1, price: 400, value: 400 }]);
+  const btc = r.rows.find((x) => x.asset === 'BTC');
+  close(btc.avg, 150);
+  close(btc.realized, 150);
+  close(btc.unrealized, 250);
+  close(btc.total, 400);
+  close(btc.invested, 300);
+  assert.equal(btc.status, 'holding');
+});
+
+test('coin đã bán hết được đánh dấu closed', () => {
+  const h = empty();
+  h.meta.SOLUSDT = ['SOL', 'USDT'];
+  h.trades.SOLUSDT = { lastId: 2, rows: [[1, t0, 10, 5, 50, 0, 'USDT', 1], [2, t0 + DAY, 8, 5, 40, 0, 'USDT', 0]] };
+  const r = computePnl(h, {}, []);
+  const sol = r.rows.find((x) => x.asset === 'SOL');
+  close(sol.realized, -10);
+  assert.equal(sol.status, 'closed');
+  close(r.totals.total, -10);
+});
+
+test('phí BNB tính vào giá vốn coin giao dịch, cặp quote BTC sinh 2 chân', () => {
+  const h = empty();
+  const hist = { BTC: { days: { [Math.floor(t0 / DAY)]: 20000 } }, BNB: { days: { [Math.floor(t0 / DAY)]: 300 } } };
+  h.meta.BTCUSDT = ['BTC', 'USDT'];
+  h.meta.ETHBTC = ['ETH', 'BTC'];
+  h.meta.BNBUSDT = ['BNB', 'USDT'];
+  h.trades.BTCUSDT = { lastId: 1, rows: [[1, t0, 20000, 1, 20000, 0, 'USDT', 1]] };
+  h.trades.BNBUSDT = { lastId: 1, rows: [[1, t0, 300, 1, 300, 0, 'USDT', 1]] };
+  // mua 10 ETH bằng 0.5 BTC, phí 0.01 BNB
+  h.trades.ETHBTC = { lastId: 1, rows: [[1, t0 + 1000, 0.05, 10, 0.5, 0.01, 'BNB', 1]] };
+  const r = computePnl(h, hist, []);
+  const eth = r.rows.find((x) => x.asset === 'ETH');
+  const btc = r.rows.find((x) => x.asset === 'BTC');
+  const bnb = r.rows.find((x) => x.asset === 'BNB');
+  close(eth.ledgerQty, 10);
+  close(eth.avg, (10000 + 3) / 10);
+  close(btc.ledgerQty, 0.5);
+  close(btc.realized, 0);
+  close(bnb.ledgerQty, 0.99);
+});
+
+test('nạp coin lấy giá thị trường làm giá vốn, rút coin không phát sinh lãi/lỗ', () => {
+  const h = empty();
+  const d0 = Math.floor(t0 / DAY);
+  const hist = { ETH: { days: { [d0]: 1000, [d0 + 10]: 2000 } } };
+  h.deposits.push([1, t0, 'ETH', 2]);
+  h.withdrawals.push([1, t0 + 10 * DAY, 'ETH', 1, 0]);
+  const r = computePnl(h, hist, [{ asset: 'ETH', total: 1, price: 3000, value: 3000 }]);
+  const eth = r.rows.find((x) => x.asset === 'ETH');
+  close(eth.realized, 0);
+  close(eth.costBasis, 1000);
+  close(eth.unrealized, 2000);
+});
+
+test('bán nhiều hơn số đã ghi nhận -> untracked, không tạo lãi ảo', () => {
+  const h = empty();
+  h.meta.XRPUSDT = ['XRP', 'USDT'];
+  h.trades.XRPUSDT = { lastId: 1, rows: [[1, t0, 1, 100, 100, 0, 'USDT', 0]] };
+  const r = computePnl(h, {}, []);
+  const x = r.rows.find((y) => y.asset === 'XRP');
+  close(x.realized, 0);
+  close(x.untrackedQty, 100);
+});
+
+test('số dư thực lớn hơn sổ sách (lãi Earn) -> phần dư giá vốn 0', () => {
+  const h = empty();
+  h.meta.ADAUSDT = ['ADA', 'USDT'];
+  h.trades.ADAUSDT = { lastId: 1, rows: [[1, t0, 1, 100, 100, 0, 'USDT', 1]] };
+  const r = computePnl(h, {}, [{ asset: 'ADA', total: 110, price: 1, value: 110 }]);
+  close(r.rows[0].unrealized, 10);
+});

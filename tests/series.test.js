@@ -68,3 +68,31 @@ test('periodPnl không tính tiền mua thêm là lãi', () => {
   assert.equal(r.pct, 100 / 1000);
   assert.equal(periodPnl([{ value: 1, cost: 1, pnl: 0 }]), null);
 });
+
+test('reconcileWithWallet: lịch sử dư → rút phần dư ở thời điểm sớm nhất hợp lệ; ví dư → thưởng giá vốn 0', async () => {
+  const { reconcileWithWallet, cryptoSeries } = await import('../js/series.js');
+  const ev = (t, asset, qty, value, kind) => ({ t, asset, qty, value, kind });
+  const events = [
+    ev(d0, 'BNB', 1, 300, 'buy'),
+    ev(d0 + DAY, 'BNB', -1, 350, 'sell'),
+    ev(d0 + 2 * DAY, 'BNB', 3, 900, 'buy'), // lệnh bán sau đó bị thiếu
+    ev(d0 + 3 * DAY, 'BNB', 1, 300, 'buy'),
+  ];
+  const out = reconcileWithWallet(events, new Map([['BNB', 1]]));
+  const fix = out.find((e) => e.kind === 'withdraw');
+  assert.equal(fix.qty, -3);
+  assert.equal(fix.t, d0 + 2 * DAY); // từ lúc mua 3 BNB thì sổ sách luôn dư ≥ 3
+  const more = reconcileWithWallet(events, new Map([['BNB', 5]])).filter((e) => e.kind === 'reward');
+  assert.ok(more.length >= 1);
+  assert.ok(Math.abs(more.reduce((a, e) => a + e.qty, 0) - 1) < 1e-9);
+  assert.ok(more.every((e) => e.value === 0));
+  // cuối chuỗi khớp số coin trong ví
+  const history = {
+    trades: { BNBUSDT: { lastId: 2, rows: [[1, d0, 300, 4, 1200, 0, 'USDT', true]] } },
+    meta: { BNBUSDT: ['BNB', 'USDT'] }, deposits: [], withdrawals: [], dust: [], converts: [],
+  };
+  const days = {}; for (let k = 0; k < 3; k++) days[d0 / DAY + k] = 300;
+  const s = cryptoSeries(history, { BNB: { days } }, { now: d0 + 2 * DAY + 1000, held: new Map([['BNB', 1]]) });
+  assert.equal(s.at(-1).value, 300);
+  assert.equal(s.at(-1).cost, 300);
+});

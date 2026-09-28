@@ -62,7 +62,9 @@ const ctx = {
   cryptoSeries() {
     const p = ctx.pnl();
     if (!p) return [];
-    p.series ||= cryptoSeries(state.history, priceHist);
+    // đối chiếu với số coin thật trong ví (không gồm ví futures) để khớp với các ô số liệu
+    const held = new Map(state.crypto.holdings.map((h) => [h.asset, h.total - (h.futures || 0)]));
+    p.series ||= cryptoSeries(state.history, priceHist, { held: state.crypto.holdings.length ? held : null });
     return p.series;
   },
 

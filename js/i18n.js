@@ -207,6 +207,8 @@ const TERMS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const RULES = [
+  [/^trong (1T|3T|6T|1N)$/, (m, r) => `in ${{ '1T': '1M', '3T': '3M', '6T': '6M', '1N': '1Y' }[r]}`],
+  [/^Lũy kế tới nay:$/, 'Cumulative to date:'],
   [/^Lịch sử nhiều hơn ví (.+?)( · ví nhiều hơn lịch sử (.+))?$/, (m, a, _x, b) => `History above wallet ${a}${b ? ` · wallet above history ${b}` : ''}`],
   [/^ví nhiều hơn lịch sử (.+)$/, 'Wallet above history $1'],
   [/^\+ (.+) trong ví futures$/, '+ $1 in futures wallet'],

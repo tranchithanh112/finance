@@ -16,7 +16,7 @@ export const histMode = (id, def) => pref(`fin.mode.${id}`, def);
  *         modes?: [[id,label]], mode?, note?, empty? }
  */
 export function historyCard(opts) {
-  const { id, title, rows, key, modes, mode, note, empty, pnl, noPct } = opts;
+  const { id, title, rows, key, modes, mode, note, empty, pnl, noPct, periodMain } = opts;
   const range = histRange(id);
   const view = sliceRange(rows, range);
   const last = view[view.length - 1];
@@ -43,7 +43,7 @@ export function historyCard(opts) {
       <div class="hist-head">
         <div class="hist-title">
           <h3>${title}</h3>
-          ${pnl ? head : last ? `<div class="hist-value"><b>${fmtMoney(last[key])}</b>${ch ? `
+          ${periodMain && last ? periodHead(view, key, range, label) : pnl ? head : last ? `<div class="hist-value"><b>${fmtMoney(last[key])}</b>${ch ? `
             <span class="hist-delta ${pnlClass(ch.abs)}">${fmtMoney(ch.abs, { sign: true })}${ch.pct != null ? ` (${fmtPct(ch.pct)})` : ''}</span>
             <small class="muted">${pnl ? (range === 'all' ? 'lãi/lỗ từ đầu' : `lãi/lỗ ${label}`) : (range === 'all' ? 'từ đầu' : label)}</small>` : ''}</div>` : ''}
         </div>
@@ -55,6 +55,18 @@ export function historyCard(opts) {
       ${view.length > 1 ? `<div class="chart tall"><canvas id="hc-${id}"></canvas></div>` : `<p class="empty">${empty || 'Chưa đủ dữ liệu — cần ít nhất 2 ngày.'}</p>`}
       ${note ? `<p class="muted small">${note}</p>` : ''}
     </div>`;
+}
+
+/**
+ * Chuỗi lũy kế (vd lãi/lỗ cộng dồn): số lớn = phần phát sinh TRONG khung đang chọn,
+ * dòng nhỏ = lũy kế tới nay. Khung "Tất cả" thì hai số như nhau.
+ */
+function periodHead(view, key, range, label) {
+  const last = view[view.length - 1][key];
+  const inRange = range === 'all' ? last : last - view[0][key];
+  return `<div class="hist-value"><b class="${pnlClass(inRange)}">${fmtMoney(inRange, { sign: true })}</b>
+      <small class="muted">${range === 'all' ? 'từ đầu' : `trong ${label}`}</small></div>
+    ${range === 'all' ? '' : `<div class="hist-sub muted small">Lũy kế tới nay: <b class="${pnlClass(last)}">${fmtMoney(last, { sign: true })}</b></div>`}`;
 }
 
 /** Vẽ biểu đồ + gắn sự kiện cho thẻ đã render. */

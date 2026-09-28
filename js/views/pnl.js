@@ -72,7 +72,7 @@ export function renderPnl(root, ctx) {
   const pMode = recon.length ? histMode('pnl', 'total') : 'realized';
   const pLabel = { total: 'Tổng lãi/lỗ', unreal: 'Lãi/lỗ chưa chốt', realized: 'Lãi/lỗ đã chốt cộng dồn' }[pMode];
   const hist = {
-    id: 'pnl', title: pLabel, rows: pRows, key: pMode, modes: pModes, mode: pMode, noPct: true,
+    id: 'pnl', title: pLabel, rows: pRows, key: pMode, modes: pModes, mode: pMode, noPct: true, periodMain: true,
     note: recon.length ? 'Tổng = chưa chốt (giá trị coin đang nắm − vốn) + đã chốt cộng dồn. Dựng lại theo giá đóng cửa từng ngày; không gồm stablecoin và futures.' : '',
     series: [{ key: pMode, label: pLabel, color: PALETTE[pMode === 'unreal' ? 1 : 0], area: 'gradient' }],
   };

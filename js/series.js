@@ -43,10 +43,11 @@ export function snapshotSeries(snapshots) {
  * Dựng lại giá trị coin (không gồm stablecoin, không gồm ví futures) và vốn đang nắm theo ngày
  * từ lịch sử giao dịch Binance + giá đóng cửa ngày. Cùng phương pháp giá vốn bình quân với tab Lãi/lỗ.
  */
-export function cryptoSeries(history, priceHist, { now = Date.now() } = {}) {
+export function cryptoSeries(history, priceHist, { now = Date.now(), held = null } = {}) {
   const usdAt = makePriceLookup(priceHist);
-  const { events } = buildEvents(history, usdAt);
+  let { events } = buildEvents(history, usdAt);
   if (!events.length) return [];
+  if (held) events = reconcileWithWallet(events, held);
   const pos = new Map(); // asset -> { qty, cost }
   const out = [];
   let i = 0;
@@ -82,6 +83,48 @@ export function cryptoSeries(history, priceHist, { now = Date.now() } = {}) {
     out.push({ date: dayKey(d), value, cost, pnl: value - cost + realized });
   }
   return out;
+}
+
+/**
+ * Lịch sử có nhiều coin hơn ví thật (coin rời ví qua kênh không có trong lịch sử: cặp đã hủy niêm yết,
+ * Binance Pay, P2P…) → thêm 1 sự kiện "rút" (không lãi/lỗ) cho phần dư, đặt ở thời điểm SỚM NHẤT mà từ đó
+ * trở đi sổ sách luôn còn đủ phần dư. Nhờ vậy điểm cuối biểu đồ khớp với số coin thật trong ví,
+ * giống cách tab Lãi/lỗ tính. `held`: Map asset → số lượng thật (không gồm ví futures).
+ */
+export function reconcileWithWallet(events, held) {
+  const byAsset = new Map();
+  events.forEach((e, i) => (byAsset.get(e.asset) || byAsset.set(e.asset, []).get(e.asset)).push(i));
+  const extra = [];
+  for (const [asset, idx] of byAsset) {
+    const qtyAfter = [];
+    let q = 0;
+    for (const i of idx) {
+      const e = events[i];
+      q = e.qty > 0 ? q + e.qty : Math.max(0, q - Math.min(-e.qty, Math.max(q, 0)));
+      if (q < EPS) q = 0;
+      qtyAfter.push(q);
+    }
+    const gap = q - (held.get(asset) || 0);
+    if (gap < -1e-8) {
+      // Ví nhiều hơn lịch sử (lãi Earn, airdrop…): giá vốn 0, rải đều theo tháng — chỉ SAU lần bán/rút cuối
+      // của coin, để không làm đổi giá vốn các lệnh bán (lãi/lỗ đã chốt giữ nguyên như tab Lãi/lỗ).
+      const outs = idx.filter((i) => events[i].qty < 0);
+      const t0 = events[outs.length ? outs[outs.length - 1] : idx[0]].t;
+      const last = Math.max(t0, events[events.length - 1].t);
+      const n = Math.max(1, Math.round((last - t0) / (30 * DAY)));
+      for (let j = 1; j <= n; j++) {
+        extra.push({ asset, t: t0 + ((last - t0) * j) / n, qty: -gap / n, value: 0, kind: 'reward', ref: { reconcile: true } });
+      }
+      continue;
+    }
+    if (gap <= 1e-8) continue;
+    let k = qtyAfter.length - 1; // lùi tới khi sổ sách không còn đủ phần dư
+    while (k > 0 && qtyAfter[k - 1] >= gap - EPS) k--;
+    extra.push({ asset, t: events[idx[k]].t, qty: -gap, value: null, kind: 'withdraw', ref: { reconcile: true } });
+  }
+  if (!extra.length) return events;
+  // cùng thời điểm: nhận vào trước, trả ra sau (giữ quy ước của buildEvents)
+  return [...events, ...extra].sort((a, b) => a.t - b.t || b.qty - a.qty);
 }
 
 /**

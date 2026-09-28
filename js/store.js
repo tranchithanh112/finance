@@ -29,6 +29,7 @@ export function defaultState() {
       cursors: {},
       updatedAt: 0,
     },
+    futures: { income: [], cursors: {}, account: null, updatedAt: 0 },
     stocks: {
       funds: [], // { ticker, name, currency, source: 'yahoo'|'manual', manualPrice, lastPrice, prevClose, lastPriceAt }
       txs: [], // { id, ticker, date, units (âm = bán), price, fee }

@@ -1,5 +1,7 @@
 import { state, local, loadState, commit, onCommit, takeSnapshot } from './store.js';
-import { fetchHoldings, syncHistory, getPriceHistory } from './binance.js';
+import { fetchHoldings, syncHistory, getPriceHistory, bn, ensurePriceHistory, fetchTickerPrices } from './binance.js';
+import { computeFutures, syncFuturesIncome, csvToIncome, mergeIncome, emptyFutures } from './futures.js';
+import { makePriceLookup } from './pnl.js';
 import { computePnl } from './pnl.js';
 import { totals, fxRate } from './calc.js';
 import * as sync from './sync.js';
@@ -9,11 +11,13 @@ import { renderCrypto } from './views/crypto.js';
 import { renderPnl, updateProgress } from './views/pnl.js';
 import { renderStocks } from './views/stocks.js';
 import { renderSettings } from './views/settings.js';
+import { renderFutures } from './views/futures.js';
 
 const VIEWS = {
   overview: renderOverview,
   crypto: renderCrypto,
   pnl: renderPnl,
+  futures: renderFutures,
   stocks: renderStocks,
   settings: renderSettings,
 };
@@ -22,6 +26,8 @@ let current = 'overview';
 let serverCfg = { offline: true };
 let priceHist = {};
 let pnlCache = null;
+let futCache = null;
+let futBusy = '';
 let syncing = { running: false, pct: 0, msg: '' };
 let abort = null;
 
@@ -38,7 +44,66 @@ const ctx = {
     pnlCache ||= computePnl(state.history, priceHist, state.crypto.holdings, { dustUsd: Number(state.settings.dustUsd) || 1 });
     return pnlCache;
   },
-  invalidatePnl() { pnlCache = null; },
+  invalidatePnl() { pnlCache = null; futCache = null; },
+
+  futuresBusy: () => futBusy,
+  futuresPnl() {
+    if (!state.futures.income.length && !state.futures.account?.positions?.length) return null;
+    if (!futCache) {
+      const prices = Object.fromEntries(state.crypto.holdings.map((h) => [h.asset, h.price]));
+      futCache = computeFutures(state.futures, makePriceLookup(priceHist), state.futures.account, (a) => prices[a] || 0);
+    }
+    return futCache;
+  },
+
+  async syncFutures() {
+    if (futBusy) return;
+    if (!local.appPassword) { toast('Nhập mật khẩu ứng dụng trong tab Cài đặt trước', 'error'); return; }
+    futBusy = 'Đang tải lịch sử futures…';
+    render();
+    try {
+      const startT = Date.parse(state.settings.historyStart) || Date.parse('2019-09-01');
+      const n = await syncFuturesIncome(bn, state.futures, startT, (m) => { futBusy = m; if (current === 'futures') render(); });
+      await ensureFuturesPrices();
+      toast(`Futures: ${n} bản ghi mới`, 'ok');
+    } catch (e) {
+      toast(`Futures: ${e.message}`, 'error', 8000);
+    }
+    futBusy = '';
+    futCache = null;
+    commit();
+    render();
+  },
+
+  async importFuturesCsv(files) {
+    let added = 0;
+    let rows = 0;
+    for (const file of files) {
+      try {
+        const { records } = csvToIncome(await file.text());
+        rows += records.length;
+        added += mergeIncome(state.futures, records);
+      } catch (e) {
+        toast(`${file.name}: ${e.message}`, 'error', 8000);
+      }
+    }
+    futBusy = 'Tải giá lịch sử…';
+    render();
+    await ensureFuturesPrices().catch(() => {});
+    futBusy = '';
+    futCache = null;
+    commit();
+    toast(`Đã nhập ${added} bản ghi futures mới (${rows - added} trùng / đã có)`, added ? 'ok' : 'info', 6000);
+    render();
+  },
+
+  clearFutures() {
+    if (!confirm('Xóa toàn bộ lịch sử futures đã tải / nhập?')) return;
+    state.futures = { ...emptyFutures(), account: state.futures.account };
+    futCache = null;
+    commit();
+    render();
+  },
 
   async loadServerConfig() {
     try {
@@ -57,9 +122,11 @@ const ctx = {
       return;
     }
     try {
-      const { holdings } = await fetchHoldings();
+      const { holdings, futures } = await fetchHoldings();
       state.crypto = { holdings, updatedAt: Date.now() };
+      if (futures?.ok) state.futures.account = futures;
       pnlCache = null;
+      futCache = null;
       snapshot();
       commit();
       if (!quiet) toast('Đã cập nhật số dư Binance', 'ok');
@@ -136,10 +203,24 @@ const ctx = {
 
   afterStateReplaced() {
     pnlCache = null;
+    futCache = null;
     applyCurrency();
     render();
   },
 };
+
+/** Giá lịch sử cho tài sản non-stable trong income futures (COIN-M, phí BNB…). */
+async function ensureFuturesPrices() {
+  const need = new Map();
+  for (const r of state.futures.income) {
+    const a = r[4];
+    if (!['USDT', 'USDC', 'BUSD', 'FDUSD', 'BNFCR', 'USD1'].includes(a)) need.set(a, Math.min(need.get(a) ?? Infinity, r[1]));
+  }
+  if (!need.size) return;
+  const tick = await fetchTickerPrices();
+  for (const [a, t] of need) await ensurePriceHistory(a, t, tick);
+  priceHist = await getPriceHistory();
+}
 
 function snapshot() {
   const t = totals();

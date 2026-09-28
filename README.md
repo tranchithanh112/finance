@@ -5,6 +5,7 @@ Dashboard danh mục đầu tư cá nhân: **crypto trên Binance** + **chứng 
 - **Tổng quan**: tổng tài sản, phân bổ theo loại tài sản & theo từng tài sản, lịch sử tổng tài sản theo ngày, tiền mặt / tài sản khác.
 - **Crypto**: số dư Spot + Funding + Simple Earn, giá trị, tỷ trọng %, giá vốn TB và PnL từng coin.
 - **Lịch sử & PnL**: đọc toàn bộ lịch sử lệnh, nạp/rút, Convert, đổi dust → tính lãi/lỗ **đã chốt + chưa chốt** của từng coin đang giữ, đã thoát hoặc từng nắm giữ; xem chi tiết từng lệnh.
+- **Futures**: lãi/lỗ USDⓈ-M + COIN-M từ trước tới nay (đóng lệnh, phí, funding, thanh lý), theo cặp và theo tháng, vị thế đang mở; ví futures được cộng vào tổng tài sản.
 - **Chứng khoán**: quỹ ETF/quỹ chỉ số (VOO, VTI, E1VFVN30.VN, FUEVFVND.VN…) lấy giá tự động từ Yahoo Finance, hoặc nhập NAV tay cho quỹ mở; nhập giao dịch mua/bán (DCA).
 - **Đồng bộ** toàn bộ dữ liệu dưới dạng 1 file JSON lên **Dropbox** hoặc **Google Drive**, hoặc xuất/nhập file thủ công.
 - Hiển thị USD hoặc VND (tỷ giá tự động hoặc cố định).
@@ -71,7 +72,13 @@ File đồng bộ: `finance-portfolio.json`. Khi tự động đồng bộ, bên
 
 **Đồng bộ nhanh** chỉ quét các coin đang giữ / từng nạp / rút / convert / đã có lệnh. Lần đầu nên chạy **Quét toàn bộ** để tìm cả coin đã mua rồi bán hết (thử mọi cặp có quote trong danh sách, mất vài phút do rate limit). Hoặc thêm tên coin vào ô *Coin bổ sung* trong Cài đặt.
 
-Hạn chế: Binance API không trả lịch sử lệnh của cặp đã bị xoá hẳn khỏi sàn; không tính Futures/Margin/P2P; giá lịch sử dùng giá trung bình mở/đóng cửa của nến ngày nên là ước tính.
+Hạn chế: Binance API không trả lịch sử lệnh của cặp đã bị xoá hẳn khỏi sàn; không tính Margin/P2P; giá lịch sử dùng giá trung bình mở/đóng cửa của nến ngày nên là ước tính.
+
+## Lãi/lỗ Futures
+
+- **Đồng bộ qua API** (`/fapi/v1/income`, `/dapi/v1/income`): Binance chỉ trả khoảng 3 tháng gần nhất. App lưu dồn lại nên từ lúc bắt đầu dùng sẽ không mất dữ liệu.
+- **Lịch sử cũ hơn**: trên web Binance vào *Orders → Transaction History → Export* (hoặc *Futures → Transaction History → Export*), chọn CSV, mỗi lần tối đa 1 năm → tab Futures → **Nhập CSV** (chọn được nhiều file). Bản ghi trùng giữa CSV và API tự bỏ qua.
+- Tổng = lãi/lỗ đóng lệnh + phí + funding + thanh lý + hoàn phí. Tiền chuyển vào/ra ví futures không tính. COIN-M quy đổi USD theo giá ngày phát sinh.
 
 ## Chạy local
 

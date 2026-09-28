@@ -16,7 +16,22 @@ const ENDPOINTS = {
   '/sapi/v1/simple-earn/locked/position': { signed: true },
   '/sapi/v1/asset/dribblet': { signed: true },
   '/sapi/v1/convert/tradeFlow': { signed: true },
+  // Futures USDⓈ-M (fapi) và COIN-M (dapi)
+  '/fapi/v1/income': { signed: true },
+  '/fapi/v3/account': { signed: true },
+  '/fapi/v2/account': { signed: true },
+  '/fapi/v3/positionRisk': { signed: true },
+  '/fapi/v2/positionRisk': { signed: true },
+  '/dapi/v1/income': { signed: true },
+  '/dapi/v1/account': { signed: true },
+  '/dapi/v1/positionRisk': { signed: true },
 };
+
+function baseUrl(path) {
+  if (path.startsWith('/fapi/')) return process.env.BINANCE_FAPI_URL || 'https://fapi.binance.com';
+  if (path.startsWith('/dapi/')) return process.env.BINANCE_DAPI_URL || 'https://dapi.binance.com';
+  return process.env.BINANCE_BASE_URL || 'https://api.binance.com';
+}
 
 export default async function handler(req, res) {
   noStore(res);
@@ -45,10 +60,9 @@ export default async function handler(req, res) {
     headers['X-MBX-APIKEY'] = key;
   }
 
-  const base = process.env.BINANCE_BASE_URL || 'https://api.binance.com';
   let r;
   try {
-    r = await fetch(`${base}${path}?${qs}`, { method: ep.method || 'GET', headers });
+    r = await fetch(`${baseUrl(path)}${path}?${qs}`, { method: ep.method || 'GET', headers });
   } catch (e) {
     return res.status(502).json({ error: `Không kết nối được Binance: ${e.message}` });
   }

@@ -14,8 +14,8 @@ export function renderCrypto(root, ctx) {
   const pnl = ctx.pnl();
   const pnlBy = Object.fromEntries((pnl?.rows || []).map((r) => [r.asset, r]));
   const wallets = all.reduce((a, h) => {
-    a.spot += h.spot * h.price; a.funding += h.funding * h.price; a.earn += h.earn * h.price; return a;
-  }, { spot: 0, funding: 0, earn: 0 });
+    a.spot += h.spot * h.price; a.funding += h.funding * h.price; a.earn += h.earn * h.price; a.futures += (h.futures || 0) * h.price; return a;
+  }, { spot: 0, funding: 0, earn: 0, futures: 0 });
 
   if (!all.length) {
     root.innerHTML = `<div class="card center">
@@ -33,6 +33,7 @@ export function renderCrypto(root, ctx) {
       <div class="kpi"><span>Spot</span><b>${fmtMoney(wallets.spot)}</b></div>
       <div class="kpi"><span>Funding</span><b>${fmtMoney(wallets.funding)}</b></div>
       <div class="kpi"><span>Earn</span><b>${fmtMoney(wallets.earn)}</b></div>
+      ${wallets.futures ? `<div class="kpi"><span>Futures (ký quỹ)</span><b>${fmtMoney(wallets.futures)}</b></div>` : ''}
       <div class="kpi"><span>Stablecoin</span><b>${fmtMoney(stable)}</b><small>${total ? fmtPct(stable / total, { sign: false }) : ''}</small></div>
     </div>
     <div class="grid2 wide-right">
@@ -52,7 +53,7 @@ export function renderCrypto(root, ctx) {
     <div class="card">
       <div class="table-wrap"><table class="tbl">
         <thead><tr>
-          <th>Coin</th><th class="r">Số lượng</th><th class="r hide-sm">Spot / Funding / Earn</th><th class="r">Giá</th>
+          <th>Coin</th><th class="r">Số lượng</th><th class="r hide-sm">Spot / Funding / Earn${wallets.futures ? ' / Futures' : ''}</th><th class="r">Giá</th>
           <th class="r">Giá trị</th><th class="r">Tỷ trọng</th><th class="r hide-sm">Giá vốn TB</th><th class="r">Lãi/lỗ chưa chốt</th><th class="r">Tổng PnL</th>
         </tr></thead>
         <tbody>
@@ -61,7 +62,7 @@ export function renderCrypto(root, ctx) {
             return `<tr>
               <td><b>${esc(h.asset)}</b></td>
               <td class="r">${fmtQty(h.total)}</td>
-              <td class="r hide-sm muted">${fmtQty(h.spot)} / ${fmtQty(h.funding)} / ${fmtQty(h.earn)}</td>
+              <td class="r hide-sm muted">${fmtQty(h.spot)} / ${fmtQty(h.funding)} / ${fmtQty(h.earn)}${wallets.futures ? ' / ' + fmtQty(h.futures || 0) : ''}</td>
               <td class="r">${fmtPrice(h.price)}</td>
               <td class="r"><b>${fmtMoney(h.value)}</b></td>
               <td class="r">${total ? fmtPct(h.value / total, { sign: false }) : ''}</td>

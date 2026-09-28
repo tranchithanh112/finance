@@ -142,7 +142,7 @@ export function computePnl(history, priceHist, holdings, { dustUsd = 1 } = {}) {
     if (isStable(a)) continue;
     const s = per[a] || get(a);
     const h = hold[a];
-    const heldQty = h?.total || 0;
+    const heldQty = h ? h.total - (h.futures || 0) : 0; // futures tính riêng ở tab Futures
     const price = h?.price || 0;
     const value = heldQty * price;
     const avg = s.qty > EPS ? s.cost / s.qty : 0;

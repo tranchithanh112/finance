@@ -6,6 +6,7 @@ import { esc, fmtMoney, fmtPct, pnlClass, uid, fmtNative, timeAgo } from '../uti
 export function renderOverview(root, ctx) {
   const t = totals();
   const pnl = ctx.pnl();
+  const fut = ctx.futuresPnl();
   const stocks = stockPositions();
   const stockPnl = stocks.reduce((a, p) => a + p.totalUSD, 0);
   const pct = (v) => (t.total ? fmtPct(v / t.total, { sign: false }) : '—');
@@ -17,7 +18,10 @@ export function renderOverview(root, ctx) {
       <div class="kpi"><span>Crypto</span><b>${fmtMoney(t.crypto)}</b><small>${pct(t.crypto)} danh mục</small></div>
       <div class="kpi"><span>Chứng khoán / quỹ</span><b>${fmtMoney(t.stocks)}</b><small>${pct(t.stocks)} danh mục</small></div>
       <div class="kpi"><span>Tiền mặt & khác</span><b>${fmtMoney(t.cash)}</b><small>${pct(t.cash)} danh mục</small></div>
-      <div class="kpi"><span>PnL crypto (từ trước tới nay)</span>
+      <div class="kpi"><span>PnL futures (từ trước tới nay)</span>
+        <b class="${pnlClass(fut ? fut.net + fut.unrealized : 0)}">${fut ? fmtMoney(fut.net + fut.unrealized, { sign: true }) : '—'}</b>
+        <small>${fut ? 'Phí + funding ' + fmtMoney(fut.byType.COMMISSION + fut.byType.FUNDING_FEE, { sign: true }) : 'Chưa có dữ liệu futures'}</small></div>
+      <div class="kpi"><span>PnL crypto spot (từ trước tới nay)</span>
         <b class="${pnlClass(pnl?.totals.total)}">${pnl ? fmtMoney(pnl.totals.total, { sign: true }) : '—'}</b>
         <small>${pnl ? 'Đã chốt ' + fmtMoney(pnl.totals.realized, { sign: true }) : 'Chưa đồng bộ lịch sử'}</small></div>
       <div class="kpi"><span>PnL chứng khoán</span>

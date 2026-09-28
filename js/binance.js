@@ -1,6 +1,7 @@
 import { state, local } from './store.js';
 import { idbGet, idbSet } from './idb.js';
 import { sleep, isStable, DAY } from './util.js';
+import { fetchFuturesAccount } from './futures.js';
 
 // ================= Gọi API =================
 
@@ -59,7 +60,7 @@ export async function fetchTickerPrices() {
 }
 
 export function usdPrice(asset, tick) {
-  if (isStable(asset)) return 1;
+  if (isStable(asset) || asset === 'BNFCR') return 1;
   for (const q of ['USDT', 'FDUSD', 'USDC']) if (tick[asset + q]) return tick[asset + q];
   if (tick[asset + 'BTC'] && tick.BTCUSDT) return tick[asset + 'BTC'] * tick.BTCUSDT;
   if (tick[asset + 'BNB'] && tick.BNBUSDT) return tick[asset + 'BNB'] * tick.BNBUSDT;
@@ -70,18 +71,19 @@ export function usdPrice(asset, tick) {
 // ================= Số dư (Spot + Funding + Earn) =================
 
 export async function fetchHoldings() {
-  const [tick, account, funding, flex, locked] = await Promise.all([
+  const [tick, account, funding, flex, locked, futures] = await Promise.all([
     fetchTickerPrices(),
     bn('/api/v3/account', { omitZeroBalances: true }),
     bn('/sapi/v1/asset/get-funding-asset', {}).catch(() => null),
     bn('/sapi/v1/simple-earn/flexible/position', { size: 100 }).catch(() => null),
     bn('/sapi/v1/simple-earn/locked/position', { size: 100 }).catch(() => null),
+    fetchFuturesAccount(bn).catch(() => null),
   ]);
 
   const map = {};
   const add = (asset, key, amt) => {
     if (!amt) return;
-    map[asset] ||= { asset, spot: 0, funding: 0, earn: 0 };
+    map[asset] ||= { asset, spot: 0, funding: 0, earn: 0, futures: 0 };
     map[asset][key] += amt;
   };
 
@@ -100,14 +102,16 @@ export async function fetchHoldings() {
   for (const f of funding || []) add(f.asset, 'funding', Number(f.free) + Number(f.locked) + Number(f.freeze || 0));
   for (const p of flex?.rows || []) add(p.asset, 'earn', Number(p.totalAmount));
   for (const p of locked?.rows || []) add(p.asset, 'earn', Number(p.amount));
+  // Ví futures: số dư ký quỹ (wallet + lãi/lỗ chưa chốt)
+  for (const a of futures?.assets || []) add(a.asset, 'futures', a.margin);
 
   const holdings = Object.values(map).map((h) => {
-    const total = h.spot + h.funding + h.earn;
+    const total = h.spot + h.funding + h.earn + h.futures;
     const price = usdPrice(h.asset, tick);
     return { ...h, total, price, value: total * price };
   });
   holdings.sort((a, b) => b.value - a.value);
-  return { holdings, tick };
+  return { holdings, tick, futures };
 }
 
 // ================= Lịch sử giá (nến ngày) để định giá giao dịch cũ =================

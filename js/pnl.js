@@ -60,12 +60,6 @@ export function buildEvents(history, usdAt) {
     }
   }
 
-  // Airdrop, lãi Earn, Launchpool/HODLer, thưởng staking…: nhận miễn phí -> giá vốn 0
-  for (const [id, t, asset, amt, info] of history.rewards || []) {
-    if (isStable(asset) || !(amt > 0)) continue;
-    add(asset, t, amt, 0, 'reward', { id, info });
-  }
-
   for (const [id, t, asset, amt] of history.deposits) {
     if (isStable(asset)) continue;
     add(asset, t, amt, amt * (price(asset, t) ?? 0), 'deposit', { id });
@@ -109,7 +103,7 @@ export function computePnl(history, priceHist, holdings, { dustUsd = 1 } = {}) {
 
   const get = (a) => (per[a] ||= {
     asset: a, qty: 0, cost: 0, realized: 0, invested: 0, proceeds: 0, buyQty: 0, sellQty: 0,
-    fees: 0, trades: 0, untrackedQty: 0, untrackedUsd: 0, untrackedBy: {}, rewardQty: 0, first: null, last: null, events: [],
+    fees: 0, trades: 0, untrackedQty: 0, first: null, last: null, events: [],
   });
 
   for (const e of events) {
@@ -121,8 +115,7 @@ export function computePnl(history, priceHist, holdings, { dustUsd = 1 } = {}) {
     if (e.qty > 0) {
       s.qty += e.qty;
       s.cost += e.value;
-      if (e.kind === 'reward') s.rewardQty += e.qty;
-      else if (e.kind !== 'deposit') { s.invested += e.value; s.buyQty += e.qty; }
+      if (e.kind !== 'deposit') { s.invested += e.value; s.buyQty += e.qty; }
     } else {
       const q = -e.qty;
       const avg = s.qty > EPS ? s.cost / s.qty : 0;
@@ -136,13 +129,7 @@ export function computePnl(history, priceHist, holdings, { dustUsd = 1 } = {}) {
         if (e.kind === 'fee') s.fees += costOut;
         else { s.proceeds += e.value; s.sellQty += q; }
       }
-      const excess = q - matched;
-      if (excess > EPS) {
-        const px = e.value != null && q > 0 ? e.value / q : usdAt(e.asset, e.t) ?? 0;
-        s.untrackedQty += excess;
-        s.untrackedUsd += excess * px;
-        s.untrackedBy[e.kind] = (s.untrackedBy[e.kind] || 0) + excess;
-      }
+      s.untrackedQty += q - matched;
       s.cost -= costOut;
       s.qty -= matched;
       if (s.qty < EPS) { s.qty = 0; s.cost = 0; }
@@ -177,7 +164,7 @@ export function computePnl(history, priceHist, holdings, { dustUsd = 1 } = {}) {
       invested: s.invested, proceeds: s.proceeds, fees: s.fees,
       roi: s.invested > 0 && total != null ? total / s.invested : null,
       trades: s.trades, first: s.first, last: s.last,
-      untrackedQty: s.untrackedQty, untrackedUsd: s.untrackedUsd, untrackedBy: s.untrackedBy, rewardQty: s.rewardQty,
+      untrackedQty: s.untrackedQty,
       status: value >= dustUsd ? 'holding' : 'closed',
       hasBasis, events: s.events,
       noPrice: missing.has(a),

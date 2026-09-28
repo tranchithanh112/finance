@@ -328,70 +328,6 @@ async function syncStaking(startT, log, signal) {
   }
 }
 
-/** Gọi `fetch(s, e)`; nếu trả đủ `max` bản ghi (có thể còn thiếu) thì chia đôi khoảng thời gian. */
-async function fetchSplit(s, e, max, fetch) {
-  const rows = await fetch(s, e);
-  if (rows.length < max || e - s < 3600000) return rows;
-  const mid = Math.floor((s + e) / 2);
-  return [...(await fetchSplit(s, mid, max, fetch)), ...(await fetchSplit(mid + 1, e, max, fetch))];
-}
-
-/** Phân phối: airdrop, lãi Simple Earn, Launchpool/HODLer, thưởng staking, BNB Vault… */
-async function syncRewards(startT, log, signal) {
-  const h = state.history;
-  h.rewards ||= [];
-  const seen = new Set(h.rewards.map((r) => String(r[0])));
-  let n = 0;
-  try {
-    await windows(Math.max(h.cursors.rewards || startT, Date.parse('2019-01-01')), 89 * DAY, async (s, e) => {
-      if (signal?.aborted) throw new DOMException('Đã hủy', 'AbortError');
-      const rows = await fetchSplit(s, e, 500, async (a, b) =>
-        (await bn('/sapi/v1/asset/assetDividend', { startTime: a, endTime: b, limit: 500 }, { signal }))?.rows || []);
-      for (const r of rows) {
-        const id = `div:${r.tranId ?? r.id}:${r.asset}`;
-        if (seen.has(id)) continue;
-        seen.add(id);
-        h.rewards.push([id, Number(r.divTime), r.asset, Number(r.amount), r.enInfo || '']);
-        n++;
-      }
-    });
-    h.cursors.rewards = Date.now() - 2 * DAY;
-    log(`Airdrop / lãi Earn / Launchpool: ${n} bản ghi mới`);
-  } catch (e) {
-    if (e.name === 'AbortError') throw e;
-    log(`Lịch sử phân phối: bỏ qua (${e.message})`);
-  }
-}
-
-/** Binance Pay: nhận = như nạp, gửi = như rút. */
-async function syncPay(startT, log) {
-  const h = state.history;
-  const dep = new Set(h.deposits.map((d) => String(d[0])));
-  const wd = new Set(h.withdrawals.map((d) => String(d[0])));
-  let n = 0;
-  try {
-    await windows(Math.max(h.cursors.pay || startT, Date.parse('2021-01-01')), 89 * DAY, async (s, e) => {
-      const rows = await fetchSplit(s, e, 100, async (a, b) =>
-        (await bn('/sapi/v1/pay/transactions', { startTime: a, endTime: b, limit: 100 }))?.data || []);
-      for (const x of rows) {
-        const parts = x.fundsDetail?.length ? x.fundsDetail : [{ currency: x.currency, amount: x.amount }];
-        const sign = Math.sign(Number(x.amount)) || 1;
-        parts.forEach((p, i) => {
-          const amt = Math.abs(Number(p.amount));
-          const id = `pay:${x.transactionId}:${i}`;
-          if (!amt) return;
-          if (sign > 0 && !dep.has(id)) { h.deposits.push([id, Number(x.transactionTime), p.currency, amt]); dep.add(id); n++; }
-          if (sign < 0 && !wd.has(id)) { h.withdrawals.push([id, Number(x.transactionTime), p.currency, amt, 0]); wd.add(id); n++; }
-        });
-      }
-    });
-    h.cursors.pay = Date.now() - 2 * DAY;
-    if (n) log(`Binance Pay: ${n} bản ghi mới`);
-  } catch (e) {
-    log(`Binance Pay: bỏ qua (${e.message})`);
-  }
-}
-
 /** Mua crypto bằng thẻ / tiền pháp định. */
 async function syncFiatBuys(startT, log) {
   const h = state.history;
@@ -456,8 +392,6 @@ export async function syncHistory({ fullScan = false, onProgress = () => {}, sig
   await syncAutoInvest(startT, log, signal);
   await syncStaking(startT, log, signal);
   await syncFiatBuys(startT, log);
-  await syncRewards(startT, log, signal);
-  await syncPay(startT, log);
 
   // Tập coin ứng viên
   const cand = new Set(st.extraAssets.map((a) => a.toUpperCase()));
@@ -466,7 +400,6 @@ export async function syncHistory({ fullScan = false, onProgress = () => {}, sig
   h.withdrawals.forEach((d) => cand.add(d[2]));
   h.dust.forEach((d) => cand.add(d[2]));
   h.converts.forEach((c) => { cand.add(c[2]); cand.add(c[4]); });
-  (h.rewards || []).forEach((r) => cand.add(r[2]));
   Object.values(h.meta).forEach(([b, q]) => { if (h.trades[b + q]) cand.add(b); });
 
   // Coin ứng viên: quét mọi cặp phổ biến (lệnh DCA có thể chạy qua FDUSD/USDC…).
@@ -507,7 +440,6 @@ export async function syncHistory({ fullScan = false, onProgress = () => {}, sig
   h.withdrawals.forEach((d) => want(d[2], d[1]));
   h.dust.forEach((d) => { want(d[2], d[1]); want('BNB', d[1]); });
   h.converts.forEach((c) => { want(c[2], c[1]); want(c[4], c[1]); });
-  (h.rewards || []).forEach((r) => want(r[2], r[1]));
 
   let i = 0;
   for (const [asset, t] of need) {

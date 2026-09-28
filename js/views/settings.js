@@ -156,7 +156,7 @@ export function renderSettings(root, ctx) {
   };
   root.querySelector('#bk-clear-history').onclick = () => {
     if (!confirm('Xóa toàn bộ lịch sử giao dịch Binance đã tải? (Có thể đồng bộ lại)')) return;
-    state.history = { trades: {}, meta: {}, checked: {}, deposits: [], withdrawals: [], dust: [], converts: [], rewards: [], cursors: {}, updatedAt: 0 };
+    state.history = { trades: {}, meta: {}, checked: {}, deposits: [], withdrawals: [], dust: [], converts: [], cursors: {}, updatedAt: 0 };
     commit();
     ctx.afterStateReplaced();
   };

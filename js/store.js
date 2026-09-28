@@ -25,8 +25,7 @@ export function defaultState() {
       deposits: [], // [id, time, asset, amount]
       withdrawals: [], // [id, time, asset, amount, fee]
       dust: [], // [transId, time, fromAsset, amount, bnbAmount]
-      converts: [], // [id, time, fromAsset, fromAmount, toAsset, toAmount, kind]
-      rewards: [], // [id, time, asset, amount, info] airdrop, lãi Earn, Launchpool…
+      converts: [], // [orderId, time, fromAsset, fromAmount, toAsset, toAmount]
       cursors: {},
       updatedAt: 0,
     },

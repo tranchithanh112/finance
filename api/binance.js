@@ -22,6 +22,8 @@ const ENDPOINTS = {
   '/sapi/v1/eth-staking/eth/history/stakingHistory': { signed: true },
   '/sapi/v1/eth-staking/eth/history/redemptionHistory': { signed: true },
   '/sapi/v1/fiat/payments': { signed: true },
+  '/sapi/v1/asset/assetDividend': { signed: true },
+  '/sapi/v1/pay/transactions': { signed: true },
   // Futures USDⓈ-M (fapi) và COIN-M (dapi)
   '/fapi/v1/income': { signed: true },
   '/fapi/v3/account': { signed: true },

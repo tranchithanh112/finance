@@ -118,3 +118,26 @@ test('mua bằng fiat VND: không coi VND là coin', () => {
   close(r.rows.find((x) => x.asset === 'BTC').invested, 1000);
   assert.deepEqual(r.missing, []);
 });
+
+test('airdrop / lãi Earn: bán coin nhận miễn phí không bị tag thiếu dữ liệu, lãi = toàn bộ tiền bán', () => {
+  const h = empty();
+  h.rewards = [['div:1', t0, 'ARB', 50, 'Airdrop']];
+  h.meta.ARBUSDT = ['ARB', 'USDT'];
+  h.trades.ARBUSDT = { lastId: 1, rows: [[1, t0 + DAY, 2, 50, 100, 0, 'USDT', 0]] };
+  const r = computePnl(h, {}, []);
+  const arb = r.rows.find((x) => x.asset === 'ARB');
+  close(arb.untrackedQty, 0);
+  close(arb.realized, 100);
+  close(arb.invested, 0);
+  close(arb.rewardQty, 50);
+});
+
+test('bán không rõ nguồn: ghi nhận giá trị USD để quyết định gắn tag', () => {
+  const h = empty();
+  h.meta.DOGEUSDT = ['DOGE', 'USDT'];
+  h.trades.DOGEUSDT = { lastId: 1, rows: [[1, t0, 0.1, 30, 3, 0, 'USDT', 0]] };
+  const r = computePnl(h, {}, []);
+  const d = r.rows.find((x) => x.asset === 'DOGE');
+  close(d.untrackedUsd, 3);
+  assert.deepEqual(Object.keys(d.untrackedBy), ['sell']);
+});

@@ -34,7 +34,7 @@ export function renderCrypto(root, ctx) {
   const hmode = recon.length > 1 ? histMode('crypto', 'coins') : 'wallet';
   const hist = hmode === 'coins'
     ? {
-      id: 'crypto', title: 'Coin đang nắm theo thời gian', rows: recon, key: 'value',
+      id: 'crypto', title: 'Coin đang nắm theo thời gian', rows: recon, key: 'value', pnl: true,
       modes: [['coins', 'Giá trị vs vốn'], ['wallet', 'Tổng ví']], mode: hmode,
       note: 'Dựng lại từ lịch sử giao dịch Binance và giá đóng cửa từng ngày; không gồm stablecoin và ví futures. Khoảng cách giữa hai đường là lãi/lỗ chưa chốt.',
       series: [

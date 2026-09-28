@@ -1,5 +1,7 @@
 import { state } from '../store.js';
-import { line, PALETTE } from '../charts.js';
+import { PALETTE } from '../charts.js';
+import { fillDaily } from '../series.js';
+import { historyCard, bindHistory, histMode } from './history-card.js';
 import { esc, fmtMoney, fmtQty, fmtPrice, fmtPct, fmtDate, pnlClass, timeAgo } from '../util.js';
 import { tr } from '../i18n.js';
 
@@ -58,6 +60,23 @@ export function renderPnl(root, ctx) {
   const winners = pnl.rows.filter((r) => (r.total || 0) > 0).length;
   const losers = pnl.rows.filter((r) => (r.total || 0) < 0).length;
 
+  // Biểu đồ lãi/lỗ theo thời gian: tổng / chưa chốt / đã chốt
+  const recon = ctx.cryptoSeries().some((r) => r.value > 0) ? ctx.cryptoSeries() : [];
+  let pRows = recon.map((r) => ({ date: r.date, total: r.pnl, unreal: r.value - r.cost, realized: r.pnl - (r.value - r.cost) }));
+  if (!pRows.length && pnl.timeline.length) {
+    const byDay = new Map();
+    for (const [t, v] of pnl.timeline) byDay.set(new Date(t).toISOString().slice(0, 10), { date: new Date(t).toISOString().slice(0, 10), realized: v });
+    pRows = fillDaily([...byDay.values()], ['realized']);
+  }
+  const pModes = recon.length ? [['total', 'Tổng'], ['unreal', 'Chưa chốt'], ['realized', 'Đã chốt']] : null;
+  const pMode = recon.length ? histMode('pnl', 'total') : 'realized';
+  const pLabel = { total: 'Tổng lãi/lỗ', unreal: 'Lãi/lỗ chưa chốt', realized: 'Lãi/lỗ đã chốt cộng dồn' }[pMode];
+  const hist = {
+    id: 'pnl', title: pLabel, rows: pRows, key: pMode, modes: pModes, mode: pMode, noPct: true,
+    note: recon.length ? 'Tổng = chưa chốt (giá trị coin đang nắm − vốn) + đã chốt cộng dồn. Dựng lại theo giá đóng cửa từng ngày; không gồm stablecoin và futures.' : '',
+    series: [{ key: pMode, label: pLabel, color: PALETTE[pMode === 'unreal' ? 1 : 0], area: 'gradient' }],
+  };
+
   const th = (k, label, cls = 'r') => `<th class="${cls} sortable ${ui.sort === k ? 'active' : ''}" data-sort="${k}">${label}</th>`;
 
   root.innerHTML = controls + `
@@ -72,10 +91,7 @@ export function renderPnl(root, ctx) {
 
     ${pnl.missing.length ? `<div class="alert">Không tìm được giá lịch sử cho: <b>${esc(pnl.missing.join(', '))}</b> — giao dịch liên quan được định giá 0, PnL các coin này có thể sai.</div>` : ''}
 
-    <div class="card">
-      <h3>Lãi/lỗ đã chốt cộng dồn</h3>
-      <div class="chart tall"><canvas id="pnl-line"></canvas></div>
-    </div>
+    ${historyCard(hist)}
 
     <div class="card">
       <div class="card-head">
@@ -112,15 +128,7 @@ export function renderPnl(root, ctx) {
         Nạp coin được tính giá vốn theo giá thị trường lúc nạp; rút coin không phát sinh lãi/lỗ. Coin nhận từ Earn/airdrop có giá vốn 0.</p>
     </div>`;
 
-  const tl = pnl.timeline;
-  if (tl.length) {
-    // gộp theo ngày để biểu đồ nhẹ
-    const byDay = new Map();
-    for (const [t, v] of tl) byDay.set(new Date(t).toISOString().slice(0, 10), v);
-    line(root.querySelector('#pnl-line'), [...byDay.keys()], [
-      { label: 'Đã chốt cộng dồn', data: [...byDay.values()], fill: true, color: PALETTE[0] },
-    ]);
-  }
+  bindHistory(root, hist, ctx);
   bind(root, ctx);
 }
 

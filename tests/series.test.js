@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fillDaily, snapshotSeries, cryptoSeries, stockSeries, sliceRange, rangeChange } from '../js/series.js';
+import { fillDaily, snapshotSeries, cryptoSeries, stockSeries, sliceRange, rangeChange, periodPnl } from '../js/series.js';
 
 const DAY = 864e5;
 const d0 = Date.UTC(2025, 0, 1);
@@ -34,6 +34,8 @@ test('cryptoSeries: giá trị theo giá ngày, vốn theo giá vốn bình quâ
   assert.equal(s.length, 4);
   assert.deepEqual(s.map((r) => r.value), [200, 300, 200, 250]);
   assert.deepEqual(s.map((r) => r.cost), [200, 200, 100, 100]);
+  // bán 1 BTC giá 150 (vốn 100) → đã chốt +50; lãi/lỗ cộng dồn = giá trị − vốn + đã chốt
+  assert.deepEqual(s.map((r) => r.pnl), [0, 100, 150, 200]);
   assert.deepEqual(cryptoSeries({ ...history, trades: {} }, {}), []);
 });
 
@@ -56,4 +58,13 @@ test('sliceRange / rangeChange', () => {
   const ch = rangeChange(sliceRange(rows, '1m'), 'v');
   assert.equal(ch.abs, 30);
   assert.equal(rangeChange([rows[0]], 'v'), null);
+});
+
+test('periodPnl không tính tiền mua thêm là lãi', () => {
+  // đầu kỳ giữ 100$, mua thêm 900$, giá không đổi → lãi 0 dù giá trị tăng 10 lần
+  assert.deepEqual(periodPnl([{ value: 100, cost: 100, pnl: 0 }, { value: 1000, cost: 1000, pnl: 0 }]), { abs: 0, pct: 0 });
+  const r = periodPnl([{ value: 100, cost: 80, pnl: 20 }, { value: 1100, cost: 980, pnl: 120 }]);
+  assert.equal(r.abs, 100);
+  assert.equal(r.pct, 100 / 1000);
+  assert.equal(periodPnl([{ value: 1, cost: 1, pnl: 0 }]), null);
 });

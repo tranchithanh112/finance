@@ -50,6 +50,7 @@ export function cryptoSeries(history, priceHist, { now = Date.now() } = {}) {
   const pos = new Map(); // asset -> { qty, cost }
   const out = [];
   let i = 0;
+  let realized = 0;
   const start = Math.floor(events[0].t / DAY);
   const end = Math.floor(now / DAY);
   for (let d = start; d <= end; d++) {
@@ -61,8 +62,10 @@ export function cryptoSeries(history, priceHist, { now = Date.now() } = {}) {
         s.qty += e.qty;
         s.cost += e.value || 0;
       } else {
-        const matched = Math.min(-e.qty, Math.max(s.qty, 0));
+        const q = -e.qty;
+        const matched = Math.min(q, Math.max(s.qty, 0));
         const avg = s.qty > EPS ? s.cost / s.qty : 0;
+        if (e.kind !== 'withdraw') realized += (e.value || 0) * (matched / q) - avg * matched;
         s.cost -= avg * matched;
         s.qty -= matched;
         if (s.qty < EPS) { s.qty = 0; s.cost = 0; }
@@ -76,7 +79,7 @@ export function cryptoSeries(history, priceHist, { now = Date.now() } = {}) {
       cost += s.cost;
       value += s.qty * (usdAt(asset, Math.min(d * DAY + DAY / 2, now)) ?? 0);
     }
-    out.push({ date: dayKey(d), value, cost });
+    out.push({ date: dayKey(d), value, cost, pnl: value - cost + realized });
   }
   return out;
 }
@@ -96,6 +99,7 @@ export function stockSeries(funds, txs, hist, { toUSD, priceOf, now = Date.now()
   );
   const out = [];
   let i = 0;
+  let realizedUSD = 0;
   const start = Math.floor(Date.parse(sorted[0].date) / DAY);
   const end = Math.floor(now / DAY);
   for (let d = start; d <= end; d++) {
@@ -112,6 +116,8 @@ export function stockSeries(funds, txs, hist, { toUSD, priceOf, now = Date.now()
       } else if (units < 0) {
         const q = Math.min(-units, s.units);
         const avg = s.units ? s.cost / s.units : 0;
+        const f = byFund.get(tx.ticker);
+        if (f) realizedUSD += toUSD(q * price - fee - avg * q, f.currency);
         s.cost -= avg * q;
         s.units -= q;
       }
@@ -131,7 +137,7 @@ export function stockSeries(funds, txs, hist, { toUSD, priceOf, now = Date.now()
       value += toUSD(s.units * px, f.currency);
       cost += toUSD(s.cost, f.currency);
     }
-    out.push({ date: key, value, cost });
+    out.push({ date: key, value, cost, pnl: value - cost + realizedUSD });
   }
   return out;
 }
@@ -145,6 +151,19 @@ export function sliceRange(rows, range) {
   const last = Date.parse(rows[rows.length - 1].date);
   const from = todayKey(last - days * DAY);
   return rows.filter((r) => r.date >= from);
+}
+
+/**
+ * Lãi/lỗ trong kỳ, KHÔNG tính tiền mua thêm / nạp vào: Δ(giá trị − vốn + đã chốt).
+ * % tính trên (giá trị đầu kỳ + vốn bỏ thêm trong kỳ).
+ */
+export function periodPnl(rows) {
+  if (rows.length < 2) return null;
+  const a = rows[0];
+  const b = rows[rows.length - 1];
+  const abs = b.pnl - a.pnl;
+  const base = a.value + Math.max(0, b.cost - a.cost);
+  return { abs, pct: base > 0 ? abs / base : null };
 }
 
 /** Thay đổi giữa điểm đầu và cuối của khoảng đang xem. */

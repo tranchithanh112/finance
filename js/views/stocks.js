@@ -21,7 +21,7 @@ export function renderStocks(root, ctx) {
   const ed = editing && state.stocks.funds.find((f) => f.ticker === editing);
 
   const hist = {
-    id: 'stocks', title: 'Danh mục chứng khoán theo thời gian', rows: ctx.stockSeries(), key: 'value',
+    id: 'stocks', title: 'Danh mục chứng khoán theo thời gian', rows: ctx.stockSeries(), key: 'value', pnl: true,
     note: 'Tính từ các giao dịch bạn nhập và giá đóng cửa từng ngày (Yahoo Finance; mã nhập tay dùng giá giao dịch gần nhất). Khoảng cách giữa hai đường là lãi/lỗ chưa chốt.',
     empty: 'Thêm giao dịch mua để xem biểu đồ.',
     series: [

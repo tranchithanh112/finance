@@ -1,5 +1,5 @@
 import { timeline } from '../charts.js';
-import { RANGES, sliceRange, rangeChange } from '../series.js';
+import { RANGES, sliceRange, rangeChange, periodPnl } from '../series.js';
 import { fmtMoney, fmtPct, pnlClass } from '../util.js';
 
 // Thẻ "tài sản theo thời gian" dùng chung: chọn khoảng 1T/3T/6T/1N/Tất cả, (tùy chọn) chế độ xem,
@@ -12,14 +12,17 @@ export const histRange = (id) => pref(`fin.range.${id}`, '3m');
 export const histMode = (id, def) => pref(`fin.mode.${id}`, def);
 
 /**
- * opts: { id, title, rows, key (chuỗi chính để tính thay đổi), modes?: [[id,label]], mode?, note?, empty? }
+ * opts: { id, title, rows, key (chuỗi chính để tính thay đổi), pnl? (rows có value/cost/pnl → hiện lãi/lỗ trong kỳ),
+ *         modes?: [[id,label]], mode?, note?, empty? }
  */
 export function historyCard(opts) {
-  const { id, title, rows, key, modes, mode, note, empty } = opts;
+  const { id, title, rows, key, modes, mode, note, empty, pnl, noPct } = opts;
   const range = histRange(id);
   const view = sliceRange(rows, range);
   const last = view[view.length - 1];
-  const ch = rangeChange(view, key);
+  // pnl: true → hiển thị lãi/lỗ trong kỳ (loại trừ tiền mua thêm) thay vì mức tăng giá trị
+  const ch = pnl ? periodPnl(view) : rangeChange(view, key);
+  if (ch && noPct) ch.pct = null;
   const label = RANGES.find((r) => r[0] === range)?.[1] || '';
   return `
     <div class="card hist-card" data-hist="${id}">
@@ -28,7 +31,7 @@ export function historyCard(opts) {
           <h3>${title}</h3>
           ${last ? `<div class="hist-value"><b>${fmtMoney(last[key])}</b>${ch ? `
             <span class="hist-delta ${pnlClass(ch.abs)}">${fmtMoney(ch.abs, { sign: true })}${ch.pct != null ? ` (${fmtPct(ch.pct)})` : ''}</span>
-            <small class="muted">${range === 'all' ? 'từ đầu' : label}</small>` : ''}</div>` : ''}
+            <small class="muted">${pnl ? (range === 'all' ? 'lãi/lỗ từ đầu' : `lãi/lỗ ${label}`) : (range === 'all' ? 'từ đầu' : label)}</small>` : ''}</div>` : ''}
         </div>
         <div class="hist-controls">
           ${modes ? `<div class="seg">${modes.map(([k, l]) => `<button data-hmode="${k}" class="${mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}

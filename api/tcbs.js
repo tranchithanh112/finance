@@ -3,7 +3,7 @@ import { checkAuth, noStore } from './_lib.js';
 
 // Proxy CHỈ ĐỌC tới TCBS Open API (https://developers.tcbs.com.vn).
 //  - TCBS_API_KEY nằm trong env của Vercel, không bao giờ gửi xuống trình duyệt.
-//  - Đổi API key + OTP lấy JWT (tối đa 8 giờ; TCBS chỉ cho 10 lần/ngày). JWT được mã hóa
+//  - Đổi API key + Smart OTP (iOTP, app TCInvest) lấy JWT, hiệu lực tối đa 8 giờ. JWT được mã hóa
 //    AES-GCM bằng khóa suy ra từ APP_PASSWORD + TCBS_API_KEY rồi mới trả về trình duyệt,
 //    nên có lấy được bản mã trong máy cũng không dùng được để đặt lệnh.
 //  - Chỉ các GET trong danh sách dưới đây được phép (hồ sơ, danh mục, tiền, sổ lệnh).

@@ -44,12 +44,6 @@ const get = (path, params) => {
 
 const num = (v) => Number(v) || 0;
 
-/** TCBS trả giá VND, nhưng vài API dùng đơn vị nghìn đồng (30.5 = 30.500đ) → chuẩn hóa. */
-export function normPrice(v) {
-  const n = num(v);
-  return n > 0 && n < 1000 ? Math.round(n * 1000) : n;
-}
-
 /** Tiểu khoản cổ phiếu (bỏ phái sinh / tiểu khoản đóng). */
 export function pickSubAccounts(profile) {
   return (profile?.bankSubAccounts || [])
@@ -57,16 +51,23 @@ export function pickSubAccounts(profile) {
     .map((a) => ({ accountNo: a.accountNo, type: a.accountType || '', name: a.accountTypeName || a.accountType || '' }));
 }
 
+/**
+ * Danh mục của 1 tiểu khoản. Tài liệu TCBS mô tả `assets[{symbol, quantity, avgPrice, marketValue}]`,
+ * còn API thật trả `stock[{symbol, totalQtty, costPrice, currentPrice, ...}]` → đọc được cả hai.
+ * Giá luôn là VND nguyên (25500 = 25.500đ).
+ */
 export function parseHoldings(se) {
-  return (se?.stock || [])
-    .map((s) => ({
-      symbol: String(s.symbol || '').toUpperCase(),
-      etf: s.secType === '008',
-      qty: num(s.totalQtty),
-      available: num(s.availableTrading),
-      cost: normPrice(s.costPrice),
-      price: normPrice(s.currentPrice),
-    }))
+  return (se?.stock || se?.assets || [])
+    .map((s) => {
+      const qty = num(s.totalQtty ?? s.quantity);
+      return {
+        symbol: String(s.symbol || '').toUpperCase(),
+        etf: s.secType === '008',
+        qty,
+        cost: num(s.costPrice ?? s.avgPrice),
+        price: num(s.currentPrice) || (qty ? num(s.marketValue) / qty : 0),
+      };
+    })
     .filter((h) => h.symbol && h.qty > 0);
 }
 

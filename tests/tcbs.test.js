@@ -1,14 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normPrice, pickSubAccounts, parseHoldings, parseCash, tcbsHoldings, tcbsCash } from '../js/tcbs.js';
+import { pickSubAccounts, parseHoldings, parseCash, tcbsHoldings, tcbsCash } from '../js/tcbs.js';
 import { seal, unseal, jwtExp } from '../api/tcbs.js';
 import { setLang, tr } from '../js/i18n.js';
-
-test('normPrice đổi đơn vị nghìn đồng', () => {
-  assert.equal(normPrice(30.5), 30500);
-  assert.equal(normPrice(30500), 30500);
-  assert.equal(normPrice(null), 0);
-});
 
 test('pickSubAccounts bỏ phái sinh', () => {
   const subs = pickSubAccounts({ bankSubAccounts: [
@@ -27,7 +21,8 @@ test('parse danh mục + tiền, gộp mã trùng giữa tiểu khoản', () => 
   ] });
   assert.equal(a.length, 1);
   assert.equal(a[0].symbol, 'FPT');
-  const b = parseHoldings({ stock: [{ symbol: 'FPT', totalQtty: 100, costPrice: 120, currentPrice: 110 }] });
+  // dạng trong tài liệu chính thức
+  const b = parseHoldings({ assets: [{ symbol: 'FPT', quantity: 100, avgPrice: 120000, marketValue: 11000000 }] });
   const t = { accounts: [{ holdings: a, cash: parseCash({ data: [{ balance: 500000, cashDevident: 20000 }] }) }, { holdings: b, cash: 0 }] };
   const [fpt] = tcbsHoldings(t);
   assert.equal(fpt.qty, 200);

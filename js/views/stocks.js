@@ -176,7 +176,7 @@ function tcbsCard(ctx) {
       ${t ? `<p class="muted small">Cập nhật ${timeAgo(t.syncedAt)} · ${t.accounts.length} tiểu khoản · ${holdings} mã · tiền ${fmtNative(tcbsCash(t), 'VND')}</p>
         ${holdings ? '' : '<p class="muted small">Tài khoản chưa có cổ phiếu — mua xong bấm Cập nhật là số liệu tự hiện.</p>'}` : ''}
       <p class="muted small">Chỉ đọc danh mục và tiền, không đặt lệnh. Mỗi phiên TCBS kéo dài tối đa 8 giờ; hết hạn thì nhập OTP mới
-        (TCBS giới hạn 10 lần lấy phiên/ngày). Số liệu đã tải vẫn được giữ và đồng bộ lên cloud.</p>
+        (Smart OTP trong app TCInvest). Số liệu đã tải vẫn được giữ và đồng bộ lên cloud.</p>
     </div>`;
 }
 

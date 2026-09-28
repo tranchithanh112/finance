@@ -259,7 +259,7 @@ const RULES = [
   // chứng khoán
   [/^Sửa mã (.+)$/, 'Edit $1'],
   [/^Đã kết nối đến (.+)$/, 'Connected until $1'],
-  [/^Chỉ đọc danh mục và tiền, [\s\S]*$/, 'Read-only: holdings and cash, never places orders. A TCBS session lasts up to 8 hours; when it expires, enter a new OTP (TCBS allows 10 sessions a day). Loaded data is kept and synced to the cloud.'],
+  [/^Chỉ đọc danh mục và tiền, [\s\S]*$/, 'Read-only: holdings and cash, never places orders. A TCBS session lasts up to 8 hours; when it expires, enter a new OTP (Smart OTP in the TCInvest app). Loaded data is kept and synced to the cloud.'],
   [/^TCBS API key: (.+)$/, (m, v) => 'TCBS API key: ' + ({ 'đã cấu hình': 'configured', 'chưa cấu hình (không bắt buộc)': 'not configured (optional)' }[v] || v)],
   [/^TCBS: (.+)$/, (m, v) => 'TCBS: ' + tr(v)],
   [/^Mã Yahoo: [\s\S]*$/, 'Yahoo symbols: US stocks/ETFs as-is (VOO, VTI, QQQ); for Vietnam exchanges add'],

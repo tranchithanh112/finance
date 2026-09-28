@@ -103,7 +103,7 @@ Hạn chế: Binance API không trả lịch sử lệnh của cặp đã bị x
 3. App đọc tất cả tiểu khoản thường/margin: cổ phiếu, ETF, giá vốn, giá hiện tại và tiền trong tài khoản.
    Số liệu được lưu và đồng bộ lên cloud; giá trị tính vào mảng Chứng khoán ở Tổng quan.
 
-- Mỗi phiên TCBS tối đa 8 giờ, TCBS chỉ cho lấy phiên 10 lần/ngày → hết hạn thì nhập OTP mới. Trong phiên,
+- Lấy phiên luôn cần API key + mã Smart OTP (iOTP) từ app TCInvest; mỗi phiên tối đa 8 giờ → hết hạn thì nhập OTP mới. Trong phiên,
   nút ↻ ở thanh trên cùng tự cập nhật luôn danh mục TCBS.
 - API key nằm trên Vercel; phiên (JWT) được mã hóa bằng APP_PASSWORD + key trước khi gửi về trình duyệt,
   và proxy `/api/tcbs` chỉ cho gọi các API đọc (hồ sơ, danh mục, tiền, sổ lệnh) — không đặt lệnh được.

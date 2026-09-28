@@ -152,6 +152,14 @@ main { max-width: 1240px; margin: 0 auto; padding: 24px; padding-bottom: calc(32
 .btn.primary { background: var(--btn-grad); border-color: transparent; color: var(--btn-text); box-shadow: 0 4px 14px rgb(122 94 66 / .35); }
 .btn.primary:hover:not(:disabled) { filter: brightness(1.08); border-color: transparent; }
 .btn.danger { color: var(--neg); }
+/* Ô ngày/tháng trên iOS Safari: bỏ giao diện native để nhận đúng chiều rộng, chiều cao và căn trái */
+input[type="date"], input[type="month"] {
+  -webkit-appearance: none; appearance: none;
+  display: block; min-width: 0; min-height: 42px; line-height: 1.25; text-align: left;
+}
+input[type="date"]::-webkit-date-and-time-value, input[type="month"]::-webkit-date-and-time-value { text-align: left; margin: 0; min-height: 1.25em; }
+input[type="date"]::-webkit-calendar-picker-indicator, input[type="month"]::-webkit-calendar-picker-indicator { opacity: .55; cursor: pointer; }
+select { min-height: 42px; }
 input::placeholder { color: color-mix(in srgb, var(--muted) 80%, transparent); }
 input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 input { min-width: 0; }
@@ -460,7 +468,8 @@ input { min-width: 0; }
   .chips::-webkit-scrollbar { display: none; }
   .chip { flex: none; }
   .quick-add .row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .quick-add .row > * { min-width: 0; width: 100%; }
+  .quick-add .row > * { min-width: 0; width: 100%; max-width: 100%; }
+  .quick-add .row input, .quick-add .row select { height: 48px; min-height: 48px; }
   .quick-add .row .grow { grid-column: 1 / -1; }
   .quick-add .row .btn.primary { grid-column: 1 / -1; padding: 13px; font-size: 15px; }
   .quick-add .row select { grid-column: 2; }
@@ -475,3 +484,4 @@ input { min-width: 0; }
   .kpi b { font-size: 19px; }
   .kpi.hero b { font-size: 24px; }
 }
+#qa-preview:empty { display: none; }

@@ -62,9 +62,8 @@ const ctx = {
   cryptoSeries() {
     const p = ctx.pnl();
     if (!p) return [];
-    // đối chiếu với số coin thật trong ví (không gồm ví futures) để khớp với các ô số liệu
-    const held = new Map(state.crypto.holdings.map((h) => [h.asset, h.total - (h.futures || 0)]));
-    p.series ||= cryptoSeries(state.history, priceHist, { held: state.crypto.holdings.length ? held : null });
+    // Chưa đối chiếu với ví: coin bị hủy niêm yết / sập khi đang giữ làm việc "bù" cho khớp ví bị sai.
+    p.series ||= cryptoSeries(state.history, priceHist);
     return p.series;
   },
 

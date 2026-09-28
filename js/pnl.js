@@ -103,12 +103,13 @@ export function computePnl(history, priceHist, holdings, { dustUsd = 1 } = {}) {
 
   const get = (a) => (per[a] ||= {
     asset: a, qty: 0, cost: 0, realized: 0, invested: 0, proceeds: 0, buyQty: 0, sellQty: 0,
-    fees: 0, trades: 0, untrackedQty: 0, first: null, last: null, events: [],
+    fees: 0, trades: 0, untrackedQty: 0, first: null, last: null, events: [], kinds: {},
   });
 
   for (const e of events) {
     const s = get(e.asset);
     s.first ??= e.t;
+    s.kinds[e.kind] = (s.kinds[e.kind] || 0) + e.qty; // tổng số lượng vào (+) / ra (−) theo loại
     s.last = e.t;
     if (e.ref?.symbol || (e.ref?.count && e.qty > 0)) s.trades++;
     let realized = 0;
@@ -163,7 +164,7 @@ export function computePnl(history, priceHist, holdings, { dustUsd = 1 } = {}) {
     const gapQty = s.qty - heldQty;
     rows.push({
       asset: a, heldQty, ledgerQty: s.qty, price, value, avg, costBasis,
-      futuresQty: h?.futures || 0, gapQty, gapValue: gapQty * priceNow, gapCost: gapQty > 0 ? avg * gapQty : 0,
+      futuresQty: h?.futures || 0, kinds: s.kinds, gapQty, gapValue: gapQty * priceNow, gapCost: gapQty > 0 ? avg * gapQty : 0,
       realized: s.realized, unrealized, total,
       invested: s.invested, proceeds: s.proceeds, fees: s.fees,
       roi: s.invested > 0 && total != null ? total / s.invested : null,

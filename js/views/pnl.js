@@ -133,6 +133,11 @@ export function renderPnl(root, ctx) {
   bind(root, ctx);
 }
 
+const KIND_LABEL = {
+  buy: 'Mua', sell: 'Bán', fee: 'Phí', deposit: 'Nạp', withdraw: 'Rút', dust: 'Đổi dust',
+  convert: 'Convert', autoinvest: 'DCA', stake: 'Stake', unstake: 'Unstake', fiat: 'Mua bằng fiat',
+};
+
 /** Coin mà số lượng theo lịch sử khác số lượng thật trong ví (lệch ≥ $5). */
 function reconcileCard(pnl) {
   const gaps = pnl.rows.filter((r) => Math.abs(r.gapValue) >= 5).sort((a, b) => Math.abs(b.gapValue) - Math.abs(a.gapValue));
@@ -145,7 +150,9 @@ function reconcileCard(pnl) {
         <small class="muted">${more ? `Lịch sử nhiều hơn ví ${fmtMoney(more)}` : ''}${more && less ? ' · ' : ''}${less ? `ví nhiều hơn lịch sử ${fmtMoney(-less)}` : ''}</small></div>
       <div class="table-wrap"><table class="tbl">
         <thead><tr><th>Coin</th><th class="r">Theo lịch sử</th><th class="r">Trong ví</th><th class="r">Chênh lệch</th><th class="r">≈ Giá trị</th></tr></thead>
-        <tbody>${gaps.map((r) => `<tr><td><b>${esc(r.asset)}</b>${r.futuresQty ? `<div class="sub">+ ${fmtQty(r.futuresQty)} trong ví futures</div>` : ''}</td>
+        <tbody>${gaps.map((r) => `<tr><td><b>${esc(r.asset)}</b>${r.futuresQty ? `<div class="sub">+ ${fmtQty(r.futuresQty)} trong ví futures</div>` : ''}
+          <div class="sub">${Object.entries(r.kinds || {}).filter(([, q]) => Math.abs(q) > 1e-9).sort((a, b) => b[1] - a[1])
+            .map(([k, q]) => `${tr(KIND_LABEL[k] || k)} ${q > 0 ? '+' : '−'}${fmtQty(Math.abs(q))}`).join(' · ')}</div></td>
           <td class="r">${fmtQty(r.ledgerQty)}</td><td class="r">${fmtQty(r.heldQty)}</td>
           <td class="r ${r.gapQty > 0 ? 'neg' : 'pos'}">${r.gapQty > 0 ? '+' : '−'}${fmtQty(Math.abs(r.gapQty))}</td>
           <td class="r">${fmtMoney(Math.abs(r.gapValue))}</td></tr>`).join('')}</tbody>

@@ -161,7 +161,7 @@ const EXACT = {
   'Chưa có Dropbox App Key': 'Missing Dropbox App Key', 'Chưa có Google Client ID': 'Missing Google Client ID',
 
   // ---- đối chiếu lịch sử với ví
-  'Đối chiếu lịch sử với ví': 'History vs wallet', 'Theo lịch sử': 'Per history', 'Trong ví': 'In wallet',
+  'Đối chiếu lịch sử với ví': 'History vs wallet', 'Đổi dust': 'Dust', 'Unstake': 'Unstake', 'Stake': 'Stake', 'Theo lịch sử': 'Per history', 'Trong ví': 'In wallet',
   'Chênh lệch': 'Difference', '≈ Giá trị': '≈ Value', 'Lịch sử nhiều hơn ví': 'History above wallet', 'Ví nhiều hơn lịch sử': 'Wallet above history',
 
   // ---- futures theo năm

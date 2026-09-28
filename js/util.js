@@ -21,8 +21,20 @@ export function setDisplayCurrency(cur, usdVnd) {
 }
 export const displayCurrency = () => money.cur;
 
+// ---- Chế độ riêng tư: ẩn số tiền / số lượng (lưu trên từng thiết bị) ----
+let privacy = (() => {
+  try { return localStorage.getItem('fin.privacy') === '1'; } catch { return false; }
+})();
+export const isPrivate = () => privacy;
+export function setPrivate(on) {
+  privacy = Boolean(on);
+  try { localStorage.setItem('fin.privacy', privacy ? '1' : '0'); } catch { /* ignore */ }
+}
+const MASK = '••••••';
+
 export function fmtMoney(usd, { sign = false, compact = false } = {}) {
   if (usd == null || !Number.isFinite(usd)) return '—';
+  if (privacy) return MASK;
   const v = money.cur === 'VND' ? usd * money.rate : usd;
   const abs = Math.abs(v);
   let s;
@@ -43,12 +55,14 @@ export function fmtMoney(usd, { sign = false, compact = false } = {}) {
 
 export function fmtNative(v, cur) {
   if (v == null || !Number.isFinite(v)) return '—';
+  if (privacy) return MASK;
   if (cur === 'VND') return Math.round(v).toLocaleString('vi-VN') + ' ₫';
   return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + (cur && cur !== 'USD' ? ' ' + cur : ' $');
 }
 
 export function fmtQty(n) {
   if (n == null || !Number.isFinite(n)) return '—';
+  if (privacy) return '••••';
   const a = Math.abs(n);
   const d = a >= 1000 ? 2 : a >= 1 ? 4 : a >= 0.01 ? 6 : 8;
   return n.toLocaleString('en-US', { maximumFractionDigits: d });

@@ -133,6 +133,7 @@ svg.i { width: 20px; height: 20px; flex: none; }
   transition: background .15s, transform .1s;
 }
 .icon-btn:hover { background: var(--surface-2); }
+.icon-btn.on { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .icon-btn:active { transform: scale(.94); }
 .icon-btn svg.i { width: 18px; height: 18px; }
 .icon-btn.spin svg.i { animation: spin .8s linear infinite; }
@@ -404,6 +405,7 @@ input { min-width: 0; }
   .logo { width: 30px; height: 30px; }
   .icon-btn, select.cur, .pill { height: 36px; }
   .icon-btn, .pill { width: 36px; }
+  #btn-theme { display: none; } /* đổi sáng/tối trong Cài đặt → Giao diện */
   select.cur { padding: 0 6px; }
   .kpi > span { letter-spacing: .03em; font-size: 10.5px; }
   .brand-name { display: none; }

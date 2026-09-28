@@ -5,7 +5,7 @@ import { makePriceLookup } from './pnl.js';
 import { computePnl } from './pnl.js';
 import { totals, fxRate } from './calc.js';
 import * as sync from './sync.js';
-import { $, $$, toast, setDisplayCurrency, isStable, esc } from './util.js';
+import { $, $$, toast, setDisplayCurrency, isStable, esc, isPrivate, setPrivate } from './util.js';
 import { icon } from './icons.js';
 import { tr, translateDom, setLang, getLang } from './i18n.js';
 import { loadPalette } from './charts.js';
@@ -330,6 +330,7 @@ function buildNav() {
   if (moreBtn) moreBtn.onclick = () => { $('#more-sheet').hidden = false; };
   $('#fab').innerHTML = icon('plus');
   $('#btn-refresh').innerHTML = icon('refresh');
+  applyPrivacyIcon();
   // chữ tĩnh trong index.html (title, aria-label…)
   for (const el of document.querySelectorAll('.topbar, #fab, #bottom-nav, #more-panel')) translateDom(el);
   if (getLang() === 'vi') {
@@ -339,6 +340,13 @@ function buildNav() {
     $('#fab').setAttribute('aria-label', 'Ghi thu chi');
     $('#cur-select').setAttribute('aria-label', 'Tiền tệ hiển thị');
   }
+}
+
+function applyPrivacyIcon() {
+  const btn = $('#btn-privacy');
+  btn.innerHTML = icon(isPrivate() ? 'eyeOff' : 'eye');
+  btn.classList.toggle('on', isPrivate());
+  btn.title = tr(isPrivate() ? 'Hiện số dư' : 'Ẩn số dư');
 }
 
 // ---- Bảng màu (theme màu): bronze | solana | okx | glass
@@ -419,6 +427,11 @@ async function init() {
     render();
   };
   applyThemeIcon();
+  $('#btn-privacy').onclick = () => {
+    setPrivate(!isPrivate());
+    applyPrivacyIcon();
+    render();
+  };
   window.onhashchange = () => go(location.hash.slice(1));
   $('#cur-select').onchange = (e) => { state.settings.displayCurrency = e.target.value; commit({ edit: true }); render(); };
   $('#btn-refresh').onclick = async () => {

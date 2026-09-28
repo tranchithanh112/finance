@@ -21,7 +21,7 @@ const EXACT = {
   'Futures': 'Futures', 'Chứng khoán': 'Stocks', 'Cài đặt': 'Settings', 'Thêm': 'Add', 'Xóa': 'Delete', 'Sửa': 'Edit',
   'Lưu': 'Save', 'Hủy': 'Cancel', 'Mở': 'Open', 'Thu gọn': 'Collapse', 'Mặc định': 'Default', 'Lên': 'Up', 'Xuống': 'Down',
   'Tiền tệ hiển thị': 'Display currency', 'Giao diện sáng / tối': 'Light / dark mode', 'Làm mới số dư & giá': 'Refresh balances & prices',
-  'Ghi thu chi': 'Add transaction', 'Điều hướng': 'Navigation', '☁ Chưa sync': '☁ Not synced',
+  'Ghi thu chi': 'Add transaction', 'Ẩn / hiện số dư': 'Hide / show balances', 'Ẩn số dư': 'Hide balances', 'Hiện số dư': 'Show balances', 'Điều hướng': 'Navigation', '☁ Chưa sync': '☁ Not synced',
   'Bấm để đồng bộ ngay': 'Tap to sync now', 'Kết nối Dropbox / Google Drive trong Cài đặt': 'Connect Dropbox / Google Drive in Settings',
 
   // ---- tổng quan

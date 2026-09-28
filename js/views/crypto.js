@@ -1,8 +1,6 @@
 import { state } from '../store.js';
 import { cryptoTotal } from '../calc.js';
-import { donut, PALETTE } from '../charts.js';
-import { snapshotSeries } from '../series.js';
-import { historyCard, bindHistory, histMode } from './history-card.js';
+import { donut } from '../charts.js';
 import { esc, fmtMoney, fmtQty, fmtPrice, fmtPct, pnlClass, timeAgo, isStable } from '../util.js';
 
 let showDust = false;
@@ -30,29 +28,6 @@ export function renderCrypto(root, ctx) {
   }
 
   // bỏ qua nếu thiếu giá lịch sử (toàn bộ = 0)
-  const recon = ctx.cryptoSeries().some((r) => r.value > 0) ? ctx.cryptoSeries() : [];
-  const hmode = recon.length > 1 ? histMode('crypto', 'coins') : 'wallet';
-  const hist = hmode === 'coins'
-    ? {
-      id: 'crypto', title: 'Coin đang nắm theo thời gian', rows: recon, key: 'value', pnl: true,
-      modes: [['coins', 'Giá trị vs vốn'], ['wallet', 'Tổng ví']], mode: hmode,
-      note: 'Dựng lại từ lịch sử giao dịch Binance và giá đóng cửa từng ngày; không gồm stablecoin và ví futures. Khoảng cách giữa hai đường là lãi/lỗ chưa chốt.',
-      series: [
-        { key: 'value', label: 'Giá trị coin', color: PALETTE[0], area: 'gradient' },
-        { key: 'cost', label: 'Vốn đang nắm', color: PALETTE[4], dash: true },
-      ],
-    }
-    : {
-      id: 'crypto', title: 'Tổng ví crypto theo thời gian', rows: snapshotSeries(state.snapshots), key: 'crypto',
-      modes: recon.length > 1 ? [['coins', 'Giá trị vs vốn'], ['wallet', 'Tổng ví']] : null, mode: hmode,
-      note: 'Số dư thực tế của ví (gồm stablecoin), mỗi ngày lưu 1 điểm khi bạn mở app.'
-        + (recon.length > 1 ? '' : ' Đồng bộ lịch sử ở tab Lãi/lỗ để xem được từ ngày đầu tiên.'),
-      series: [
-        { key: 'coins', label: 'Coin', color: PALETTE[0], area: 'stack' },
-        { key: 'stable', label: 'Stablecoin', color: PALETTE[2], area: 'stack' },
-      ],
-    };
-
   root.innerHTML = `
     <div class="kpis">
       <div class="kpi hero"><span>Tổng giá trị crypto</span><b>${fmtMoney(total)}</b><small>Cập nhật ${timeAgo(state.crypto.updatedAt)}</small></div>
@@ -62,7 +37,6 @@ export function renderCrypto(root, ctx) {
       ${wallets.futures ? `<div class="kpi"><span>Futures (ký quỹ)</span><b>${fmtMoney(wallets.futures)}</b></div>` : ''}
       <div class="kpi"><span>Stablecoin</span><b>${fmtMoney(stable)}</b><small>${total ? fmtPct(stable / total, { sign: false }) : ''}</small></div>
     </div>
-    ${historyCard(hist)}
     <div class="grid2 wide-right">
       <div class="card"><h3>Phân bổ danh mục</h3><div class="chart"><canvas id="cr-donut"></canvas></div></div>
       <div class="card">
@@ -104,6 +78,5 @@ export function renderCrypto(root, ctx) {
     </div>`;
 
   donut(root.querySelector('#cr-donut'), list.map((h) => ({ label: h.asset, value: h.value })));
-  bindHistory(root, hist, ctx);
   root.querySelector('#cr-dust').onchange = (e) => { showDust = e.target.checked; ctx.rerender(); };
 }

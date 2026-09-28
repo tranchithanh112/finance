@@ -37,12 +37,12 @@ const API_TYPE = {
 export function csvType(s) {
   const t = String(s || '').toLowerCase();
   if (API_TYPE[s?.toUpperCase?.()]) return API_TYPE[s.toUpperCase()];
-  if (/realized|profit and loss|realised/.test(t)) return 'REALIZED_PNL';
-  if (/funding/.test(t)) return 'FUNDING_FEE';
-  if (/insurance|liquidation/.test(t)) return 'LIQUIDATION';
-  if (/rebate|kickback|referral|fee return/.test(t)) return 'REBATE';
-  if (/settle/.test(t)) return 'SETTLEMENT';
-  if (/fee|commission/.test(t)) return 'COMMISSION';
+  if (/realized|profit and loss|realised|lợi nhuận|lãi|lỗ/.test(t)) return 'REALIZED_PNL';
+  if (/funding|tài trợ/.test(t)) return 'FUNDING_FEE';
+  if (/insurance|liquidation|thanh lý|bảo hiểm/.test(t)) return 'LIQUIDATION';
+  if (/rebate|kickback|referral|fee return|hoàn|giới thiệu/.test(t)) return 'REBATE';
+  if (/settle|tất toán/.test(t)) return 'SETTLEMENT';
+  if (/fee|commission|phí|hoa hồng/.test(t)) return 'COMMISSION';
   return null;
 }
 
@@ -57,10 +57,12 @@ export function mergeIncome(store, records) {
   const keys = new Set(store.income.map((r) => r[0]));
   const loose = new Map(store.income.map((r, i) => [looseKey(r[1], r[2], r[3], r[4]), i]));
   let added = 0;
+  const src = (id) => String(id).split(':')[0];
   for (const r of records) {
     if (keys.has(r[0])) continue;
     const lk = looseKey(r[1], r[2], r[3], r[4]);
-    if (loose.has(lk)) {
+    // chỉ coi là trùng khi khác nguồn (CSV ↔ API); cùng nguồn đã có id riêng cho từng dòng
+    if (loose.has(lk) && src(store.income[loose.get(lk)][0]) !== src(r[0])) {
       // Cùng giao dịch từ nguồn khác (CSV ↔ API): bổ sung symbol nếu thiếu
       const ex = store.income[loose.get(lk)];
       if (!ex[5] && r[5]) ex[5] = r[5];
@@ -198,19 +200,64 @@ function parseTime(s) {
  * Hỗ trợ:
  *  - Sao kê giao dịch ví (User_ID, UTC_Time, Account, Operation, Coin, Change, Remark) — chỉ lấy dòng Account chứa "Futures"
  *  - Lịch sử giao dịch Futures (Time, Type/Income Type, Amount/Income, Asset, Symbol)
+ *  - Lịch sử khớp lệnh Futures (xem tradesToIncome) — tiêu đề tiếng Anh hoặc tiếng Việt
  */
+const RE_TIME = /time|date|thời gian|ngày/i;
+const RE_REALIZED = /realized|realised|lợi nhuận đã thực hiện|lợi nhuận/i;
+
+/**
+ * Lịch sử khớp lệnh Futures (Trade History): mỗi dòng 1 lần khớp, có cột lãi/lỗ đã thực hiện và phí.
+ * Tiếng Việt: Uid, Thời gian, Mã, Bên, Giá, Số lượng, Số tiền, Phí ("0.036 USDT"), Lợi nhuận đã thực hiện, …, ID giao dịch
+ * Tiếng Anh: Date(UTC), Symbol, Side, Price, Quantity, Amount, Fee, Realized Profit
+ */
+function tradesToIncome(rows, hi) {
+  const head = rows[hi].map((h) => h.trim().toLowerCase());
+  const col = (re) => head.findIndex((h) => re.test(h));
+  const iTime = col(RE_TIME);
+  const iSym = col(/^symbol$|^pair$|^mã$|^cặp/);
+  const iFee = col(/^fee$|^phí$|^phí giao dịch$/);
+  const iFeeAsset = col(/fee ?coin|fee ?asset|tài sản phí/);
+  const iPnl = col(RE_REALIZED);
+  const iId = col(/trade ?id|id giao dịch|^id$/);
+  const out = [];
+  let skipped = 0;
+  for (const r of rows.slice(hi + 1)) {
+    const t = parseTime(r[iTime]);
+    if (t == null) { skipped++; continue; }
+    const symbol = iSym >= 0 ? (r[iSym] || '').trim().toUpperCase() : '';
+    const quote = (symbol.match(/(USDT|USDC|BUSD|FDUSD|USD)$/) || [])[1] || 'USDT';
+    const id = iId >= 0 && r[iId] ? r[iId].trim() : `${t}|${symbol}|${r.join('|')}`;
+    const pnl = Number(String(r[iPnl] ?? '').replace(/[^\d.eE+-]/g, ''));
+    if (Number.isFinite(pnl) && pnl !== 0) {
+      out.push([`csvt:${id}:pnl`, t, 'REALIZED_PNL', pnl, quote, symbol, 'csv']);
+    }
+    if (iFee >= 0) {
+      const raw = String(r[iFee] || '').trim();
+      const fee = Number(raw.replace(/[^\d.eE+-]/g, ''));
+      const asset = ((iFeeAsset >= 0 ? r[iFeeAsset] : raw.replace(/[\d.,eE+\s-]/g, '')) || quote).trim().toUpperCase() || quote;
+      if (Number.isFinite(fee) && fee !== 0) out.push([`csvt:${id}:fee`, t, 'COMMISSION', -Math.abs(fee), asset, symbol, 'csv']);
+    }
+  }
+  return { records: out, skipped };
+}
+
 export function csvToIncome(text) {
   const rows = parseCsv(text);
-  const hi = rows.findIndex((r) => r.some((c) => /time|date/i.test(c)) && r.some((c) => /change|amount|income|realized/i.test(c)));
+  // Định dạng lịch sử khớp lệnh (có cột lãi/lỗ đã thực hiện + giá / bên mua bán)
+  const ti = rows.findIndex((r) => r.some((c) => RE_TIME.test(c)) && r.some((c) => RE_REALIZED.test(c))
+    && r.some((c) => /^(side|bên|price|giá)$/i.test(c.trim())));
+  if (ti >= 0) return tradesToIncome(rows, ti);
+
+  const hi = rows.findIndex((r) => r.some((c) => RE_TIME.test(c)) && r.some((c) => /change|amount|income|realized|số tiền|thay đổi/i.test(c)));
   if (hi < 0) throw new Error('Không nhận ra cột thời gian / số tiền trong file CSV');
   const head = rows[hi].map((h) => h.trim().toLowerCase());
   const col = (re, not) => head.findIndex((h) => re.test(h) && !(not && not.test(h)));
-  const iTime = col(/time|date/);
-  const iType = col(/operation|income ?type|^type$|type/);
-  const iAmt = col(/^change$|amount|^income$|realized|change/);
-  const iAsset = col(/coin|asset/);
-  const iSym = col(/symbol|pair/);
-  const iAcc = col(/account/);
+  const iTime = col(RE_TIME);
+  const iType = col(/operation|income ?type|^type$|type|^loại|thao tác/);
+  const iAmt = col(/^change$|amount|^income$|realized|change|số tiền|thay đổi/);
+  const iAsset = col(/coin|asset|tài sản/);
+  const iSym = col(/symbol|pair|^mã$|^cặp/);
+  const iAcc = col(/account|tài khoản/);
   if (iTime < 0 || iType < 0 || iAmt < 0) throw new Error('Thiếu cột Time / Operation(Type) / Change(Amount)');
 
   const out = [];

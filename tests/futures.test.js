@@ -56,3 +56,24 @@ test('tính tổng futures, quy đổi COIN-M theo giá lịch sử', () => {
   close(r.unrealized, -10);
   assert.deepEqual(r.monthly.map((m) => m[0]), ['2023-01']);
 });
+
+test('csvToIncome đọc file lịch sử khớp lệnh tiếng Việt (Trade History)', async () => {
+  const { csvToIncome, mergeIncome, emptyFutures } = await import('../js/futures.js');
+  const csv = '\ufeffUid,Thời gian,Mã,Bên,Giá,Số lượng,Số tiền,Phí,Lợi nhuận đã thực hiện,Người mua,Người tạo,ID giao dịch,ID lệnh\r\n'
+    + '1,2023-06-28 16:56:20,BTCUSDT,SELL,30288.9,0.003,90.8667,0.03634668 USDT,0,false,false,11,21\r\n'
+    + '1,2023-06-29 17:34:04,BTCUSDT,BUY,30673.9,0.19,5828.041,0.00000000 USDT,-73.245,true,false,12,22\r\n'
+    + '1,2023-06-29 17:47:26,ETHBUSD,SELL,1800,0.1,180,0.0012 BNB,5,false,false,13,23\r\n'
+    + '1,2023-06-29 17:47:26,ETHBUSD,SELL,1800,0.1,180,0.0012 BNB,5,false,false,14,23\r\n';
+  const { records } = csvToIncome(csv);
+  const pick = (r) => [r[2], r[3], r[4], r[5]];
+  assert.deepEqual(records.map(pick), [
+    ['COMMISSION', -0.03634668, 'USDT', 'BTCUSDT'],
+    ['REALIZED_PNL', -73.245, 'USDT', 'BTCUSDT'],
+    ['REALIZED_PNL', 5, 'BUSD', 'ETHBUSD'], ['COMMISSION', -0.0012, 'BNB', 'ETHBUSD'],
+    ['REALIZED_PNL', 5, 'BUSD', 'ETHBUSD'], ['COMMISSION', -0.0012, 'BNB', 'ETHBUSD'],
+  ]);
+  const store = emptyFutures();
+  // 2 lần khớp giống hệt nhau trong cùng giây vẫn được giữ; nhập lại file thì không trùng
+  assert.equal(mergeIncome(store, records), 6);
+  assert.equal(mergeIncome(store, records), 0);
+});

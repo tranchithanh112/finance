@@ -20,7 +20,7 @@ export function renderFutures(root, ctx) {
       </div>
       <p class="muted small">API Binance chỉ trả lịch sử futures gần đây (~3 tháng). Để có lỗ/lãi từ trước tới nay, tải file CSV từ Binance rồi bấm "Nhập CSV":
         <b>Binance → Orders → Transaction History → Export</b> (hoặc <b>Futures → Transaction History → Export</b>), chọn định dạng CSV, mỗi file tối đa 1 năm — nhập lần lượt từng năm.
-        Bản ghi trùng giữa CSV và API tự được bỏ qua.</p>
+        Bản ghi trùng giữa CSV và API tự được bỏ qua. File lịch sử khớp lệnh (Trade History) cũng nhập được — có lãi/lỗ và phí, nhưng không có funding.</p>
       <div class="row gap wrap">
         <button class="btn primary" id="fu-sync" ${busy ? 'disabled' : ''}>Đồng bộ qua API</button>
         <label class="btn ${busy ? 'disabled' : ''}">Nhập CSV<input type="file" id="fu-csv" accept=".csv,text/csv" multiple hidden></label>

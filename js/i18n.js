@@ -298,7 +298,7 @@ const RULES = [
   [/^Cấu hình$/, 'Set'],
   [/^trên Vercel,\s+nhập mật khẩu ứng dụng trong tab Cài đặt rồi bấm làm mới\.$/, 'in Vercel, enter the app password in Settings, then refresh.'],
   [/^\(vd E1VFVN30\.VN\)\.\s+Quỹ mở [\s\S]*$/, '(e.g. E1VFVN30.VN). Open-end funds (VESAF, DCDS, VFMVSF…): choose "Manual" and update the NAV periodically.'],
-  [/^\), chọn định dạng CSV[\s\S]*$/, '), choose CSV, up to 1 year per file — import one year at a time. Duplicates between CSV and API are skipped automatically.'],
+  [/^\), chọn định dạng CSV[\s\S]*$/, '), choose CSV, up to 1 year per file — import one year at a time. Duplicates between CSV and API are skipped automatically. Trade History files also work — they include P&L and fees, but not funding.'],
   [/^\(trống = tự động, hiện (.+)\)$/, '(empty = automatic, currently $1)'],
   [/^Tỷ giá USD\/VND cố định$/, 'Fixed USD/VND rate'],
   [/^Xuất \/ nhập toàn bộ dữ liệu (.|\n)*$/, 'Export / import all data (portfolio, Binance history, stock transactions, settings) as JSON. Passwords and tokens are not included.'],

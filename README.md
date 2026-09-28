@@ -84,7 +84,7 @@ Hạn chế: Binance API không trả lịch sử lệnh của cặp đã bị x
 ## Lãi/lỗ Futures
 
 - **Đồng bộ qua API** (`/fapi/v1/income`, `/dapi/v1/income`): Binance chỉ trả khoảng 3 tháng gần nhất. App lưu dồn lại nên từ lúc bắt đầu dùng sẽ không mất dữ liệu.
-- **Lịch sử cũ hơn**: trên web Binance vào *Orders → Transaction History → Export* (hoặc *Futures → Transaction History → Export*), chọn CSV, mỗi lần tối đa 1 năm → tab Futures → **Nhập CSV** (chọn được nhiều file). Bản ghi trùng giữa CSV và API tự bỏ qua.
+- **Lịch sử cũ hơn**: trên web Binance vào *Orders → Transaction History → Export* (hoặc *Futures → Transaction History → Export*), chọn CSV, mỗi lần tối đa 1 năm → tab Futures → **Nhập CSV** (chọn được nhiều file). Bản ghi trùng giữa CSV và API tự bỏ qua. File *Lịch sử giao dịch / Trade History* (khớp lệnh, tiếng Việt hoặc Anh) cũng nhập được, nhưng không có phí funding.
 - Tổng = lãi/lỗ đóng lệnh + phí + funding + thanh lý + hoàn phí. Tiền chuyển vào/ra ví futures không tính. COIN-M quy đổi USD theo giá ngày phát sinh.
 
 ## Thu chi & điểm sức khỏe tài chính

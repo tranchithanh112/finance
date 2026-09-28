@@ -8,6 +8,7 @@ export function defaultState() {
   return {
     version: 1,
     updatedAt: 0,
+    editedAt: 0,
     settings: {
       displayCurrency: 'USD',
       dustUsd: 1,
@@ -65,7 +66,7 @@ export async function loadState() {
 }
 
 /** Dọn dữ liệu do bản thử nghiệm (airdrop / Binance Pay) đã ghi vào lịch sử — bản đó đã bị gỡ. */
-function cleanup(obj) {
+export function cleanupState(obj) {
   const h = obj.history;
   if (!h) return obj;
   const notPay = (r) => !String(r[0]).startsWith('pay:');
@@ -77,7 +78,7 @@ function cleanup(obj) {
 }
 
 function replaceInPlace(obj) {
-  cleanup(obj);
+  cleanupState(obj);
   for (const k of Object.keys(state)) delete state[k];
   Object.assign(state, obj);
 }
@@ -93,8 +94,9 @@ function persist() {
 }
 
 /** Gọi sau mỗi thay đổi dữ liệu người dùng. */
-export function commit() {
+export function commit({ edit = false } = {}) {
   state.updatedAt = Date.now();
+  if (edit) state.editedAt = state.updatedAt; // người dùng tự sửa (cài đặt, chứng khoán, tiền mặt)
   persist();
   listeners.forEach((fn) => fn());
 }

@@ -113,7 +113,7 @@ export function renderStocks(root, ctx) {
     if (ex) Object.assign(ex, data);
     else state.stocks.funds.push(data);
     editing = null;
-    commit();
+    commit({ edit: true });
     ctx.rerender();
     if (data.source === 'yahoo') ctx.refreshQuotes(false);
   };
@@ -123,7 +123,7 @@ export function renderStocks(root, ctx) {
     const f = Object.fromEntries(new FormData(e.target));
     const units = Number(f.units) * (f.side === 'sell' ? -1 : 1);
     state.stocks.txs.push({ id: uid(), ticker: f.ticker, date: f.date, units, price: Number(f.price), fee: Number(f.fee) || 0 });
-    commit();
+    commit({ edit: true });
     ctx.rerender();
   };
 
@@ -134,14 +134,14 @@ export function renderStocks(root, ctx) {
       if (!confirm(`Xóa ${t} và toàn bộ giao dịch của mã này?`)) return;
       state.stocks.funds = state.stocks.funds.filter((f) => f.ticker !== t);
       state.stocks.txs = state.stocks.txs.filter((x) => x.ticker !== t);
-      commit();
+      commit({ edit: true });
       ctx.rerender();
     };
   });
   root.querySelectorAll('[data-del-tx]').forEach((b) => {
     b.onclick = () => {
       state.stocks.txs = state.stocks.txs.filter((x) => x.id !== b.dataset.delTx);
-      commit();
+      commit({ edit: true });
       ctx.rerender();
     };
   });

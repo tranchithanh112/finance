@@ -29,7 +29,7 @@ export function renderSettings(root, ctx) {
       <div class="card">
         <h3>Đồng bộ đám mây (JSON)</h3>
         <p class="muted small">Trạng thái: ${prov ? `đã kết nối <b>${prov}</b> · lần sync cuối ${timeAgo(local.lastSync)}` : 'chưa kết nối'}.
-          File: <code>finance-portfolio.json</code>. Bên nào mới hơn sẽ thắng khi tự động đồng bộ.</p>
+          File: <code>finance-portfolio.json</code>. Khi đồng bộ, lịch sử giao dịch của các máy được gộp lại (không mất bản ghi); dữ liệu tự nhập lấy theo lần sửa gần nhất.</p>
         <form id="oauth-form" class="form-grid one">
           <label>Dropbox App Key ${cfg.dropboxAppKey ? '<small class="muted">(đã có từ env DROPBOX_APP_KEY)</small>' : ''}
             <input name="dropboxAppKey" value="${esc(local.dropboxAppKey || '')}" placeholder="${esc(cfg.dropboxAppKey || 'xxxxxxxxxxxx')}"></label>
@@ -110,7 +110,7 @@ export function renderSettings(root, ctx) {
   bind('#sy-dropbox', run(async () => { saveOauth(); await sync.dropboxLogin(); }));
   bind('#sy-google', run(async () => { saveOauth(); await sync.googleLogin(true); await ctx.smartSync(); }, 'Đã kết nối Google Drive'));
   bind('#sy-disconnect', run(async () => sync.disconnect(), 'Đã ngắt kết nối'));
-  bind('#sy-smart', run(() => ctx.smartSync(), (r) => ({ pulled: 'Đã tải dữ liệu mới hơn từ cloud', pushed: 'Đã tải lên cloud', same: 'Đã đồng bộ' }[r] || 'OK')));
+  bind('#sy-smart', run(() => ctx.smartSync(), (r) => ({ pulled: 'Đã nhận dữ liệu từ cloud', pushed: 'Đã tải lên cloud', merged: 'Đã gộp dữ liệu 2 bên', same: 'Đã đồng bộ' }[r] || 'OK')));
   bind('#sy-push', run(() => sync.push(), 'Đã ghi đè lên cloud'));
   bind('#sy-pull', run(async () => {
     if (!confirm('Dữ liệu trên máy này sẽ bị thay bằng dữ liệu trên cloud. Tiếp tục?')) return;
@@ -133,7 +133,7 @@ export function renderSettings(root, ctx) {
       extraAssets: list('extraAssets'),
       includeConvert: f.get('includeConvert') === 'on',
     });
-    commit();
+    commit({ edit: true });
     ctx.invalidatePnl();
     toast('Đã lưu cài đặt', 'ok');
     ctx.rerender();
@@ -147,7 +147,7 @@ export function renderSettings(root, ctx) {
     if (!file) return;
     try {
       replaceState(sync.parsePayload(await file.text()));
-      commit();
+      commit({ edit: true });
       ctx.afterStateReplaced();
       toast('Đã nhập dữ liệu', 'ok');
     } catch (err) {
@@ -163,7 +163,7 @@ export function renderSettings(root, ctx) {
   root.querySelector('#bk-reset').onclick = () => {
     if (!confirm('Xóa TOÀN BỘ dữ liệu trên máy này? Nếu đang bật tự động đồng bộ, file trên cloud cũng sẽ bị ghi đè. Hãy xuất JSON trước nếu cần.')) return;
     replaceState({});
-    commit();
+    commit({ edit: true });
     ctx.afterStateReplaced();
   };
 }

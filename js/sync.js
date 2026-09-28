@@ -1,4 +1,5 @@
-import { state, local, saveLocal, replaceState } from './store.js';
+import { state, local, saveLocal, replaceState, cleanupState } from './store.js';
+import { mergeStates } from './merge.js';
 
 // Đồng bộ toàn bộ dữ liệu dưới dạng 1 file JSON lên Dropbox hoặc Google Drive.
 // Chỉ dùng OAuth phía trình duyệt (PKCE / Google Identity Services), không cần server.
@@ -224,25 +225,35 @@ export async function pull() {
   return true;
 }
 
-/** Bên nào mới hơn (updatedAt) thì thắng. Trả về 'pulled' | 'pushed' | 'same'. */
-export async function smartSync() {
+/**
+ * Tải bản trên cloud, GỘP với máy này (không mất lịch sử của bên nào), rồi ghi lại nếu cần.
+ * Trả về 'pulled' (máy này nhận thêm dữ liệu) | 'pushed' | 'merged' (cả hai) | 'same'.
+ */
+let syncing = Promise.resolve();
+export function smartSync() {
+  // Xếp hàng: không cho 2 lần đồng bộ chạy chồng lên nhau
+  const run = syncing.then(doSmartSync, doSmartSync);
+  syncing = run.catch(() => {});
+  return run;
+}
+
+async function doSmartSync() {
   const p = provider();
   if (!p) return null;
   const text = await p.download();
-  if (text) {
-    const remote = parsePayload(text);
-    if ((remote.updatedAt || 0) > (state.updatedAt || 0)) {
-      replaceState(remote);
-      local.lastSync = Date.now();
-      saveLocal();
-      return 'pulled';
-    }
-    if (remote.updatedAt === state.updatedAt) {
-      local.lastSync = Date.now();
-      saveLocal();
-      return 'same';
-    }
+  if (!text) {
+    await push();
+    return 'pushed';
   }
-  await push();
-  return 'pushed';
+  const remote = cleanupState(parsePayload(text));
+  const merged = mergeStates(JSON.parse(JSON.stringify(state)), remote);
+  const mergedText = JSON.stringify(merged);
+  const localChanged = mergedText !== JSON.stringify(state);
+  const remoteChanged = mergedText !== JSON.stringify(remote);
+  if (localChanged) replaceState(merged);
+  if (remoteChanged) await p.upload(JSON.stringify({ app: 'finance-dashboard', exportedAt: Date.now(), state: merged }));
+  local.lastSync = Date.now();
+  saveLocal();
+  if (localChanged && remoteChanged) return 'merged';
+  return localChanged ? 'pulled' : remoteChanged ? 'pushed' : 'same';
 }

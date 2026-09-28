@@ -426,9 +426,18 @@ export async function syncHistory({ fullScan = false, onProgress = () => {}, sig
     }
   }
 
-  // Giá lịch sử cho mọi tài sản non-stable xuất hiện trong lịch sử
+  await ensureAllPriceHistory({ tick, signal, onProgress: (i, n) => log(`Tải giá lịch sử ${i}/${n} tài sản`, 85 + (i / n) * 15) });
+
+  h.updatedAt = Date.now();
+  log(`Xong: ${newTrades} lệnh mới`, 100);
+  return { newTrades };
+}
+
+/** Tải giá lịch sử cho mọi tài sản non-stable trong lịch sử (máy mới nhận dữ liệu từ cloud cũng cần). */
+export async function ensureAllPriceHistory({ tick, signal, onProgress = () => {} } = {}) {
+  const h = state.history;
   const need = new Map();
-  const want = (a, t) => { if (!isStable(a)) need.set(a, Math.min(need.get(a) ?? Infinity, t)); };
+  const want = (a, t) => { if (a && !isStable(a)) need.set(a, Math.min(need.get(a) ?? Infinity, t)); };
   for (const [s, e] of Object.entries(h.trades)) {
     const [b, q] = h.meta[s] || [];
     if (!e.rows.length) continue;
@@ -440,16 +449,14 @@ export async function syncHistory({ fullScan = false, onProgress = () => {}, sig
   h.withdrawals.forEach((d) => want(d[2], d[1]));
   h.dust.forEach((d) => { want(d[2], d[1]); want('BNB', d[1]); });
   h.converts.forEach((c) => { want(c[2], c[1]); want(c[4], c[1]); });
-
+  for (const r of state.futures?.income || []) if (r[4] !== 'BNFCR') want(r[4], r[1]);
+  if (!need.size) return 0;
+  tick ||= await fetchTickerPrices();
   let i = 0;
   for (const [asset, t] of need) {
     if (signal?.aborted) throw new DOMException('Đã hủy', 'AbortError');
     await ensurePriceHistory(asset, t, tick);
-    i++;
-    if (i % 5 === 0 || i === need.size) log(`Tải giá lịch sử ${i}/${need.size} tài sản`, 85 + (i / need.size) * 15);
+    onProgress(++i, need.size);
   }
-
-  h.updatedAt = Date.now();
-  log(`Xong: ${newTrades} lệnh mới`, 100);
-  return { newTrades };
+  return need.size;
 }

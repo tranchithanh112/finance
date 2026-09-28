@@ -88,13 +88,13 @@ export function renderOverview(root, ctx) {
     e.preventDefault();
     const f = new FormData(e.target);
     state.cash.push({ id: uid(), name: f.get('name'), amount: Number(f.get('amount')), currency: f.get('currency') });
-    commit();
+    commit({ edit: true });
     ctx.rerender();
   };
   root.querySelectorAll('[data-del-cash]').forEach((b) => {
     b.onclick = () => {
       state.cash = state.cash.filter((c) => c.id !== b.dataset.delCash);
-      commit();
+      commit({ edit: true });
       ctx.rerender();
     };
   });

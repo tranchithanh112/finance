@@ -1,5 +1,5 @@
 import { state, local, loadState, commit, onCommit, takeSnapshot } from './store.js';
-import { fetchHoldings, syncHistory, getPriceHistory, bn, ensurePriceHistory, fetchTickerPrices } from './binance.js';
+import { fetchHoldings, syncHistory, getPriceHistory, bn, ensurePriceHistory, fetchTickerPrices, ensureAllPriceHistory } from './binance.js';
 import { computeFutures, syncFuturesIncome, csvToIncome, mergeIncome, emptyFutures } from './futures.js';
 import { makePriceLookup } from './pnl.js';
 import { computePnl } from './pnl.js';
@@ -196,7 +196,10 @@ const ctx = {
 
   async smartSync() {
     const r = await sync.smartSync();
-    if (r === 'pulled') ctx.afterStateReplaced();
+    if (r === 'pulled' || r === 'merged') {
+      ctx.afterStateReplaced();
+      refreshPriceHistory();
+    }
     updateSyncPill();
     return r;
   },
@@ -220,6 +223,21 @@ async function ensureFuturesPrices() {
   const tick = await fetchTickerPrices();
   for (const [a, t] of need) await ensurePriceHistory(a, t, tick);
   priceHist = await getPriceHistory();
+}
+
+/** Tải giá lịch sử còn thiếu ở nền (vd máy mới vừa nhận lịch sử từ Dropbox), rồi tính lại PnL. */
+let priceJob = null;
+function refreshPriceHistory() {
+  priceJob ||= ensureAllPriceHistory()
+    .then(async (n) => {
+      if (!n) return;
+      priceHist = await getPriceHistory();
+      pnlCache = null;
+      futCache = null;
+      render();
+    })
+    .catch(() => {})
+    .finally(() => { priceJob = null; });
 }
 
 function snapshot() {
@@ -268,7 +286,7 @@ onCommit(() => {
   if (local.autoSync === false || !sync.syncEnabled()) return;
   clearTimeout(pushTimer);
   pushTimer = setTimeout(() => {
-    sync.push().then(updateSyncPill).catch((e) => toast(`Sync: ${e.message}`, 'error'));
+    ctx.smartSync().catch((e) => toast(`Sync: ${e.message}`, 'error'));
   }, 4000);
 });
 
@@ -281,7 +299,7 @@ async function init() {
 
   $('#tabs').onclick = (e) => { const b = e.target.closest('button[data-tab]'); if (b) go(b.dataset.tab); };
   window.onhashchange = () => go(location.hash.slice(1));
-  $('#cur-select').onchange = (e) => { state.settings.displayCurrency = e.target.value; commit(); render(); };
+  $('#cur-select').onchange = (e) => { state.settings.displayCurrency = e.target.value; commit({ edit: true }); render(); };
   $('#btn-refresh').onclick = async (e) => {
     e.currentTarget.disabled = true;
     await Promise.all([ctx.refreshCrypto(), ctx.refreshQuotes()]);
@@ -291,7 +309,7 @@ async function init() {
     if (!sync.syncEnabled()) return go('settings');
     try {
       const r = await ctx.smartSync();
-      toast({ pulled: 'Đã tải dữ liệu mới hơn từ cloud', pushed: 'Đã tải lên cloud', same: 'Đã đồng bộ' }[r], 'ok');
+      toast({ pulled: 'Đã nhận dữ liệu từ cloud', pushed: 'Đã tải lên cloud', merged: 'Đã gộp dữ liệu 2 bên', same: 'Đã đồng bộ' }[r], 'ok');
     } catch (e) {
       toast(`Sync: ${e.message}`, 'error');
     }
@@ -315,6 +333,7 @@ async function init() {
   }
 
   render();
+  refreshPriceHistory();
   // Tự làm mới nếu dữ liệu cũ hơn 5 phút
   if (serverCfg.authOk) {
     const stale = Date.now() - (state.crypto.updatedAt || 0) > 5 * 60000;

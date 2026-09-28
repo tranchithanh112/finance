@@ -225,6 +225,14 @@ function headerOffset(h) {
   return m ? (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 3600e3 + Number(m[3] || 0) * 60e3) : 0;
 }
 
+/** Múi giờ ghi trong tên file Binance xuất, vd "…(UTC+7).csv", "…_UTC+07_….csv", "GMT+7" → số giờ (0 nếu không có). */
+export function fileNameOffsetHours(name) {
+  const m = String(name || '').match(/(?:utc|gmt)\s*([+-])\s*(\d{1,2})(?!\d)/i);
+  if (!m) return 0;
+  const h = (m[1] === '-' ? -1 : 1) * Number(m[2]);
+  return h >= -12 && h <= 14 ? h : 0;
+}
+
 function tradesToIncome(rows, hi) {
   const head = rows[hi].map((h) => h.trim().toLowerCase());
   const col = (re) => head.findIndex((h) => re.test(h));

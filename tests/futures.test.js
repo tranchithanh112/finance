@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { csvToIncome, mergeIncome, computeFutures, emptyFutures, parseCsv, detectOffsetHours, shiftRecords } from '../js/futures.js';
+import { csvToIncome, mergeIncome, computeFutures, emptyFutures, parseCsv, detectOffsetHours, shiftRecords, fileNameOffsetHours } from '../js/futures.js';
 
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} ≈ ${b}`);
 
@@ -116,4 +116,12 @@ test('CSV giờ UTC+7: đọc múi giờ từ tiêu đề hoặc tự dò theo d
   assert.equal(mergeIncome(store, shiftRecords(raw, 7)), 0);
   // không có dữ liệu để so → giữ nguyên
   assert.equal(detectOffsetHours(emptyFutures(), raw), 0);
+});
+
+test('đọc múi giờ từ tên file', () => {
+  assert.equal(fileNameOffsetHours('Binance-Thay đổi số dư-2024 (UTC+7).csv'), 7);
+  assert.equal(fileNameOffsetHours('export_UTC+07_2024.csv'), 7);
+  assert.equal(fileNameOffsetHours('history GMT-5.csv'), -5);
+  assert.equal(fileNameOffsetHours('Binance-UTC-2024.csv'), 0);
+  assert.equal(fileNameOffsetHours('Binance-Lịch sử-2023.csv'), 0);
 });

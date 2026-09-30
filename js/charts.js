@@ -174,6 +174,8 @@ export function timeline(canvas, rows, series) {
         },
         y: {
           stacked,
+          // biểu đồ xếp chồng phải bắt đầu từ 0, nếu không lớp dưới cùng bị cắt và trông nhỏ đi
+          beginAtZero: stacked,
           ticks: { color: css('--muted'), maxTicksLimit: 5, callback: (v) => fmtMoney(v, { compact: true }) },
           grid: { color: css('--grid') },
           border: { display: false },

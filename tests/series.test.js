@@ -16,7 +16,7 @@ test('snapshotSeries tách coin / stablecoin, snapshot cũ không có stable', (
     { date: '2025-01-01', crypto: 100, stocks: 5, cash: 10, total: 115 },
     { date: '2025-01-02', crypto: 120, stable: 20, stocks: 5, cash: 10, total: 135 },
   ]);
-  assert.equal(a.coins, 100); assert.equal(a.stable, 0);
+  assert.equal(a.coins, 80); assert.equal(a.stable, 20); // thiếu stable → lấy theo ảnh sau
   assert.equal(b.coins, 100); assert.equal(b.stable, 20); assert.equal(b.crypto, 120);
 });
 
@@ -95,4 +95,14 @@ test('reconcileWithWallet: lịch sử dư → rút phần dư ở thời điể
   const s = cryptoSeries(history, { BNB: { days } }, { now: d0 + 2 * DAY + 1000, held: new Map([['BNB', 1]]) });
   assert.equal(s.at(-1).value, 300);
   assert.equal(s.at(-1).cost, 300);
+});
+
+test('snapshotSeries: ảnh chụp cũ thiếu stable lấy theo ảnh sau đó', () => {
+  const rows = snapshotSeries([
+    { date: '2026-09-28', crypto: 310, stocks: 0, cash: 20, total: 330 },
+    { date: '2026-09-29', crypto: 305, stable: 70, stocks: 0, cash: 20, total: 325 },
+  ]);
+  assert.equal(rows[0].stable, 70);
+  assert.equal(rows[0].coins, 240);
+  assert.equal(rows[1].coins, 235);
 });

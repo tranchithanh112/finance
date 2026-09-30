@@ -27,7 +27,17 @@ export function fillDaily(rows, keys) {
 
 /** Ảnh chụp tài sản hằng ngày → chuỗi theo loại (crypto rủi ro, stablecoin, CK, tiền mặt, ròng). */
 export function snapshotSeries(snapshots) {
-  const rows = fillDaily(snapshots || [], ['crypto', 'stable', 'stocks', 'cash', 'debt', 'total']);
+  // Ảnh chụp cũ (trước khi app ghi riêng stablecoin) không có `stable` → lấy theo ảnh gần nhất sau đó
+  // (stablecoin ít thay đổi), để không bị trông như crypto "chuyển" hết sang stablecoin.
+  const sorted = [...(snapshots || [])].sort((a, b) => a.date.localeCompare(b.date));
+  let next = null;
+  const snaps = [];
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const x = sorted[i];
+    if (x.stable != null) next = x.stable;
+    snaps[i] = x.stable != null || next == null ? x : { ...x, stable: Math.min(next, Number(x.crypto) || 0) };
+  }
+  const rows = fillDaily(snaps, ['crypto', 'stable', 'stocks', 'cash', 'debt', 'total']);
   return rows.map((r) => ({
     date: r.date,
     crypto: r.crypto,

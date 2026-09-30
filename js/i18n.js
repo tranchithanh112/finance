@@ -87,8 +87,8 @@ const EXACT = {
   'Tổng PnL từ trước tới nay': 'All-time P&L', 'Đã chốt (realized)': 'Realized', 'Chưa chốt (unrealized)': 'Unrealized',
   'Tổng tiền đã mua': 'Total bought', 'Coin lãi / lỗ': 'Winners / losers', 'Lãi/lỗ đã chốt cộng dồn': 'Cumulative realized P&L',
   'Đã chốt cộng dồn': 'Cumulative realized', 'Tổng lãi/lỗ': 'Total P&L',
-  'Tổng = chưa chốt (giá trị coin đang nắm − vốn) + đã chốt cộng dồn. Dựng lại theo giá đóng cửa từng ngày; không gồm stablecoin và futures.':
-    'Total = unrealized (value of coins held − cost) + cumulative realized. Rebuilt from daily closing prices; excludes stablecoins and futures.',
+  'Tổng = chưa chốt (giá trị coin đang nắm − vốn) + đã chốt cộng dồn. Dựng lại theo giá đóng cửa từng ngày; không gồm stablecoin và futures. Điểm hôm nay lấy đúng các ô số liệu phía trên.':
+    'Total = unrealized (value of coins held − cost) + cumulative realized. Rebuilt from daily closing prices; excludes stablecoins and futures. Today\'s point uses the figures above.',
   'Tất cả': 'All', 'Đang giữ': 'Holding', 'Đã thoát': 'Exited', 'Tìm coin…': 'Search coin…', 'Trạng thái': 'Status',
   'Đã mua': 'Bought', 'Giá hiện tại': 'Current price', 'Đã chốt': 'Realized', 'Chưa chốt': 'Unrealized', 'ROI': 'ROI',
   'GD cuối': 'Last trade', 'thiếu dữ liệu': 'missing data',
@@ -160,6 +160,11 @@ const EXACT = {
   'File JSON không đúng định dạng': 'Invalid JSON file', 'Chưa kết nối Dropbox / Google Drive': 'Dropbox / Google Drive not connected',
   'Chưa có Dropbox App Key': 'Missing Dropbox App Key', 'Chưa có Google Client ID': 'Missing Google Client ID',
 
+  // ---- giao diện gọn
+  '↻ Đồng bộ': '↻ Sync', 'Lịch sử Binance': 'Binance history', 'Lãi nhất · lỗ nhất': 'Best · worst', 'Ẩn cảnh báo': 'Hide warning',
+  'Tỷ trọng & lãi/lỗ': 'Weight & P&L', 'Theo tài sản': 'By asset',
+  'Cột cuối: lãi/lỗ chưa chốt so với giá vốn của số coin đang giữ.': 'Last column: unrealized P&L vs. cost of the coins held.',
+
   // ---- đối chiếu lịch sử với ví
   'Đối chiếu lịch sử với ví': 'History vs wallet', 'Bỏ phần dư': 'Drop excess', 'Đã bỏ:': 'Dropped:', 'Không còn phần dư để bỏ': 'Nothing left to drop', 'Đổi dust': 'Dust', 'Unstake': 'Unstake', 'Stake': 'Stake', 'Theo lịch sử': 'Per history', 'Trong ví': 'In wallet',
   'Chênh lệch': 'Difference', '≈ Giá trị': '≈ Value', 'Lịch sử nhiều hơn ví': 'History above wallet', 'Ví nhiều hơn lịch sử': 'Wallet above history',
@@ -207,6 +212,9 @@ const TERMS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const RULES = [
+  [/^· cập nhật (.+)$/, '· updated $1'],
+  [/^(\d[\d,.]*) lệnh · (\d+) cặp · (\d+) nạp · (\d+) rút · (\d+) DCA · (\d+) convert · (\d+) staking$/, '$1 trades · $2 pairs · $3 deposits · $4 withdrawals · $5 DCA · $6 convert · $7 staking'],
+  [/^"Đồng bộ" quét [\s\S]*$/, '"Sync" scans coins you hold / deposited / withdrew / converted plus pairs with past trades. "Full scan" tries every quoted pair to also find coins you bought and fully sold (slow, a few minutes).'],
   [/^Bỏ (\S+) (\S+) khỏi lịch sử \(coi như đã rời ví từ (\S+), không tính lãi\/lỗ\)\?$/, 'Drop $1 $2 from history (treated as having left the wallet since $3, no P&L)?'],
   [/^([\d.,]+ \S+) \(từ (.+)\)$/, '$1 (since $2)'],
   [/^trong (1T|3T|6T|1N)$/, (m, r) => `in ${{ '1T': '1M', '3T': '3M', '6T': '6M', '1N': '1Y' }[r]}`],

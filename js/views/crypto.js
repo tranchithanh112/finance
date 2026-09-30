@@ -1,6 +1,5 @@
 import { state } from '../store.js';
 import { cryptoTotal } from '../calc.js';
-import { donut } from '../charts.js';
 import { esc, fmtMoney, fmtQty, fmtPrice, fmtPct, pnlClass, timeAgo, isStable } from '../util.js';
 
 let showDust = false;
@@ -31,25 +30,28 @@ export function renderCrypto(root, ctx) {
   root.innerHTML = `
     <div class="kpis">
       <div class="kpi hero"><span>Tổng giá trị crypto</span><b>${fmtMoney(total)}</b><small>Cập nhật ${timeAgo(state.crypto.updatedAt)}</small></div>
-      <div class="kpi"><span>Spot</span><b>${fmtMoney(wallets.spot)}</b></div>
-      <div class="kpi"><span>Funding</span><b>${fmtMoney(wallets.funding)}</b></div>
-      <div class="kpi"><span>Earn</span><b>${fmtMoney(wallets.earn)}</b></div>
-      ${wallets.futures ? `<div class="kpi"><span>Futures (ký quỹ)</span><b>${fmtMoney(wallets.futures)}</b></div>` : ''}
+      ${[['Spot', wallets.spot], ['Funding', wallets.funding], ['Earn', wallets.earn], ['Futures (ký quỹ)', wallets.futures]]
+        .filter(([, v]) => v >= 1) // bỏ ví gần như trống
+        .map(([l, v]) => `<div class="kpi"><span>${l}</span><b>${fmtMoney(v)}</b><small>${total ? fmtPct(v / total, { sign: false }) : ''}</small></div>`).join('')}
       <div class="kpi"><span>Stablecoin</span><b>${fmtMoney(stable)}</b><small>${total ? fmtPct(stable / total, { sign: false }) : ''}</small></div>
     </div>
-    <div class="grid2 wide-right">
-      <div class="card"><h3>Phân bổ danh mục</h3><div class="chart"><canvas id="cr-donut"></canvas></div></div>
-      <div class="card">
-        <div class="card-head"><h3>Tỷ trọng</h3>
-          <label class="check"><input type="checkbox" id="cr-dust" ${showDust ? 'checked' : ''}> Hiện coin bụi (&lt; ${fmtMoney(dust)})</label>
-        </div>
-        <div class="bars">
-          ${list.slice(0, 12).map((h) => `
-            <div class="bar-row"><span class="bar-label">${esc(h.asset)}</span>
-              <div class="bar"><i style="width:${total ? (h.value / total) * 100 : 0}%"></i></div>
-              <span class="bar-val">${total ? fmtPct(h.value / total, { sign: false }) : ''}</span></div>`).join('')}
-        </div>
+    <div class="card">
+      <div class="card-head"><h3>Tỷ trọng & lãi/lỗ</h3>
+        <label class="check"><input type="checkbox" id="cr-dust" ${showDust ? 'checked' : ''}> Hiện coin bụi (&lt; ${fmtMoney(dust)})</label>
       </div>
+      <div class="bars alloc">
+        ${list.slice(0, 15).map((h) => {
+          const p = pnlBy[h.asset];
+          const pct = p?.unrealized != null && p.costBasis > 0 ? p.unrealized / p.costBasis : null;
+          return `
+          <div class="bar-row"><span class="bar-label">${esc(h.asset)}</span>
+            <div class="bar"><i style="width:${total ? (h.value / total) * 100 : 0}%"></i></div>
+            <span class="bar-val">${total ? fmtPct(h.value / total, { sign: false }) : ''}</span>
+            <span class="bar-money">${fmtMoney(h.value, { compact: true })}</span>
+            <span class="bar-pnl ${pnlClass(pct)}">${pct != null ? fmtPct(pct) : isStable(h.asset) ? '' : '—'}</span></div>`;
+        }).join('')}
+      </div>
+      ${pnl ? '<p class="muted small">Cột cuối: lãi/lỗ chưa chốt so với giá vốn của số coin đang giữ.</p>' : ''}
     </div>
     <div class="card">
       <div class="table-wrap"><table class="tbl">
@@ -77,6 +79,5 @@ export function renderCrypto(root, ctx) {
       ${pnl ? '' : '<p class="muted small">Cột giá vốn / PnL cần đồng bộ lịch sử ở tab "Lịch sử & PnL".</p>'}
     </div>`;
 
-  donut(root.querySelector('#cr-donut'), list.map((h) => ({ label: h.asset, value: h.value })));
   root.querySelector('#cr-dust').onchange = (e) => { showDust = e.target.checked; ctx.rerender(); };
 }

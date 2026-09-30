@@ -18,23 +18,33 @@ export function renderPnl(root, ctx) {
   const syncing = ctx.syncState();
   const tradeCount = Object.values(h.trades).reduce((a, e) => a + e.rows.length, 0);
 
-  const controls = `
+  const hasHist = tradeCount > 0 || h.deposits.length > 0;
+  const stats = `${tradeCount.toLocaleString()} lệnh · ${Object.keys(h.trades).length} cặp · ${h.deposits.length} nạp · ${h.withdrawals.length} rút · ${countKind(h, 'autoinvest')} DCA · ${countKind(h, 'convert')} convert · ${countKind(h, 'stake') + countKind(h, 'unstake')} staking`;
+  const progress = syncing.running || syncing.msg ? `
+        <div class="progress"><i style="width:${syncing.pct || 0}%"></i></div>
+        <p class="small muted" id="pnl-msg">${esc(syncing.msg || '')}</p>` : '';
+  const buttons = `
+        <button class="btn primary" id="pnl-sync" ${syncing.running ? 'disabled' : ''}>${hasHist ? '↻ Đồng bộ' : 'Đồng bộ nhanh'}</button>
+        <button class="btn" id="pnl-full" ${syncing.running ? 'disabled' : ''}>Quét toàn bộ</button>
+        ${syncing.running ? '<button class="btn danger" id="pnl-cancel">Hủy</button>' : ''}`;
+  // Đã có lịch sử & không đang đồng bộ → 1 dòng gọn; ngược lại hiện đầy đủ hướng dẫn
+  const controls = hasHist && !syncing.running ? `
+    <div class="card sync-bar">
+      <div class="sync-info"><b>Lịch sử Binance</b> <span class="muted">· cập nhật ${timeAgo(h.updatedAt)}</span>
+        <details><summary>${stats}</summary>
+          <p class="muted">"Đồng bộ" quét các coin bạn đang giữ / từng nạp / rút / convert + các cặp đã có lệnh.
+          "Quét toàn bộ" thử mọi cặp có quote ${esc(state.settings.scanQuotes.join(', '))} để tìm cả coin đã mua rồi bán hết (chậm, vài phút).</p></details></div>
+      <div class="row gap">${buttons}</div>
+    </div>` : `
     <div class="card">
       <div class="card-head">
         <h3>Đồng bộ lịch sử Binance</h3>
-        <small class="muted">Lần cuối: ${timeAgo(h.updatedAt)} · ${tradeCount.toLocaleString()} lệnh · ${Object.keys(h.trades).length} cặp ·
-          ${h.deposits.length} nạp · ${h.withdrawals.length} rút · ${countKind(h, 'autoinvest')} DCA · ${countKind(h, 'convert')} convert · ${countKind(h, 'stake') + countKind(h, 'unstake')} staking</small>
+        <small class="muted">Lần cuối: ${timeAgo(h.updatedAt)} · ${stats}</small>
       </div>
       <p class="muted small">"Đồng bộ nhanh" quét các coin bạn đang giữ / từng nạp / rút / convert + các cặp đã có lệnh.
         "Quét toàn bộ" thử mọi cặp có quote ${esc(state.settings.scanQuotes.join(', '))} để tìm cả coin đã mua rồi bán hết (chậm, vài phút — chỉ cần chạy lần đầu).</p>
-      <div class="row gap">
-        <button class="btn primary" id="pnl-sync" ${syncing.running ? 'disabled' : ''}>Đồng bộ nhanh</button>
-        <button class="btn" id="pnl-full" ${syncing.running ? 'disabled' : ''}>Quét toàn bộ</button>
-        ${syncing.running ? '<button class="btn danger" id="pnl-cancel">Hủy</button>' : ''}
-      </div>
-      ${syncing.running || syncing.msg ? `
-        <div class="progress"><i style="width:${syncing.pct || 0}%"></i></div>
-        <p class="small muted" id="pnl-msg">${esc(syncing.msg || '')}</p>` : ''}
+      <div class="row gap">${buttons}</div>
+      ${progress}
     </div>`;
 
   if (!pnl || !pnl.rows.length) {
@@ -57,12 +67,18 @@ export function renderPnl(root, ctx) {
     last: (a, b) => (b.last || 0) - (a.last || 0),
   };
   rows.sort(sorters[ui.sort]);
-  const winners = pnl.rows.filter((r) => (r.total || 0) > 0).length;
-  const losers = pnl.rows.filter((r) => (r.total || 0) < 0).length;
+  const hidden = hiddenMissing();
+  const missingShown = pnl.missing.filter((a) => !hidden.has(a));
+  const ranked = pnl.rows.filter((r) => r.total != null).sort((a, b) => b.total - a.total);
+  const best = ranked[0]?.total > 0 ? ranked[0] : null;
+  const worst = ranked.at(-1)?.total < 0 ? ranked.at(-1) : null;
 
   // Biểu đồ lãi/lỗ theo thời gian: tổng / chưa chốt / đã chốt
   const recon = ctx.cryptoSeries().some((r) => r.value > 0) ? ctx.cryptoSeries() : [];
   let pRows = recon.map((r) => ({ date: r.date, total: r.pnl, unreal: r.value - r.cost, realized: r.pnl - (r.value - r.cost) }));
+  // Điểm hôm nay lấy đúng các ô số liệu (số coin thật trong ví, giá hiện tại) → "từ đầu" = Tổng PnL.
+  // Nếu lịch sử còn lệch với ví, biểu đồ sẽ có bước nhảy ở ngày cuối.
+  if (pRows.length) Object.assign(pRows[pRows.length - 1], { total: T.total, unreal: T.unrealized, realized: T.realized });
   if (!pRows.length && pnl.timeline.length) {
     const byDay = new Map();
     for (const [t, v] of pnl.timeline) byDay.set(new Date(t).toISOString().slice(0, 10), { date: new Date(t).toISOString().slice(0, 10), realized: v });
@@ -73,7 +89,7 @@ export function renderPnl(root, ctx) {
   const pLabel = { total: 'Tổng lãi/lỗ', unreal: 'Lãi/lỗ chưa chốt', realized: 'Lãi/lỗ đã chốt cộng dồn' }[pMode];
   const hist = {
     id: 'pnl', title: pLabel, rows: pRows, key: pMode, modes: pModes, mode: pMode, noPct: true, periodMain: true,
-    note: recon.length ? 'Tổng = chưa chốt (giá trị coin đang nắm − vốn) + đã chốt cộng dồn. Dựng lại theo giá đóng cửa từng ngày; không gồm stablecoin và futures.' : '',
+    note: recon.length ? 'Tổng = chưa chốt (giá trị coin đang nắm − vốn) + đã chốt cộng dồn. Dựng lại theo giá đóng cửa từng ngày; không gồm stablecoin và futures. Điểm hôm nay lấy đúng các ô số liệu phía trên.' : '',
     series: [{ key: pMode, label: pLabel, color: PALETTE[pMode === 'unreal' ? 1 : 0], area: 'gradient' }],
   };
 
@@ -86,10 +102,12 @@ export function renderPnl(root, ctx) {
       <div class="kpi"><span>Đã chốt (realized)</span><b class="${pnlClass(T.realized)}">${fmtMoney(T.realized, { sign: true })}</b></div>
       <div class="kpi"><span>Chưa chốt (unrealized)</span><b class="${pnlClass(T.unrealized)}">${fmtMoney(T.unrealized, { sign: true })}</b></div>
       <div class="kpi"><span>Tổng tiền đã mua</span><b>${fmtMoney(T.invested)}</b><small>Phí (coin non-stable): ${fmtMoney(T.fees)}</small></div>
-      <div class="kpi"><span>Coin lãi / lỗ</span><b><span class="pos">${winners}</span> / <span class="neg">${losers}</span></b></div>
+      <div class="kpi"><span>Lãi nhất · lỗ nhất</span>
+        <b class="kpi-duo">${best ? `<span class="pos">${esc(best.asset)} ${fmtMoney(best.total, { sign: true, compact: true })}</span>` : '—'}</b>
+        <small>${worst ? `<span class="neg">${esc(worst.asset)} ${fmtMoney(worst.total, { sign: true, compact: true })}</span>` : ''}</small></div>
     </div>
 
-    ${pnl.missing.length ? `<div class="alert">Không tìm được giá lịch sử cho: <b>${esc(pnl.missing.join(', '))}</b> — giao dịch liên quan được định giá 0, PnL các coin này có thể sai.</div>` : ''}
+    ${missingShown.length ? `<div class="alert"><button class="alert-x" id="pnl-hide-missing" title="Ẩn cảnh báo">✕</button>Không tìm được giá lịch sử cho: <b>${esc(missingShown.join(', '))}</b> — giao dịch liên quan được định giá 0, PnL các coin này có thể sai.</div>` : ''}
 
     ${historyCard(hist)}
 
@@ -166,6 +184,8 @@ function reconcileCard(pnl) {
     </div>`;
 }
 
+const hiddenMissing = () => { try { return new Set(JSON.parse(localStorage.getItem('fin.hideMissing') || '[]')); } catch { return new Set(); } };
+
 const countKind = (h, k) => h.converts.filter((c) => (c[6] || 'convert') === k).length;
 
 function detail(r) {
@@ -200,6 +220,12 @@ function bind(root, ctx) {
   on('#pnl-sync', () => ctx.syncHistory(false));
   on('#pnl-full', () => ctx.syncHistory(true));
   on('#pnl-cancel', () => ctx.cancelSync());
+  on('#pnl-hide-missing', () => {
+    const set = hiddenMissing();
+    (ctx.pnl()?.missing || []).forEach((a) => set.add(a));
+    try { localStorage.setItem('fin.hideMissing', JSON.stringify([...set])); } catch { /* bỏ qua */ }
+    ctx.rerender();
+  });
   root.querySelectorAll('[data-drop]').forEach((b) => { b.onclick = () => ctx.dropGap(b.dataset.drop); });
   root.querySelectorAll('[data-undo-adj]').forEach((b) => { b.onclick = () => ctx.undoAdjust(b.dataset.undoAdj); });
   root.querySelectorAll('[data-filter]').forEach((b) => { b.onclick = () => { ui.filter = b.dataset.filter; ctx.rerender(); }; });

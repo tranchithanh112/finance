@@ -171,6 +171,7 @@ const ctx = {
       if (!quiet) { toast('Nhập mật khẩu ứng dụng trong tab Cài đặt trước', 'error'); go('settings'); }
       return;
     }
+    document.body.classList.add('is-refreshing'); // khung mờ nhấp nháy trên các ô số trong lúc tải
     try {
       const { holdings, futures } = await fetchHoldings();
       state.crypto = { holdings, updatedAt: Date.now() };
@@ -183,6 +184,7 @@ const ctx = {
     } catch (e) {
       toast(`Binance: ${e.message}`, 'error', 8000);
     }
+    document.body.classList.remove('is-refreshing');
     render();
   },
 

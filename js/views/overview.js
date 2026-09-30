@@ -60,6 +60,8 @@ export function renderOverview(root, ctx) {
       : [{ key: 'total', label: 'Tài sản ròng', color: PALETTE[0], area: 'gradient' }],
   };
 
+  const alloc = (() => { try { return localStorage.getItem('fin.alloc') || 'class'; } catch { return 'class'; } })();
+
   root.innerHTML = `
     <div class="kpis">
       <div class="kpi hero"><span>Tài sản ròng</span><b>${fmtMoney(t.total)}</b>
@@ -77,6 +79,14 @@ export function renderOverview(root, ctx) {
 
     ${historyCard(hist)}
 
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><h3>Phân bổ tài sản</h3>
+          <div class="seg">${[['class', 'Theo loại'], ['asset', 'Theo tài sản']].map(([k, l]) => `<button data-alloc="${k}" class="${alloc === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+        <div class="chart"><canvas id="ov-class"></canvas></div></div>
+      <div class="card"><h3>Thu chi 6 tháng</h3>${hasBudget ? '<div class="chart"><canvas id="ov-flow"></canvas></div>' : '<p class="empty">Chưa có dữ liệu thu chi.</p>'}</div>
+    </div>
+
     <div class="card health">
       <div class="score" style="--p:${health.score ?? 0};--c:${scoreColor}">
         <div class="score-ring"><b>${health.score ?? '—'}</b><small>/100</small></div>
@@ -93,15 +103,7 @@ export function renderOverview(root, ctx) {
       ${!hasBudget ? '<p class="muted small">Chưa có dữ liệu thu chi — vào tab <b>Thu chi</b> để thêm lương (định kỳ) và các khoản chi.</p>' : ''}
     </div>
 
-    <div class="grid2">
-      <div class="card"><h3>Phân bổ tài sản</h3><div class="chart"><canvas id="ov-class"></canvas></div></div>
-      <div class="card"><h3>Thu chi 6 tháng</h3>${hasBudget ? '<div class="chart"><canvas id="ov-flow"></canvas></div>' : '<p class="empty">Chưa có dữ liệu thu chi.</p>'}</div>
-    </div>
 
-    <div class="card">
-      <div class="card-head"><h3>Top tài sản</h3></div>
-      <div class="chart"><canvas id="ov-top"></canvas></div>
-    </div>
 
     <div class="grid2">
       <div class="card">
@@ -152,17 +154,21 @@ export function renderOverview(root, ctx) {
       </div>
     </div>`;
 
-  donut(root.querySelector('#ov-class'), [
-    { label: 'Crypto', value: t.crypto - t.stable, color: PALETTE[0] },
-    { label: 'Stablecoin', value: t.stable, color: PALETTE[2] },
-    { label: 'Chứng khoán', value: t.stocks, color: PALETTE[1] },
-    { label: 'Tiền mặt & khác', value: t.cash, color: PALETTE[9] },
-  ]);
-  donut(root.querySelector('#ov-top'), [
-    ...cryptoHoldings().map((h) => ({ label: h.asset, value: h.value })),
-    ...stocks.map((p) => ({ label: p.ticker, value: p.valueUSD })),
-    ...state.cash.map((c) => ({ label: c.name, value: toUSD(cashBalance(c).balance, c.currency) })),
-  ]);
+  donut(root.querySelector('#ov-class'), alloc === 'asset'
+    ? [
+      ...cryptoHoldings().map((h) => ({ label: h.asset, value: h.value })),
+      ...stocks.map((p) => ({ label: p.ticker, value: p.valueUSD })),
+      ...state.cash.map((c) => ({ label: c.name, value: toUSD(cashBalance(c).balance, c.currency) })),
+    ]
+    : [
+      { label: 'Crypto', value: t.crypto - t.stable, color: PALETTE[0] },
+      { label: 'Stablecoin', value: t.stable, color: PALETTE[2] },
+      { label: 'Chứng khoán', value: t.stocks, color: PALETTE[1] },
+      { label: 'Tiền mặt & khác', value: t.cash, color: PALETTE[9] },
+    ]);
+  root.querySelectorAll('[data-alloc]').forEach((b) => {
+    b.onclick = () => { try { localStorage.setItem('fin.alloc', b.dataset.alloc); } catch { /* bỏ qua */ } ctx.rerender(); };
+  });
   if (hasBudget) {
     bars(root.querySelector('#ov-flow'), months.map((m) => m.slice(5) + '/' + m.slice(2, 4)), [
       { label: 'Thu', data: trend.map((m) => toUSD(m.income, 'VND')), color: PALETTE[2] },

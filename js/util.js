@@ -46,7 +46,8 @@ export function fmtMoney(usd, { sign = false, compact = false } = {}) {
   } else {
     const d = abs !== 0 && abs < 1 ? 4 : 2;
     if (compact && abs >= 1e6) s = '$' + (abs / 1e6).toLocaleString('en-US', { maximumFractionDigits: 2 }) + 'M';
-    else if (compact && abs >= 1e4) s = '$' + (abs / 1e3).toLocaleString('en-US', { maximumFractionDigits: 1 }) + 'K';
+    else if (compact && abs >= 1e3) s = '$' + (abs / 1e3).toLocaleString('en-US', { maximumFractionDigits: 1 }) + 'K';
+    else if (compact && abs >= 10) s = '$' + abs.toLocaleString('en-US', { maximumFractionDigits: 0 });
     else s = '$' + abs.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
   }
   const pre = v < 0 ? '−' : sign && v > 0 ? '+' : '';

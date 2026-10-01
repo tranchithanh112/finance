@@ -143,9 +143,11 @@ export function authHeaders() {
   return {};
 }
 
-/** Đổi mật khẩu lấy phiên. Trả về true nếu đúng mật khẩu. Mật khẩu không được lưu lại. */
-export async function login(password) {
-  const r = await fetch('/api/session', { method: 'POST', headers: { 'x-app-password': password } });
+/** Đổi mật khẩu (+ mã 2FA nếu server bật) lấy phiên. Trả về true nếu đúng. Mật khẩu không được lưu lại. */
+export async function login(password, otp = '') {
+  const headers = { 'x-app-password': password };
+  if (otp) headers['x-app-otp'] = String(otp).replace(/\s/g, '');
+  const r = await fetch('/api/session', { method: 'POST', headers });
   const data = await r.json().catch(() => ({}));
   if (!r.ok || !data.token) return false;
   local.session = { token: data.token, exp: data.exp };
@@ -163,7 +165,10 @@ export function logout() {
 /** Thiết bị đã lưu mật khẩu (bản cũ) → đổi sang phiên rồi xóa mật khẩu. */
 export async function migrateAuth() {
   if (local.appPassword && !(local.session && local.session.exp > Date.now())) {
-    try { await login(local.appPassword); } catch { /* offline: thử lại lần sau */ }
+    try {
+      // Nếu server đã bật 2FA thì mật khẩu thôi không đủ → xóa mật khẩu đã lưu, đăng nhập lại có mã 6 số
+      if (!(await login(local.appPassword))) dropSession();
+    } catch { /* offline: thử lại lần sau */ }
   }
 }
 

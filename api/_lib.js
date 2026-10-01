@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 // Xác thực mọi API route (trừ /api/config, /api/session):
 //  - Ưu tiên header x-app-session: phiên do /api/session cấp, ký HMAC bằng APP_PASSWORD, có hạn.
 //    Trình duyệt chỉ giữ phiên này, không giữ mật khẩu; đổi APP_PASSWORD trên Vercel → mọi phiên cũ mất hiệu lực.
-//  - x-app-password (cách cũ) vẫn được chấp nhận để thiết bị cũ tự đổi sang phiên.
+//  - x-app-password (cách cũ) vẫn được chấp nhận để thiết bị cũ tự đổi sang phiên — trừ khi đã bật 2FA (TOTP_SECRET).
 
 export const SESSION_DAYS = 30;
 
@@ -17,12 +17,53 @@ function safeEqual(a, b) {
 
 const sign = (secret, exp) => b64url(crypto.createHmac('sha256', secret).update(`session|${exp}`).digest());
 
-export function issueSession(secret = process.env.APP_PASSWORD, now = Date.now()) {
+// Khóa ký phiên gồm cả TOTP_SECRET → bật / đổi 2FA là mọi phiên cũ mất hiệu lực.
+const sessionKey = () => `${process.env.APP_PASSWORD}|${process.env.TOTP_SECRET || ''}`;
+
+// ================= 2FA: TOTP (RFC 6238) — tương thích Google Authenticator =================
+
+export function base32Decode(s) {
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const clean = String(s).toUpperCase().replace(/[\s=-]/g, '');
+  let bits = 0;
+  let val = 0;
+  const out = [];
+  for (const c of clean) {
+    const i = A.indexOf(c);
+    if (i < 0) throw new Error('TOTP_SECRET không phải base32');
+    val = (val << 5) | i;
+    bits += 5;
+    if (bits >= 8) { out.push((val >>> (bits - 8)) & 255); bits -= 8; }
+  }
+  return Buffer.from(out);
+}
+
+export function totpCode(key, counter, digits = 6) {
+  const msg = Buffer.alloc(8);
+  msg.writeBigUInt64BE(BigInt(counter));
+  const h = crypto.createHmac('sha1', key).update(msg).digest();
+  const o = h[h.length - 1] & 15;
+  const bin = ((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3];
+  return String(bin % 10 ** digits).padStart(digits, '0');
+}
+
+/** Kiểm tra mã 6 số, chấp nhận lệch ±1 bước 30 giây (đồng hồ điện thoại hơi lệch). */
+export function verifyTotp(code, secret = process.env.TOTP_SECRET, now = Date.now()) {
+  if (!secret || !/^\d{6}$/.test(String(code || ''))) return false;
+  const key = base32Decode(secret);
+  const step = Math.floor(now / 30000);
+  return [-1, 0, 1].some((d) => safeEqual(totpCode(key, step + d), String(code)));
+}
+
+export const totpEnabled = () => Boolean(process.env.TOTP_SECRET);
+
+export function issueSession(secret = sessionKey(), now = Date.now()) {
   const exp = now + SESSION_DAYS * 86400e3;
   return { token: `${exp}.${sign(secret, exp)}`, exp };
 }
 
-export function verifySession(token, secret = process.env.APP_PASSWORD, now = Date.now()) {
+export function verifySession(token, secret = sessionKey(), now = Date.now()) {
+  if (!process.env.APP_PASSWORD && secret === sessionKey()) return false;
   if (!secret || typeof token !== 'string') return false;
   const [expStr, sig] = token.split('.');
   const exp = Number(expStr);
@@ -36,7 +77,8 @@ export function passwordOk(req) {
 }
 
 export function isAuthed(req) {
-  return verifySession(req.headers['x-app-session']) || passwordOk(req);
+  // Khi bật 2FA, chỉ chấp nhận phiên (mật khẩu trần không đủ để gọi API)
+  return verifySession(req.headers['x-app-session']) || (!totpEnabled() && passwordOk(req));
 }
 
 export function checkAuth(req, res) {

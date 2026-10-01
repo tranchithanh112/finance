@@ -38,3 +38,32 @@ test('CSP khớp với script inline trong index.html', () => {
   // script ngoài phải có SRI
   for (const m of html.matchAll(/<script[^>]+src="https:[^"]+"[^>]*>/g)) assert.match(m[0], /integrity="sha384-/);
 });
+
+test('TOTP theo RFC 6238 (vector chuẩn) và cửa sổ ±30 giây', async () => {
+  const { totpCode, verifyTotp, base32Decode } = await import('../api/_lib.js');
+  // RFC 6238, SHA1, secret "12345678901234567890", T=59 → 94287082 (8 số)
+  assert.equal(totpCode(Buffer.from('12345678901234567890'), Math.floor(59 / 30), 8), '94287082');
+  assert.equal(totpCode(Buffer.from('12345678901234567890'), Math.floor(1111111109 / 30), 8), '07081804');
+  const secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'; // base32 của "12345678901234567890"
+  assert.deepEqual(base32Decode(secret), Buffer.from('12345678901234567890'));
+  const t = 1111111109 * 1000;
+  const code = totpCode(base32Decode(secret), Math.floor(t / 30000));
+  assert.equal(verifyTotp(code, secret, t), true);
+  assert.equal(verifyTotp(code, secret, t + 30000), true); // lệch 1 bước
+  assert.equal(verifyTotp(code, secret, t + 90000), false); // quá xa
+  assert.equal(verifyTotp('000000', secret, t), code === '000000');
+  assert.equal(verifyTotp('abc', secret, t), false);
+});
+
+test('bật 2FA: mật khẩu trần không đủ, phiên cũ mất hiệu lực', async () => {
+  const { issueSession, isAuthed } = await import('../api/_lib.js');
+  process.env.APP_PASSWORD = 'pw-test';
+  delete process.env.TOTP_SECRET;
+  const old = issueSession().token;
+  assert.equal(isAuthed({ headers: { 'x-app-password': 'pw-test' } }), true);
+  process.env.TOTP_SECRET = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
+  assert.equal(isAuthed({ headers: { 'x-app-password': 'pw-test' } }), false);
+  assert.equal(isAuthed({ headers: { 'x-app-session': old } }), false);
+  assert.equal(isAuthed({ headers: { 'x-app-session': issueSession().token } }), true);
+  delete process.env.TOTP_SECRET;
+});

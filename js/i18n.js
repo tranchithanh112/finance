@@ -161,7 +161,9 @@ const EXACT = {
   'Chưa có Dropbox App Key': 'Missing Dropbox App Key', 'Chưa có Google Client ID': 'Missing Google Client ID',
 
   // ---- đăng nhập / bảo mật
-  'Đăng nhập': 'Sign in', 'Đăng xuất thiết bị này': 'Sign out this device',
+  'Đăng nhập': 'Sign in', 'Đăng xuất thiết bị này': 'Sign out this device', 'Đã đăng nhập': 'Signed in',
+  'Mã xác thực 2 bước (Google Authenticator)': '2-step verification code (Google Authenticator)', '6 số': '6 digits',
+  'Sai mật khẩu hoặc mã xác thực 2 bước': 'Wrong password or 2-step code',
   'Phiên đăng nhập Dropbox không hợp lệ, hãy thử lại': 'Invalid Dropbox sign-in session, please try again',
   'Đã hủy kết nối Dropbox': 'Dropbox connection cancelled',
 
@@ -217,6 +219,7 @@ const TERMS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const RULES = [
+  [/^Xác thực 2 bước \(TOTP\): (.+)$/, (m, v) => '2-step verification (TOTP): ' + (v === 'đang bật' ? 'on' : 'off')],
   [/^Đã đăng nhập đến (.+)$/, 'Signed in until $1'],
   [/^Mật khẩu không được lưu trên máy: [\s\S]*$/, 'The password is not stored on this device: the app exchanges it for a 30-day session. Changing APP_PASSWORD on Vercel signs out every device.'],
   [/^· cập nhật (.+)$/, '· updated $1'],

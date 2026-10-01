@@ -59,12 +59,15 @@ export function renderSettings(root, ctx) {
         <form id="pw-form" class="form-grid one">
           <label>Mật khẩu ứng dụng (APP_PASSWORD)
             <input name="pw" type="password" autocomplete="current-password" placeholder="Giá trị bạn đặt trong env của Vercel"></label>
+          ${cfg.totpRequired ? `<label>Mã xác thực 2 bước (Google Authenticator)
+            <input name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="6 số" required></label>` : ''}
           <div class="form-actions"><button class="btn primary">Đăng nhập</button></div>
         </form>`}
         <p class="muted small">Mật khẩu không được lưu trên máy: app đổi nó lấy một phiên đăng nhập 30 ngày.
           Đổi APP_PASSWORD trên Vercel sẽ đăng xuất mọi thiết bị.</p>
         <ul class="status-list">
           <li class="${cfg.passwordConfigured ? 'ok' : 'bad'}">APP_PASSWORD trên server: ${cfg.passwordConfigured ? 'đã cấu hình' : cfg.offline ? 'không kết nối được /api (chạy local không có vercel dev?)' : 'CHƯA cấu hình'}</li>
+          <li class="${cfg.totpRequired ? 'ok' : ''}">Xác thực 2 bước (TOTP): ${cfg.totpRequired ? 'đang bật' : 'chưa bật'}</li>
           <li class="${cfg.authOk ? 'ok' : 'bad'}">Mật khẩu trên thiết bị này: ${cfg.authOk ? 'đúng' : 'chưa đúng / chưa nhập'}</li>
           <li class="${cfg.binanceConfigured ? 'ok' : 'bad'}">Binance API key: ${cfg.binanceConfigured ? 'đã cấu hình' : cfg.authOk ? 'CHƯA cấu hình' : '—'}</li>
           ${cfg.tcbsConfigured ? '<li class="ok">TCBS API key: đã cấu hình</li>' : ''}
@@ -146,9 +149,10 @@ export function renderSettings(root, ctx) {
   const pwForm = root.querySelector('#pw-form');
   if (pwForm) pwForm.onsubmit = async (e) => {
     e.preventDefault();
-    const ok = await login(new FormData(e.target).get('pw')).catch(() => false);
+    const f = new FormData(e.target);
+    const ok = await login(f.get('pw'), f.get('otp') || '').catch(() => false);
     await ctx.loadServerConfig();
-    toast(ok ? 'Mật khẩu đúng' : 'Mật khẩu sai hoặc server chưa cấu hình', ok ? 'ok' : 'error');
+    toast(ok ? 'Đã đăng nhập' : ctx.serverConfig().totpRequired ? 'Sai mật khẩu hoặc mã xác thực 2 bước' : 'Mật khẩu sai hoặc server chưa cấu hình', ok ? 'ok' : 'error');
     ctx.rerender();
   };
   root.querySelector('#pw-logout')?.addEventListener('click', async () => {

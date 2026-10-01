@@ -1,4 +1,4 @@
-import { state, local, loadState, commit, onCommit, takeSnapshot, authHeaders, hasAuth, migrateAuth } from './store.js';
+import { state, local, loadState, commit, onCommit, takeSnapshot, authHeaders, hasAuth, migrateAuth, login, wipeDevice } from './store.js';
 import { fetchHoldings, syncHistory, getPriceHistory, bn, ensurePriceHistory, fetchTickerPrices, ensureAllPriceHistory } from './binance.js';
 import { computeFutures, syncFuturesIncome, csvToIncome, mergeIncome, emptyFutures, detectOffsetHours, shiftRecords, fileNameOffsetHours } from './futures.js';
 import { makePriceLookup } from './pnl.js';
@@ -377,7 +377,59 @@ function applyCurrency() {
   $('#cur-select').value = state.settings.displayCurrency;
 }
 
+// ================= Màn hình khóa =================
+// Chưa đăng nhập / phiên hết hạn → ẩn toàn bộ số liệu, chỉ hiện form đăng nhập, không đồng bộ.
+const isLocked = () => !hasAuth();
+let afterUnlock = null;
+
+function renderLock() {
+  document.body.classList.add('locked');
+  $$('main .tab').forEach((t) => { t.innerHTML = ''; }); // gỡ hẳn số liệu khỏi trang, không chỉ ẩn
+  const box = $('#lock');
+  box.hidden = false;
+  const otp = serverCfg.totpRequired;
+  box.innerHTML = `
+    <form class="card lock-card" id="lock-form">
+      <div class="lock-logo">${document.querySelector('.brand .logo')?.innerHTML || ''}</div>
+      <h2>iFinance đang khóa</h2>
+      <p class="muted small">Đăng nhập để xem số liệu. Dữ liệu trên máy được ẩn cho tới khi đăng nhập.</p>
+      <label>Mật khẩu ứng dụng<input name="pw" type="password" autocomplete="current-password" required autofocus></label>
+      ${otp ? `<label>Mã xác thực 2 bước<input name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="6 số" required></label>` : ''}
+      <button class="btn primary">Đăng nhập</button>
+      ${serverCfg.offline ? '<p class="small neg">Không kết nối được server — kiểm tra mạng rồi thử lại.</p>' : ''}
+      <button type="button" class="link danger small" id="lock-wipe">Xóa dữ liệu trên thiết bị này</button>
+    </form>`;
+  translateDom(box);
+  $('#lock-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const btn = e.target.querySelector('button.primary');
+    btn.disabled = true;
+    const ok = await login(f.get('pw'), f.get('otp') || '').catch(() => false);
+    btn.disabled = false;
+    if (!ok) return toast(otp ? 'Sai mật khẩu hoặc mã xác thực 2 bước' : 'Sai mật khẩu ứng dụng', 'error');
+    await ctx.loadServerConfig();
+    unlock();
+  };
+  $('#lock-wipe').onclick = async () => {
+    if (!confirm('Xóa toàn bộ dữ liệu của app trên thiết bị này? File trên cloud (Dropbox / Drive) không bị ảnh hưởng.')) return;
+    await wipeDevice();
+    location.reload();
+  };
+}
+
+function unlock() {
+  document.body.classList.remove('locked');
+  $('#lock').hidden = true;
+  $('#lock').innerHTML = '';
+  const next = afterUnlock;
+  afterUnlock = null;
+  if (next) next();
+  else render();
+}
+
 function render() {
+  if (isLocked()) return renderLock();
   applyCurrency();
   loadPalette();
   const group = groupOf(current);
@@ -492,7 +544,7 @@ function updateSyncPill() {
 
 let pushTimer;
 onCommit(() => {
-  if (local.autoSync === false || !sync.syncEnabled()) return;
+  if (local.autoSync === false || !sync.syncEnabled() || isLocked()) return; // đang khóa → không đồng bộ
   clearTimeout(pushTimer);
   pushTimer = setTimeout(() => {
     ctx.smartSync().catch((e) => toast(`Sync: ${e.message}`, 'error'));
@@ -551,10 +603,20 @@ async function init() {
     }
   };
 
-  render();
   await migrateAuth(); // thiết bị cũ còn lưu mật khẩu → đổi sang phiên, xóa mật khẩu
+  render(); // chưa đăng nhập → chỉ hiện màn hình khóa
   await ctx.loadServerConfig();
+  window.addEventListener('fin:locked', () => render());
+  if (isLocked()) {
+    render(); // vẽ lại form khóa (biết server có bật 2FA chưa)
+    afterUnlock = startSession;
+    return;
+  }
+  await startSession();
+}
 
+/** Phần khởi động chỉ chạy khi đã đăng nhập: xử lý OAuth, đồng bộ cloud, làm mới số dư. */
+async function startSession() {
   try {
     if (await sync.handleOAuthCallback()) {
       toast('Đã kết nối Dropbox', 'ok');

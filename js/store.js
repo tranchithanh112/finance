@@ -160,6 +160,7 @@ export function logout() {
   delete local.session;
   delete local.appPassword;
   saveLocal();
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('fin:locked'));
 }
 
 /** Thiết bị đã lưu mật khẩu (bản cũ) → đổi sang phiên rồi xóa mật khẩu. */
@@ -178,4 +179,15 @@ export function dropSession() {
   delete local.session;
   delete local.appPassword;
   saveLocal();
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('fin:locked')); // app hiện màn hình khóa
+}
+
+/** Xóa sạch dữ liệu trên thiết bị này (không đụng tới file trên cloud). */
+export async function wipeDevice() {
+  for (const k of Object.keys(localStorage)) if (k.startsWith('fin.')) localStorage.removeItem(k);
+  sessionStorage.clear();
+  await new Promise((resolve) => {
+    const r = indexedDB.deleteDatabase('finance-dashboard');
+    r.onsuccess = r.onerror = r.onblocked = () => resolve();
+  });
 }

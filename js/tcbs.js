@@ -1,11 +1,11 @@
-import { local, saveLocal } from './store.js';
+import { local, saveLocal, authHeaders, hasAuth } from './store.js';
 
 // Kết nối TCBS (chỉ đọc) qua /api/tcbs. Phiên (JWT đã mã hóa) chỉ lưu trên máy này, không sync.
 
 async function call(body) {
   const r = await fetch('/api/tcbs', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-app-password': local.appPassword || '' },
+    headers: { 'content-type': 'application/json', ...authHeaders() },
     body: JSON.stringify(body),
   });
   const data = await r.json().catch(() => ({}));

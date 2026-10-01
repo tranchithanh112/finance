@@ -160,6 +160,11 @@ const EXACT = {
   'File JSON không đúng định dạng': 'Invalid JSON file', 'Chưa kết nối Dropbox / Google Drive': 'Dropbox / Google Drive not connected',
   'Chưa có Dropbox App Key': 'Missing Dropbox App Key', 'Chưa có Google Client ID': 'Missing Google Client ID',
 
+  // ---- đăng nhập / bảo mật
+  'Đăng nhập': 'Sign in', 'Đăng xuất thiết bị này': 'Sign out this device',
+  'Phiên đăng nhập Dropbox không hợp lệ, hãy thử lại': 'Invalid Dropbox sign-in session, please try again',
+  'Đã hủy kết nối Dropbox': 'Dropbox connection cancelled',
+
   // ---- giao diện gọn
   '↻ Đồng bộ': '↻ Sync', 'Lịch sử Binance': 'Binance history', 'Lãi nhất · lỗ nhất': 'Best · worst', 'Ẩn cảnh báo': 'Hide warning',
   'Tỷ trọng & lãi/lỗ': 'Weight & P&L', 'Theo tài sản': 'By asset',
@@ -212,6 +217,8 @@ const TERMS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const RULES = [
+  [/^Đã đăng nhập đến (.+)$/, 'Signed in until $1'],
+  [/^Mật khẩu không được lưu trên máy: [\s\S]*$/, 'The password is not stored on this device: the app exchanges it for a 30-day session. Changing APP_PASSWORD on Vercel signs out every device.'],
   [/^· cập nhật (.+)$/, '· updated $1'],
   [/^(\d[\d,.]*) lệnh · (\d+) cặp · (\d+) nạp · (\d+) rút · (\d+) DCA · (\d+) convert · (\d+) staking$/, '$1 trades · $2 pairs · $3 deposits · $4 withdrawals · $5 DCA · $6 convert · $7 staking'],
   [/^"Đồng bộ" quét [\s\S]*$/, '"Sync" scans coins you hold / deposited / withdrew / converted plus pairs with past trades. "Full scan" tries every quoted pair to also find coins you bought and fully sold (slow, a few minutes).'],

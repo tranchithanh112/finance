@@ -113,4 +113,3 @@ export function totals() {
   return { crypto, stocks, cash, stable, debt, assets: crypto + stocks + cash, total: crypto + stocks + cash - debt };
 }
 
-export const hasPassword = () => Boolean(local.appPassword);

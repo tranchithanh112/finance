@@ -26,6 +26,12 @@ function enhance(req, res, url, body) {
   res.send = (s) => { res.end(s); return res; };
 }
 
+// Áp dụng header bảo mật trong vercel.json (CSP…) giống khi deploy
+const SEC_HEADERS = Object.fromEntries(
+  (JSON.parse(fs.readFileSync(path.join(root, 'vercel.json'), 'utf8')).headers?.[0]?.headers || []).map((h) => [h.key, h.value]),
+);
+delete SEC_HEADERS['Strict-Transport-Security']; // localhost là http
+
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname.startsWith('/api/')) {
@@ -47,7 +53,9 @@ http.createServer(async (req, res) => {
   let p = path.normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, '');
   if (p.endsWith('/')) p += 'index.html';
   const file = path.join(root, p);
+  // không phục vụ file ẩn (.env.local…) hay thư mục nội bộ
+  if (/(^|[/\\])\.|^[/\\]?(scripts|tests|node_modules)[/\\]/.test(p)) return res.writeHead(404).end('Not found');
   if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) return res.writeHead(404).end('Not found');
-  res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
+  res.writeHead(200, { ...SEC_HEADERS, 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
   fs.createReadStream(file).pipe(res);
 }).listen(process.env.PORT || 3000, () => console.log(`http://localhost:${process.env.PORT || 3000}`));

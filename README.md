@@ -110,6 +110,19 @@ Hạn chế: Binance API không trả lịch sử lệnh của cặp đã bị x
 - API key nằm trên Vercel; phiên (JWT) được mã hóa bằng APP_PASSWORD + key trước khi gửi về trình duyệt,
   và proxy `/api/tcbs` chỉ cho gọi các API đọc (hồ sơ, danh mục, tiền, sổ lệnh) — không đặt lệnh được.
 
+## Bảo mật
+
+- **Không có secret trong mã chạy trên trình duyệt.** Binance key/secret, `APP_PASSWORD`, `TCBS_API_KEY` chỉ nằm trong
+  Environment Variables của Vercel. `/api/config` chỉ trả Dropbox App Key và Google Client ID — đây là định danh công khai
+  của ứng dụng OAuth, không phải bí mật.
+- **Đăng nhập app:** mật khẩu chỉ gửi 1 lần tới `/api/session` để đổi lấy phiên ký HMAC (30 ngày). Trình duyệt chỉ lưu phiên,
+  không lưu mật khẩu. Đổi `APP_PASSWORD` trên Vercel là mọi phiên cũ mất hiệu lực.
+- **Dropbox:** OAuth 2 Authorization Code + **PKCE (S256)**, `state` ngẫu nhiên, không cần client secret.
+  **Google Drive:** Google Identity Services (token client) — luồng Google khuyến nghị cho app chạy trên trình duyệt; token chỉ giữ trong sessionStorage.
+- **CSP** chặn script lạ (chỉ cho phép script của app, Chart.js trên jsDelivr có kiểm tra **SRI**, và Google Sign-In);
+  thêm HSTS, `frame-ancestors 'none'`, `X-Content-Type-Options`, `Permissions-Policy`.
+- Sửa script inline trong `index.html` thì phải cập nhật hash trong CSP (`vercel.json`) — `npm test` sẽ báo nếu quên.
+
 ## Chạy local
 
 ```bash

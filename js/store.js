@@ -130,3 +130,47 @@ export const local = (() => {
 export function saveLocal() {
   localStorage.setItem('fin.local', JSON.stringify(local));
 }
+
+// ---- đăng nhập server (Vercel) ----
+// Trình duyệt chỉ giữ phiên do /api/session cấp (ký HMAC, hết hạn sau 30 ngày), KHÔNG giữ mật khẩu.
+
+export const hasAuth = () => Boolean((local.session && local.session.exp > Date.now()) || local.appPassword);
+
+/** Header xác thực cho mọi request /api. */
+export function authHeaders() {
+  if (local.session && local.session.exp > Date.now()) return { 'x-app-session': local.session.token };
+  if (local.appPassword) return { 'x-app-password': local.appPassword }; // thiết bị cũ, sẽ tự đổi sang phiên
+  return {};
+}
+
+/** Đổi mật khẩu lấy phiên. Trả về true nếu đúng mật khẩu. Mật khẩu không được lưu lại. */
+export async function login(password) {
+  const r = await fetch('/api/session', { method: 'POST', headers: { 'x-app-password': password } });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || !data.token) return false;
+  local.session = { token: data.token, exp: data.exp };
+  delete local.appPassword;
+  saveLocal();
+  return true;
+}
+
+export function logout() {
+  delete local.session;
+  delete local.appPassword;
+  saveLocal();
+}
+
+/** Thiết bị đã lưu mật khẩu (bản cũ) → đổi sang phiên rồi xóa mật khẩu. */
+export async function migrateAuth() {
+  if (local.appPassword && !(local.session && local.session.exp > Date.now())) {
+    try { await login(local.appPassword); } catch { /* offline: thử lại lần sau */ }
+  }
+}
+
+/** Server báo hết phiên → xóa để giao diện yêu cầu đăng nhập lại. */
+export function dropSession() {
+  if (!local.session && !local.appPassword) return;
+  delete local.session;
+  delete local.appPassword;
+  saveLocal();
+}

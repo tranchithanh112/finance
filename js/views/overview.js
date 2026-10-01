@@ -116,8 +116,8 @@ export function renderOverview(root, ctx) {
               <tr><td>${esc(c.name)}<div class="sub">${c.anchorAt ? `Chốt ${fmtNative(Number(c.amount), c.currency)} lúc ${fmtDate(c.anchorAt, true)}` : ''}
                 ${B.count ? ` · ${B.delta >= 0 ? '+' : '−'}${fmtNative(Math.abs(B.delta), c.currency)} từ ${B.count} khoản thu chi` : ''}</div></td>
               <td class="r"><b>${fmtNative(B.balance, c.currency)}</b></td>
-              <td class="r nowrap"><button class="link" data-edit-cash="${c.id}">Sửa số dư</button>
-                <button class="link danger" data-del-cash="${c.id}">Xóa</button></td></tr>`;
+              <td class="r nowrap"><button class="link" data-edit-cash="${esc(c.id)}">Sửa số dư</button>
+                <button class="link danger" data-del-cash="${esc(c.id)}">Xóa</button></td></tr>`;
             }).join('') ||
               '<tr><td colspan="3" class="empty">Chưa có — tiền gửi ngân hàng, tiền mặt, vàng…</td></tr>'}
           </tbody>
@@ -138,8 +138,8 @@ export function renderOverview(root, ctx) {
               <tr><td>${esc(d.name)}${d.rate ? ` <span class="muted small">${d.rate}%/năm</span>` : ''}</td>
               <td class="r neg">${fmtNative(Number(d.balance), d.currency)}</td>
               <td class="r muted small">${d.monthly ? fmtNative(Number(d.monthly), d.currency) + '/th' : ''}</td>
-              <td class="r nowrap"><button class="link" data-edit-debt="${d.id}">Sửa dư nợ</button>
-                <button class="link danger" data-del-debt="${d.id}">Xóa</button></td></tr>`).join('') ||
+              <td class="r nowrap"><button class="link" data-edit-debt="${esc(d.id)}">Sửa dư nợ</button>
+                <button class="link danger" data-del-debt="${esc(d.id)}">Xóa</button></td></tr>`).join('') ||
               '<tr><td colspan="4" class="empty">Thẻ tín dụng, vay mua nhà/xe, vay người quen…</td></tr>'}
           </tbody>
         </table>

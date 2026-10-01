@@ -30,10 +30,13 @@ export async function dropboxLogin() {
   if (!key) throw new Error('Chưa có Dropbox App Key');
   const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
   const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  // state ngẫu nhiên (chống CSRF trên callback) — lưu tạm trong sessionStorage cùng code_verifier
+  const state = 'dropbox.' + b64url(crypto.getRandomValues(new Uint8Array(16)));
   sessionStorage.setItem('dbx_verifier', verifier);
+  sessionStorage.setItem('dbx_state', state);
   const q = new URLSearchParams({
     client_id: key, response_type: 'code', code_challenge: challenge, code_challenge_method: 'S256',
-    token_access_type: 'offline', redirect_uri: redirectUri(), state: 'dropbox',
+    token_access_type: 'offline', redirect_uri: redirectUri(), state,
   });
   location.href = `https://www.dropbox.com/oauth2/authorize?${q}`;
 }
@@ -41,9 +44,14 @@ export async function dropboxLogin() {
 /** Xử lý khi Dropbox redirect về với ?code=… */
 export async function handleOAuthCallback() {
   const p = new URLSearchParams(location.search);
-  if (p.get('state') !== 'dropbox' || !p.get('code')) return false;
-  history.replaceState(null, '', location.pathname + location.hash);
+  if (!String(p.get('state') || '').startsWith('dropbox') || !(p.get('code') || p.get('error'))) return false;
+  history.replaceState(null, '', location.pathname + location.hash); // bỏ code khỏi URL / lịch sử trình duyệt
   const verifier = sessionStorage.getItem('dbx_verifier');
+  const expected = sessionStorage.getItem('dbx_state');
+  sessionStorage.removeItem('dbx_verifier');
+  sessionStorage.removeItem('dbx_state');
+  if (p.get('error')) throw new Error(p.get('error_description') || 'Đã hủy kết nối Dropbox');
+  if (!verifier || !expected || p.get('state') !== expected) throw new Error('Phiên đăng nhập Dropbox không hợp lệ, hãy thử lại');
   const r = await fetch('https://api.dropboxapi.com/oauth2/token', {
     method: 'POST',
     body: new URLSearchParams({

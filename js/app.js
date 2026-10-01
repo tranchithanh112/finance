@@ -1,4 +1,4 @@
-import { state, local, loadState, commit, onCommit, takeSnapshot } from './store.js';
+import { state, local, loadState, commit, onCommit, takeSnapshot, authHeaders, hasAuth, migrateAuth } from './store.js';
 import { fetchHoldings, syncHistory, getPriceHistory, bn, ensurePriceHistory, fetchTickerPrices, ensureAllPriceHistory } from './binance.js';
 import { computeFutures, syncFuturesIncome, csvToIncome, mergeIncome, emptyFutures, detectOffsetHours, shiftRecords, fileNameOffsetHours } from './futures.js';
 import { makePriceLookup } from './pnl.js';
@@ -104,7 +104,7 @@ const ctx = {
 
   async syncFutures() {
     if (futBusy) return;
-    if (!local.appPassword) { toast('Nhập mật khẩu ứng dụng trong tab Cài đặt trước', 'error'); return; }
+    if (!hasAuth()) { toast('Nhập mật khẩu ứng dụng trong tab Cài đặt trước', 'error'); return; }
     futBusy = 'Đang tải lịch sử futures…';
     render();
     try {
@@ -157,7 +157,7 @@ const ctx = {
 
   async loadServerConfig() {
     try {
-      const r = await fetch('/api/config', { headers: { 'x-app-password': local.appPassword || '' } });
+      const r = await fetch('/api/config', { headers: { ...authHeaders() } });
       if (!r.ok || !(r.headers.get('content-type') || '').includes('json')) throw new Error();
       serverCfg = await r.json();
     } catch {
@@ -167,7 +167,7 @@ const ctx = {
   },
 
   async refreshCrypto({ quiet = false } = {}) {
-    if (!local.appPassword) {
+    if (!hasAuth()) {
       if (!quiet) { toast('Nhập mật khẩu ứng dụng trong tab Cài đặt trước', 'error'); go('settings'); }
       return;
     }
@@ -227,11 +227,11 @@ const ctx = {
     const stale = state.stocks.funds.filter((f) => f.source !== 'manual'
       && state.stocks.txs.some((t) => t.ticker === f.ticker)
       && Date.now() - (stockHist[f.ticker]?.at || 0) > 12 * 3600e3);
-    if (!stale.length || !local.appPassword || Date.now() - histTriedAt < 60e3) return;
+    if (!stale.length || !hasAuth() || Date.now() - histTriedAt < 60e3) return;
     histTriedAt = Date.now();
     try {
       const r = await fetch(`/api/quote?history=5y&symbols=${encodeURIComponent(stale.map((f) => f.ticker).join(','))}`, {
-        headers: { 'x-app-password': local.appPassword },
+        headers: authHeaders(),
       });
       const data = await r.json();
       if (!r.ok) return;
@@ -243,11 +243,11 @@ const ctx = {
 
   async refreshQuotes(showToast = false) {
     const funds = state.stocks.funds.filter((f) => f.source !== 'manual');
-    if (!local.appPassword) return;
+    if (!hasAuth()) return;
     const symbols = [...funds.map((f) => f.ticker), 'VND=X'];
     try {
       const r = await fetch(`/api/quote?symbols=${encodeURIComponent(symbols.join(','))}`, {
-        headers: { 'x-app-password': local.appPassword },
+        headers: authHeaders(),
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || r.status);
@@ -270,7 +270,7 @@ const ctx = {
 
   async syncHistory(fullScan) {
     if (syncing.running) return;
-    if (!local.appPassword) { toast('Nhập mật khẩu ứng dụng trong tab Cài đặt trước', 'error'); return; }
+    if (!hasAuth()) { toast('Nhập mật khẩu ứng dụng trong tab Cài đặt trước', 'error'); return; }
     abort = new AbortController();
     syncing = { running: true, pct: 0, msg: 'Bắt đầu…' };
     render();
@@ -552,6 +552,7 @@ async function init() {
   };
 
   render();
+  await migrateAuth(); // thiết bị cũ còn lưu mật khẩu → đổi sang phiên, xóa mật khẩu
   await ctx.loadServerConfig();
 
   try {

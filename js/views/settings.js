@@ -1,6 +1,6 @@
-import { state, local, saveLocal, commit, replaceState } from '../store.js';
+import { state, local, saveLocal, commit, replaceState, login, logout } from '../store.js';
 import * as sync from '../sync.js';
-import { esc, toast, downloadFile, timeAgo, todayKey } from '../util.js';
+import { esc, toast, downloadFile, timeAgo, todayKey, fmtDate } from '../util.js';
 import { fxRate } from '../calc.js';
 import { tabOrder, setTabOrder, resetTabOrder, BOTTOM_MAX } from '../nav.js';
 import { icon } from '../icons.js';
@@ -53,11 +53,16 @@ export function renderSettings(root, ctx) {
     <div class="grid2">
       <div class="card">
         <h3>Kết nối server (Vercel)</h3>
+        ${local.session && local.session.exp > Date.now() ? `
+        <div class="row gap"><span class="tag ok">Đã đăng nhập đến ${fmtDate(local.session.exp)}</span>
+          <button class="btn" id="pw-logout">Đăng xuất thiết bị này</button></div>` : `
         <form id="pw-form" class="form-grid one">
           <label>Mật khẩu ứng dụng (APP_PASSWORD)
-            <input name="pw" type="password" autocomplete="current-password" value="${esc(local.appPassword || '')}" placeholder="Giá trị bạn đặt trong env của Vercel"></label>
-          <div class="form-actions"><button class="btn primary">Lưu & kiểm tra</button></div>
-        </form>
+            <input name="pw" type="password" autocomplete="current-password" placeholder="Giá trị bạn đặt trong env của Vercel"></label>
+          <div class="form-actions"><button class="btn primary">Đăng nhập</button></div>
+        </form>`}
+        <p class="muted small">Mật khẩu không được lưu trên máy: app đổi nó lấy một phiên đăng nhập 30 ngày.
+          Đổi APP_PASSWORD trên Vercel sẽ đăng xuất mọi thiết bị.</p>
         <ul class="status-list">
           <li class="${cfg.passwordConfigured ? 'ok' : 'bad'}">APP_PASSWORD trên server: ${cfg.passwordConfigured ? 'đã cấu hình' : cfg.offline ? 'không kết nối được /api (chạy local không có vercel dev?)' : 'CHƯA cấu hình'}</li>
           <li class="${cfg.authOk ? 'ok' : 'bad'}">Mật khẩu trên thiết bị này: ${cfg.authOk ? 'đúng' : 'chưa đúng / chưa nhập'}</li>
@@ -138,14 +143,19 @@ export function renderSettings(root, ctx) {
   root.querySelectorAll('[data-mode]').forEach((b) => { b.onclick = () => ctx.setMode(b.dataset.mode); });
   root.querySelectorAll('[data-lang]').forEach((b) => { b.onclick = () => ctx.setLang(b.dataset.lang); });
 
-  root.querySelector('#pw-form').onsubmit = async (e) => {
+  const pwForm = root.querySelector('#pw-form');
+  if (pwForm) pwForm.onsubmit = async (e) => {
     e.preventDefault();
-    local.appPassword = new FormData(e.target).get('pw');
-    saveLocal();
+    const ok = await login(new FormData(e.target).get('pw')).catch(() => false);
     await ctx.loadServerConfig();
-    toast(ctx.serverConfig().authOk ? 'Mật khẩu đúng' : 'Mật khẩu sai hoặc server chưa cấu hình', ctx.serverConfig().authOk ? 'ok' : 'error');
+    toast(ok ? 'Mật khẩu đúng' : 'Mật khẩu sai hoặc server chưa cấu hình', ok ? 'ok' : 'error');
     ctx.rerender();
   };
+  root.querySelector('#pw-logout')?.addEventListener('click', async () => {
+    logout();
+    await ctx.loadServerConfig();
+    ctx.rerender();
+  });
 
   const saveOauth = () => {
     const f = new FormData(root.querySelector('#oauth-form'));

@@ -108,7 +108,7 @@ export function renderStocks(root, ctx) {
             <td class="r">${fmtQty(Math.abs(t.units))}</td><td class="r">${fmtNative(Number(t.price), cur)}</td>
             <td class="r">${t.fee ? fmtNative(Number(t.fee), cur) : ''}</td>
             <td class="r">${fmtNative(Math.abs(t.units) * t.price, cur)}</td>
-            <td class="r"><button class="link danger" data-del-tx="${t.id}">Xóa</button></td></tr>`;
+            <td class="r"><button class="link danger" data-del-tx="${esc(t.id)}">Xóa</button></td></tr>`;
         }).join('') || '<tr><td colspan="8" class="empty">Chưa có giao dịch.</td></tr>'}</tbody>
       </table></div>
     </div>`;

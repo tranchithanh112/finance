@@ -1,4 +1,4 @@
-import { state, local } from './store.js';
+import { state, local, authHeaders, hasAuth, dropSession } from './store.js';
 import { idbGet, idbSet } from './idb.js';
 import { sleep, isStable, DAY } from './util.js';
 import { fetchFuturesAccount } from './futures.js';
@@ -17,7 +17,7 @@ export async function bn(path, params = {}, { signal } = {}) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const r = await fetch('/api/binance', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-app-password': local.appPassword || '' },
+      headers: { 'content-type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ path, params }),
       signal,
     });
@@ -28,6 +28,7 @@ export async function bn(path, params = {}, { signal } = {}) {
     }
     const data = await r.json().catch(() => null);
     if (!r.ok) {
+      if (r.status === 401 && data?.auth) dropSession(); // phiên hết hạn → yêu cầu đăng nhập lại
       throw new ApiError(data?.msg || data?.error || `HTTP ${r.status}`, r.status);
     }
     const used = Number(r.headers.get('x-used-weight')) || 0;

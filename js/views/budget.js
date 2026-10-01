@@ -80,7 +80,7 @@ export function renderBudget(root, ctx) {
           <span class="muted small" id="qa-preview"></span>
         </div>
         <div class="chips">
-          ${typeCats.map((c) => `<button type="button" class="chip ${ui.cat === c.id ? 'on' : ''}" data-cat="${esc(c.id)}">${c.icon || ''} ${esc(c.name)}</button>`).join('')}
+          ${typeCats.map((c) => `<button type="button" class="chip ${ui.cat === c.id ? 'on' : ''}" data-cat="${esc(c.id)}">${esc(c.icon || '')} ${esc(c.name)}</button>`).join('')}
         </div>
         <div class="row gap wrap">
           <input name="note" placeholder="Ghi chú (tuỳ chọn)" class="grow">
@@ -132,7 +132,7 @@ export function renderBudget(root, ctx) {
         <div class="day"><div class="day-head muted small">${new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'short', day: '2-digit', month: '2-digit' })}</div>
           ${list.map((t) => {
             const c = cats[t.cat];
-            return `<div class="tx"><span class="tx-icon">${c?.icon || '•'}</span>
+            return `<div class="tx"><span class="tx-icon">${esc(c?.icon || '•')}</span>
               <span class="tx-main"><b>${esc(c?.name || t.cat)}</b>${t.note ? `<span class="muted small"> · ${esc(t.note)}</span>` : ''}
                 ${t.id.startsWith('rec:') ? '<span class="tag">định kỳ</span>' : ''}
                 ${t.acc && accName(t.acc) ? `<span class="tag">🏦 ${esc(accName(t.acc))}</span>` : ''}</span>
@@ -166,11 +166,11 @@ const accName = (id) => state.cash.find((c) => c.id === id)?.name;
 
 function configHtml(b, pctSum) {
   const catOpts = (type, sel) => b.categories.filter((c) => c.type === type)
-    .map((c) => `<option value="${esc(c.id)}" ${c.id === sel ? 'selected' : ''}>${c.icon || ''} ${esc(c.name)}</option>`).join('');
+    .map((c) => `<option value="${esc(c.id)}" ${c.id === sel ? 'selected' : ''}>${esc(c.icon || '')} ${esc(c.name)}</option>`).join('');
   return `
     <h4>Tỷ lệ các hũ <small class="${pctSum === 100 ? 'muted' : 'neg'}">(tổng ${pctSum}%${pctSum === 100 ? '' : ' — cần bằng 100%'})</small></h4>
     <form id="jar-form" class="jar-form">
-      ${b.jars.map((j) => `<label>${esc(j.name)}<input name="${j.id}" type="number" min="0" max="100" step="1" value="${j.pct}"></label>`).join('')}
+      ${b.jars.map((j) => `<label>${esc(j.name)}<input name="${esc(j.id)}" type="number" min="0" max="100" step="1" value="${j.pct}"></label>`).join('')}
       <label>Quỹ dự phòng mục tiêu (tháng)<input name="emergencyTarget" type="number" min="1" max="24" value="${b.emergencyTarget}"></label>
       <button class="btn primary">Lưu tỷ lệ</button>
     </form>
@@ -179,7 +179,7 @@ function configHtml(b, pctSum) {
     <div class="table-wrap"><table class="tbl mini">
       <thead><tr><th>Khoản</th><th class="r">Số tiền</th><th class="r">Ngày</th><th>Chu kỳ</th><th>Từ tháng</th><th></th></tr></thead>
       <tbody>${b.recurring.map((r) => `<tr>
-        <td>${b.categories.find((c) => c.id === r.cat)?.icon || ''} ${esc(b.categories.find((c) => c.id === r.cat)?.name || r.cat)}${r.note ? ` · ${esc(r.note)}` : ''}${r.acc && accName(r.acc) ? ` <span class="tag">🏦 ${esc(accName(r.acc))}</span>` : ''}</td>
+        <td>${esc(b.categories.find((c) => c.id === r.cat)?.icon || '')} ${esc(b.categories.find((c) => c.id === r.cat)?.name || r.cat)}${r.note ? ` · ${esc(r.note)}` : ''}${r.acc && accName(r.acc) ? ` <span class="tag">🏦 ${esc(accName(r.acc))}</span>` : ''}</td>
         <td class="r ${r.type === 'income' ? 'pos' : ''}">${r.type === 'income' ? '+' : '−'}${vnd(r.amount)}</td>
         <td class="r">${r.day}</td><td>${EVERY[r.every || 1] || `${r.every} tháng`}</td><td>${esc(r.startMonth)}</td>
         <td class="r"><button class="link danger" data-del-rec="${esc(r.id)}">Xóa</button></td></tr>`).join('') ||
@@ -201,10 +201,10 @@ function configHtml(b, pctSum) {
       <input name="icon" placeholder="Emoji" maxlength="4" style="max-width:80px">
       <input name="name" placeholder="Tên danh mục" required>
       <select name="type"><option value="expense">Chi</option><option value="income">Thu</option></select>
-      <select name="jar">${b.jars.map((j) => `<option value="${j.id}">Hũ ${esc(j.name)}</option>`).join('')}</select>
+      <select name="jar">${b.jars.map((j) => `<option value="${esc(j.id)}">Hũ ${esc(j.name)}</option>`).join('')}</select>
       <button class="btn">Thêm</button>
     </form>
-    <div class="chips">${b.categories.map((c) => `<span class="chip static">${c.icon || ''} ${esc(c.name)}
+    <div class="chips">${b.categories.map((c) => `<span class="chip static">${esc(c.icon || '')} ${esc(c.name)}
       <small class="muted">${c.type === 'income' ? 'thu' : esc(b.jars.find((j) => j.id === c.jar)?.name || '')}</small>
       ${b.txs.some((t) => t.cat === c.id) || b.recurring.some((r) => r.cat === c.id) ? '' : `<button class="link danger" data-del-cat="${esc(c.id)}">✕</button>`}</span>`).join('')}</div>`;
 }

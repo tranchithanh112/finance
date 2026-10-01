@@ -117,7 +117,7 @@ Hạn chế: Binance API không trả lịch sử lệnh của cặp đã bị x
   của ứng dụng OAuth, không phải bí mật.
 - **Đăng nhập app:** mật khẩu chỉ gửi 1 lần tới `/api/session` để đổi lấy phiên ký HMAC (30 ngày). Trình duyệt chỉ lưu phiên,
   không lưu mật khẩu. Đổi `APP_PASSWORD` trên Vercel là mọi phiên cũ mất hiệu lực.
-- **Xác thực 2 bước (tùy chọn):** chạy `node scripts/totp-setup.js` trên máy để tạo khóa → thêm vào Google Authenticator
+- **Xác thực 2 bước (tùy chọn):** tab Cài đặt → *Bật xác thực 2 bước* → *Tạo khóa* (hoặc `node scripts/totp-setup.js`) → thêm vào Google Authenticator
   (*+ → Nhập khóa thiết lập*, loại *Theo thời gian*) → đặt `TOTP_SECRET` trên Vercel rồi Redeploy. Từ đó đăng nhập cần
   mật khẩu + mã 6 số; mọi phiên cũ mất hiệu lực và mật khẩu trần không còn gọi được API. Mất điện thoại: xóa / đổi
   `TOTP_SECRET` trên Vercel.

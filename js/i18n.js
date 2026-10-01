@@ -164,6 +164,13 @@ const EXACT = {
   'Đăng nhập': 'Sign in', 'Đăng xuất thiết bị này': 'Sign out this device', 'Đã đăng nhập': 'Signed in',
   'Mã xác thực 2 bước (Google Authenticator)': '2-step verification code (Google Authenticator)', '6 số': '6 digits',
   'Sai mật khẩu hoặc mã xác thực 2 bước': 'Wrong password or 2-step code',
+  'Bật xác thực 2 bước (Google Authenticator)': 'Turn on 2-step verification (Google Authenticator)', 'Tạo khóa': 'Generate key',
+  'Mở Google Authenticator': 'Open Google Authenticator', 'Sao chép khóa': 'Copy key', 'Kiểm tra': 'Check', 'Mã đúng ✓': 'Code OK ✓',
+  'Thêm vào Google Authenticator.': 'Add to Google Authenticator.', 'Kiểm tra.': 'Verify.', 'Bật trên Vercel.': 'Turn on in Vercel.',
+  'Hủy, tạo lại sau': 'Cancel, do it later', 'Đã sao chép khóa': 'Key copied', 'Không sao chép được — hãy chép tay': 'Could not copy — copy it by hand',
+  'Mã đúng — giờ thêm TOTP_SECRET trên Vercel': 'Code OK — now add TOTP_SECRET on Vercel',
+  'Mã chưa đúng, kiểm tra lại khóa đã nhập vào Authenticator': 'Wrong code — check the key entered in Authenticator',
+  'Tạo khóa ngay trên máy này (không gửi đi đâu), thêm vào Google Authenticator, rồi dán khóa vào Vercel.': 'Generate a key on this device (it is not sent anywhere), add it to Google Authenticator, then paste it into Vercel.',
   'Phiên đăng nhập Dropbox không hợp lệ, hãy thử lại': 'Invalid Dropbox sign-in session, please try again',
   'Đã hủy kết nối Dropbox': 'Dropbox connection cancelled',
 
@@ -219,6 +226,13 @@ const TERMS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const RULES = [
+  [/^Nhập mã 6 số đang hiện trong Authenticator:$/, 'Enter the 6-digit code shown in Authenticator:'],
+  [/^Trên điện thoại bấm$/, 'On your phone tap'],
+  [/^— hoặc trong app bấm$/, '— or in the app tap'],
+  [/^Settings → Environment Variables → thêm$/, 'Settings → Environment Variables → add'],
+  [/^= khóa ở bước 1 → Save → Redeploy\.[\s\S]*$/, '= the key from step 1 → Save → Redeploy. Then sign in here again with password + 6-digit code.'],
+  [/^Giữ kín khóa này [\s\S]*$/, 'Keep this key secret and store a copy somewhere safe (a password manager) — if you lose your phone, delete'],
+  [/^trên Vercel để tắt 2FA\.$/, 'on Vercel to turn 2FA off.'],
   [/^Xác thực 2 bước \(TOTP\): (.+)$/, (m, v) => '2-step verification (TOTP): ' + (v === 'đang bật' ? 'on' : 'off')],
   [/^Đã đăng nhập đến (.+)$/, 'Signed in until $1'],
   [/^Mật khẩu không được lưu trên máy: [\s\S]*$/, 'The password is not stored on this device: the app exchanges it for a 30-day session. Changing APP_PASSWORD on Vercel signs out every device.'],

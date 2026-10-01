@@ -4,6 +4,7 @@ import { esc, toast, downloadFile, timeAgo, todayKey, fmtDate } from '../util.js
 import { fxRate } from '../calc.js';
 import { tabOrder, setTabOrder, resetTabOrder, BOTTOM_MAX } from '../nav.js';
 import { icon } from '../icons.js';
+import { newSecret, checkCode, otpauthUri } from '../totp.js';
 
 export function renderSettings(root, ctx) {
   const s = state.settings;
@@ -72,6 +73,7 @@ export function renderSettings(root, ctx) {
           <li class="${cfg.binanceConfigured ? 'ok' : 'bad'}">Binance API key: ${cfg.binanceConfigured ? 'đã cấu hình' : cfg.authOk ? 'CHƯA cấu hình' : '—'}</li>
           ${cfg.tcbsConfigured ? '<li class="ok">TCBS API key: đã cấu hình</li>' : ''}
         </ul>
+        ${cfg.totpRequired || cfg.offline ? '' : totpSetupHtml()}
         <p class="muted small">Key Binance chỉ nằm trong Environment Variables của Vercel, trình duyệt không bao giờ thấy.
           Hãy tạo API key <b>chỉ bật quyền Read</b> (Enable Reading).</p>
       </div>
@@ -155,6 +157,7 @@ export function renderSettings(root, ctx) {
     toast(ok ? 'Đã đăng nhập' : ctx.serverConfig().totpRequired ? 'Sai mật khẩu hoặc mã xác thực 2 bước' : 'Mật khẩu sai hoặc server chưa cấu hình', ok ? 'ok' : 'error');
     ctx.rerender();
   };
+  bindTotpSetup(root, ctx);
   root.querySelector('#pw-logout')?.addEventListener('click', async () => {
     logout();
     await ctx.loadServerConfig();
@@ -237,4 +240,45 @@ export function renderSettings(root, ctx) {
     commit({ edit: true });
     ctx.afterStateReplaced();
   };
+}
+
+// ---- Thiết lập xác thực 2 bước ngay trong app (khóa tạo trên máy này, không gửi đi đâu) ----
+let totpSecret = null;
+let totpOk = false;
+
+function totpSetupHtml() {
+  if (!totpSecret) return `
+    <details class="totp-setup"><summary>Bật xác thực 2 bước (Google Authenticator)</summary>
+      <p class="muted small">Tạo khóa ngay trên máy này (không gửi đi đâu), thêm vào Google Authenticator, rồi dán khóa vào Vercel.</p>
+      <button class="btn" id="totp-new">Tạo khóa</button></details>`;
+  return `
+    <details class="totp-setup" open><summary>Bật xác thực 2 bước (Google Authenticator)</summary>
+      <ol class="steps">
+        <li><b>Thêm vào Google Authenticator.</b> Trên điện thoại bấm <a class="btn" href="${otpauthUri(totpSecret)}">Mở Google Authenticator</a>
+          — hoặc trong app bấm <b>+</b> → <b>Nhập khóa thiết lập</b>, đặt tên "iFinance", dán khóa dưới đây, loại <b>Theo thời gian</b>.
+          <div class="totp-key"><code>${totpSecret.match(/.{1,4}/g).join(' ')}</code> <button class="btn" id="totp-copy">Sao chép khóa</button></div></li>
+        <li><b>Kiểm tra.</b> Nhập mã 6 số đang hiện trong Authenticator:
+          <div class="row gap"><input id="totp-test" inputmode="numeric" maxlength="6" placeholder="6 số" autocomplete="one-time-code">
+            <button class="btn" id="totp-check">Kiểm tra</button>
+            ${totpOk ? '<span class="tag ok">Mã đúng ✓</span>' : ''}</div></li>
+        <li><b>Bật trên Vercel.</b> Settings → Environment Variables → thêm <code>TOTP_SECRET</code> = khóa ở bước 1 → Save → Redeploy.
+          Sau đó đăng nhập lại ở đây bằng mật khẩu + mã 6 số.</li>
+      </ol>
+      <p class="muted small">Giữ kín khóa này và lưu 1 bản ở nơi an toàn (trình quản lý mật khẩu) — mất điện thoại thì xóa
+        <code>TOTP_SECRET</code> trên Vercel để tắt 2FA. <button class="link" id="totp-cancel">Hủy, tạo lại sau</button></p>
+    </details>`;
+}
+
+export function bindTotpSetup(root, ctx) {
+  root.querySelector('#totp-new')?.addEventListener('click', () => { totpSecret = newSecret(); totpOk = false; ctx.rerender(); });
+  root.querySelector('#totp-cancel')?.addEventListener('click', () => { totpSecret = null; totpOk = false; ctx.rerender(); });
+  root.querySelector('#totp-copy')?.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(totpSecret); toast('Đã sao chép khóa', 'ok'); } catch { toast('Không sao chép được — hãy chép tay', 'error'); }
+  });
+  root.querySelector('#totp-check')?.addEventListener('click', async () => {
+    const code = root.querySelector('#totp-test').value;
+    totpOk = await checkCode(totpSecret, code);
+    toast(totpOk ? 'Mã đúng — giờ thêm TOTP_SECRET trên Vercel' : 'Mã chưa đúng, kiểm tra lại khóa đã nhập vào Authenticator', totpOk ? 'ok' : 'error');
+    ctx.rerender();
+  });
 }

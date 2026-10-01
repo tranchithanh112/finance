@@ -67,3 +67,17 @@ test('bật 2FA: mật khẩu trần không đủ, phiên cũ mất hiệu lực
   assert.equal(isAuthed({ headers: { 'x-app-session': issueSession().token } }), true);
   delete process.env.TOTP_SECRET;
 });
+
+test('khóa 2FA tạo trong trình duyệt cho cùng mã với server', async () => {
+  const web = await import('../js/totp.js');
+  const srv = await import('../api/_lib.js');
+  const secret = web.newSecret();
+  assert.match(secret, /^[A-Z2-7]{32}$/);
+  assert.deepEqual(Buffer.from(web.base32Decode(secret)), srv.base32Decode(secret));
+  const t = Date.UTC(2026, 9, 1, 12, 0, 7);
+  const step = Math.floor(t / 30000);
+  assert.equal(await web.totpCode(secret, step), srv.totpCode(srv.base32Decode(secret), step));
+  assert.equal(await web.checkCode(secret, srv.totpCode(srv.base32Decode(secret), step), t), true);
+  assert.equal(srv.verifyTotp(await web.totpCode(secret, step), secret, t), true);
+  assert.match(web.otpauthUri(secret), /^otpauth:\/\/totp\/iFinance\?secret=[A-Z2-7]+&issuer=iFinance/);
+});

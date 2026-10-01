@@ -534,3 +534,11 @@ body.is-refreshing .kpi.hero b { background: linear-gradient(90deg, rgb(255 255 
 .sync-bar summary { cursor: pointer; color: var(--muted); }
 .alert .alert-x { float: right; background: none; border: 0; color: inherit; font-size: 16px; cursor: pointer; opacity: .7; padding: 0 0 0 10px; }
 .kpi b.kpi-duo { font-size: 17px; }
+
+/* ---- Thiết lập 2FA ---- */
+.totp-setup { margin-top: 12px; border-top: 1px solid var(--border, var(--grid)); padding-top: 10px; }
+.totp-setup summary { cursor: pointer; font-weight: 650; }
+.totp-setup .steps { padding-left: 18px; display: grid; gap: 12px; margin: 10px 0; font-size: 13.5px; }
+.totp-key { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.totp-key code { font-size: 15px; letter-spacing: .06em; padding: 6px 10px; border-radius: 8px; background: var(--surface-2); user-select: all; word-break: break-all; }
+#totp-test { width: 110px; }

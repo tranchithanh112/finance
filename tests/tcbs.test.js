@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import { pickSubAccounts, parseHoldings, parseCash, tcbsHoldings, tcbsCash } from '../js/tcbs.js';
 import { seal, unseal, jwtExp } from '../api/tcbs.js';
 import { setLang, tr } from '../js/i18n.js';
@@ -34,14 +35,14 @@ test('parse danh mục + tiền, gộp mã trùng giữa tiểu khoản', () => 
 });
 
 test('seal/unseal token và đọc hạn JWT', () => {
-  process.env.APP_PASSWORD = 'pw';
-  process.env.TCBS_API_KEY = 'key';
+  process.env.APP_PASSWORD = crypto.randomUUID(); // giá trị test sinh lúc chạy
+  process.env.TCBS_API_KEY = crypto.randomUUID();
   const jwt = `x.${Buffer.from(JSON.stringify({ exp: 2000000000 })).toString('base64url')}.y`;
   const s = seal(jwt);
   assert.notEqual(s, jwt);
   assert.equal(unseal(s), jwt);
   assert.equal(jwtExp(jwt), 2000000000 * 1000);
-  process.env.APP_PASSWORD = 'other';
+  process.env.APP_PASSWORD = crypto.randomUUID();
   assert.throws(() => unseal(s));
 });
 

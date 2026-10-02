@@ -9,7 +9,7 @@ import * as sync from './sync.js';
 import { captureDrafts, restoreDrafts, isTyping, $, $$, toast, setDisplayCurrency, isStable, esc, isPrivate, setPrivate } from './util.js';
 import { icon } from './icons.js';
 import { tr, translateDom, setLang, getLang } from './i18n.js';
-import { loadPalette } from './charts.js';
+import { loadPalette, setChartAnimation } from './charts.js';
 import { tabOrder, groupOf, lastSub, rememberSub, BOTTOM_MAX } from './nav.js';
 import { renderOverview } from './views/overview.js';
 import { renderCrypto } from './views/crypto.js';
@@ -446,19 +446,46 @@ document.addEventListener('focusout', () => {
   setTimeout(() => { if (pendingRender && !isTyping()) render(); }, 200);
 });
 
-/** Ẩn màn hình chờ (chỉ lần đầu) với hiệu ứng mờ dần. */
+// ================= Màn hình chờ =================
+// Hiện tối thiểu SPLASH_MIN; trong lúc đó tải xong lịch sử giá, Chart.js và lần đồng bộ đầu
+// (tối đa SPLASH_MAX) để khi màn chờ tắt, giao diện đã ở trạng thái hoàn chỉnh — không nhảy, không khựng.
+const SPLASH_MIN = 1800;
+const SPLASH_MAX = 3500;
+const startupGates = [];
+let splashPlanned = false;
+let splashRevealing = false; // đang mở màn: lần vẽ cuối được chạy hiệu ứng biểu đồ
+
+const deferred = () => { let resolve; const promise = new Promise((r) => { resolve = r; }); return { promise, resolve }; };
+const syncGate = deferred();
+
 function hideSplash() {
   const sp = document.getElementById('splash');
-  if (!sp || sp.classList.contains('hide')) return;
-  requestAnimationFrame(() => {
-    sp.classList.add('hide');
-    setTimeout(() => sp.remove(), 400);
+  if (!sp || splashPlanned) return;
+  splashPlanned = true;
+  const elapsed = performance.now();
+  const ready = Promise.race([Promise.allSettled(startupGates), new Promise((r) => setTimeout(r, SPLASH_MAX - elapsed))]);
+  const minWait = new Promise((r) => setTimeout(r, Math.max(0, SPLASH_MIN - elapsed)));
+  Promise.all([ready, minWait]).then(() => {
+    splashRevealing = true;
+    render(); // vẽ bản cuối (có hiệu ứng biểu đồ) ngay trước khi lộ ra
+    splashRevealing = false;
+    document.body.classList.add('app-enter');
+    requestAnimationFrame(() => {
+      sp.classList.add('hide');
+      setTimeout(() => { sp.remove(); document.body.classList.remove('app-enter'); }, 600);
+    });
   });
 }
+
+let lastDrawn = null;
 
 function draw() {
   hideSplash();
   if (isLocked()) return renderLock();
+  // biểu đồ chỉ chạy hiệu ứng khi đổi tab (và lần hiện sau màn chờ), không phải khi dữ liệu cập nhật ngầm
+  const splashOn = Boolean(document.getElementById('splash')) && !splashRevealing;
+  setChartAnimation(splashRevealing || (!splashOn && current !== lastDrawn));
+  lastDrawn = current;
   applyCurrency();
   loadPalette();
   const group = groupOf(current);
@@ -585,9 +612,17 @@ onCommit(() => {
 async function init() {
   await loadState();
   // Lịch sử giá khá nặng → đọc sau lần vẽ đầu, xong thì tính lại PnL và vẽ lại
-  getPriceHistory().then((h) => { priceHist = h; pnlCache = null; futCache = null; render(); }).catch(() => {});
+  startupGates.push(getPriceHistory().then((h) => { priceHist = h; pnlCache = null; futCache = null; render(); }).catch(() => {}));
   // Chart.js tải song song (async): tải xong thì vẽ lại để hiện biểu đồ
-  if (!window.Chart) document.querySelector('script[src*="chart.js"]')?.addEventListener('load', () => render());
+  if (!window.Chart) {
+    startupGates.push(new Promise((resolve) => {
+      const tag = document.querySelector('script[src*="chart.js"]');
+      if (!tag) return resolve();
+      tag.addEventListener('load', () => { render(); resolve(); });
+      tag.addEventListener('error', resolve);
+    }));
+  }
+  startupGates.push(syncGate.promise);
   current = location.hash.slice(1) || 'overview';
   runRecurring();
 
@@ -642,6 +677,7 @@ async function init() {
   if (isLocked()) {
     render(); // vẽ lại form khóa (biết server có bật 2FA chưa)
     afterUnlock = startSession;
+    syncGate.resolve(); // đang khóa: không đồng bộ, màn chờ không cần đợi
     return;
   }
   await startSession();
@@ -662,6 +698,7 @@ async function startSession() {
   if (sync.syncEnabled() && local.autoSync !== false) {
     await ctx.smartSync().catch((e) => toast(`Sync: ${e.message}`, 'error'));
   }
+  syncGate.resolve();
 
   render();
   refreshPriceHistory();

@@ -553,3 +553,11 @@ body.locked #more-sheet, body.locked #page-title { display: none !important; }
 .lock-card input { font-size: 16px; }
 .lock-logo svg { width: 56px; height: 56px; }
 .lock-card .link { justify-self: center; margin-top: 4px; }
+
+/* ---- Chuyển cảnh từ màn hình chờ vào app ---- */
+@keyframes app-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes nav-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+body.app-enter main, body.app-enter #lock { animation: app-in .55s cubic-bezier(.2,.7,.2,1) both .05s; }
+body.app-enter .topbar { animation: app-in .45s ease both; }
+body.app-enter #bottom-nav, body.app-enter #fab { animation: nav-in .55s cubic-bezier(.2,.7,.2,1) both .12s; }
+@media (prefers-reduced-motion: reduce) { body.app-enter main, body.app-enter .topbar, body.app-enter #bottom-nav, body.app-enter #fab, body.app-enter #lock { animation: none; } }

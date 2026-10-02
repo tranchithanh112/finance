@@ -17,8 +17,15 @@ function css(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
+// Hiệu ứng vẽ biểu đồ chỉ chạy khi người dùng mở tab; vẽ lại do dữ liệu cập nhật ngầm thì hiện ngay
+// (tránh cảm giác biểu đồ "nhảy" lại mỗi lần đồng bộ / làm mới giá).
+let animate = true;
+export function setChartAnimation(on) { animate = Boolean(on); }
+
 function mount(canvas, config) {
   if (!window.Chart || !canvas) return;
+  config.options ||= {};
+  if (!animate) config.options.animation = false;
   // dịch nhãn (legend / tooltip) theo ngôn ngữ đang chọn
   config.data.labels = config.data.labels?.map((l) => tr(l));
   for (const d of config.data.datasets) if (d.label) d.label = tr(d.label);

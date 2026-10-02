@@ -1,8 +1,9 @@
 // Service worker: mở app tức thì từ bản đã lưu (stale-while-revalidate), đồng thời tải bản mới ở nền
 // cho lần mở sau. Không bao giờ cache /api (dữ liệu tài khoản).
-const CACHE = 'finance-shell-v2';
-// Thư viện / font bên ngoài cũng được lưu để mở app không phải chờ mạng
-const CDN = ['https://cdn.jsdelivr.net/', 'https://fonts.googleapis.com/', 'https://fonts.gstatic.com/'];
+const CACHE = 'finance-shell-v3';
+// Thư viện bên ngoài (Chart.js) cũng được lưu để mở app không phải chờ mạng.
+// Lưu ý: SW tự fetch nên domain phải có trong connect-src của CSP.
+const CDN = ['https://cdn.jsdelivr.net/'];
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil((async () => {
@@ -41,6 +42,9 @@ self.addEventListener('fetch', (e) => {
       e.waitUntil(network); // cập nhật nền
       return cached;
     }
-    return (await network) || (await cache.match('./')) || Response.error();
+    const res = await network;
+    if (res) return res;
+    // Mất mạng: chỉ trang chính mới dùng bản đã lưu — không bao giờ trả HTML thay cho script
+    return (req.mode === 'navigate' && (await cache.match('./'))) || Response.error();
   })());
 });

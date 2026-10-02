@@ -37,7 +37,7 @@ export function renderCrypto(root, ctx) {
       <div class="kpi"><span>Stablecoin</span><b>${fmtMoney(stable)}</b><small>${total ? fmtPct(stable / total, { sign: false }) : ''}</small></div>
     </div>
     <div class="card">
-      <h3>Phân bổ theo coin</h3>
+      <h3>Phân bổ</h3>
       <div class="chart"><canvas id="cr-alloc"></canvas></div>
     </div>
     <div class="card">

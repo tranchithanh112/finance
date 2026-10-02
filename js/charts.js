@@ -34,7 +34,7 @@ function mount(canvas, config) {
 }
 
 /** Biểu đồ donut phân bổ; gộp phần đuôi thành "Khác" nếu quá nhiều mục. */
-export function donut(canvas, items, { max = 9 } = {}) {
+export function donut(canvas, items, { max = 9, legendPct = false } = {}) {
   const sorted = items.filter((i) => i.value > 0).sort((a, b) => b.value - a.value);
   let data = sorted;
   if (sorted.length > max) {
@@ -57,7 +57,17 @@ export function donut(canvas, items, { max = 9 } = {}) {
       cutout: '62%',
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: canvas.clientWidth < 440 ? 'bottom' : 'right', labels: { color: css('--text'), boxWidth: 10, boxHeight: 10, font: { size: 12 } } },
+        legend: {
+          position: canvas.clientWidth < 440 ? 'bottom' : 'right',
+          labels: {
+            color: css('--text'), boxWidth: 10, boxHeight: 10, font: { size: 12 },
+            // Tùy chọn: ghi % cạnh tên để đọc được ngay, không cần chạm vào biểu đồ
+            ...(legendPct && {
+              generateLabels: (chart) => window.Chart.overrides.doughnut.plugins.legend.labels.generateLabels(chart)
+                .map((l) => ({ ...l, text: `${l.text} ${((data[l.index].value / total) * 100).toFixed(1)}%` })),
+            }),
+          },
+        },
         tooltip: {
           callbacks: { label: (c) => ` ${c.label}: ${fmtMoney(c.raw)} (${((c.raw / total) * 100).toFixed(1)}%)` },
         },

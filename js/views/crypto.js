@@ -1,5 +1,6 @@
 import { state } from '../store.js';
 import { cryptoTotal } from '../calc.js';
+import { donut } from '../charts.js';
 import { esc, fmtMoney, fmtQty, fmtPrice, fmtPct, pnlClass, timeAgo, isStable } from '../util.js';
 
 let showDust = false;
@@ -34,6 +35,10 @@ export function renderCrypto(root, ctx) {
         .filter(([, v]) => v >= 1) // bỏ ví gần như trống
         .map(([l, v]) => `<div class="kpi"><span>${l}</span><b>${fmtMoney(v)}</b><small>${total ? fmtPct(v / total, { sign: false }) : ''}</small></div>`).join('')}
       <div class="kpi"><span>Stablecoin</span><b>${fmtMoney(stable)}</b><small>${total ? fmtPct(stable / total, { sign: false }) : ''}</small></div>
+    </div>
+    <div class="card">
+      <h3>Phân bổ theo coin</h3>
+      <div class="chart"><canvas id="cr-alloc"></canvas></div>
     </div>
     <div class="card">
       <div class="card-head"><h3>Tỷ trọng & lãi/lỗ</h3>
@@ -79,5 +84,6 @@ export function renderCrypto(root, ctx) {
       ${pnl ? '' : '<p class="muted small">Cột giá vốn / PnL cần đồng bộ lịch sử ở tab "Lịch sử & PnL".</p>'}
     </div>`;
 
+  donut(root.querySelector('#cr-alloc'), all.map((h) => ({ label: h.asset, value: h.value })), { legendPct: true });
   root.querySelector('#cr-dust').onchange = (e) => { showDust = e.target.checked; ctx.rerender(); };
 }

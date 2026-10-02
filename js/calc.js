@@ -1,7 +1,6 @@
-import { state, local } from './store.js';
+import { state } from './store.js';
 import { isStable } from './util.js';
 import { debtTotalVnd, accountBalance } from './budget.js';
-import { tcbsHoldings, tcbsCash } from './tcbs.js';
 
 export const fxRate = () => Number(state.settings.fxManual) || state.fx.USDVND || 25500;
 
@@ -65,34 +64,11 @@ export function stockPositions() {
       dayChangeUSD: dayChange == null ? null : toUSD(dayChange, f.currency),
     };
   });
-  return [...manual, ...brokerPositions()];
+  return manual;
 }
-
-/** Vị thế đọc trực tiếp từ TCBS (VND, giá vốn do TCBS tính). */
-export function brokerPositions() {
-  return tcbsHoldings(state.broker?.tcbs).map((h) => {
-    const costTotal = h.qty * h.cost;
-    const unrealized = h.value - costTotal;
-    return {
-      ticker: h.symbol, name: h.etf ? 'ETF' : '', currency: 'VND', source: 'tcbs', broker: 'tcbs',
-      units: h.qty, cost: costTotal, avg: h.cost, price: h.price, realized: 0,
-      value: h.value, unrealized, total: unrealized,
-      valueUSD: toUSD(h.value, 'VND'),
-      costUSD: toUSD(costTotal, 'VND'),
-      unrealizedUSD: toUSD(unrealized, 'VND'),
-      realizedUSD: 0,
-      totalUSD: toUSD(unrealized, 'VND'),
-      investedUSD: toUSD(costTotal, 'VND'),
-      dayChangeUSD: null,
-    };
-  });
-}
-
-/** Tiền mặt nằm trong tài khoản chứng khoán (tính vào mảng chứng khoán). */
-export const brokerCashUSD = () => toUSD(tcbsCash(state.broker?.tcbs), 'VND');
 
 export function stocksTotal() {
-  return stockPositions().reduce((a, p) => a + p.valueUSD, 0) + brokerCashUSD();
+  return stockPositions().reduce((a, p) => a + p.valueUSD, 0);
 }
 
 /** Số dư hiện tại của 1 tài khoản tiền mặt (đã tự cộng/trừ thu chi sau lần chốt). */

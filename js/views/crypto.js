@@ -27,7 +27,13 @@ export function renderCrypto(root, ctx) {
     return;
   }
 
-  // bỏ qua nếu thiếu giá lịch sử (toàn bộ = 0)
+  // Lãi/lỗ chưa chốt từng coin (bỏ stablecoin và coin bụi), lời nhiều nhất lên đầu
+  const pnlRows = list
+    .map((h) => ({ asset: h.asset, ...pnlBy[h.asset] }))
+    .filter((r) => r.unrealized != null && !isStable(r.asset))
+    .sort((a, b) => b.unrealized - a.unrealized);
+  const maxAbs = Math.max(1e-9, ...pnlRows.map((r) => Math.abs(r.unrealized)));
+
   root.innerHTML = `
     <div class="kpis">
       <div class="kpi hero"><span>Tổng giá trị crypto</span><b>${fmtMoney(total)}</b><small>Cập nhật ${timeAgo(state.crypto.updatedAt)}</small></div>
@@ -40,25 +46,21 @@ export function renderCrypto(root, ctx) {
       <h3>Phân bổ</h3>
       <div class="chart"><canvas id="cr-alloc"></canvas></div>
     </div>
+    ${pnlRows.length ? `<div class="card">
+      <div class="card-head"><h3>Lãi/lỗ theo coin</h3><span class="muted small">chưa chốt</span></div>
+      <div class="bars pnl-bars">
+        ${pnlRows.map((r) => `
+          <div class="bar-row"><span class="bar-label">${esc(r.asset)}</span>
+            <div class="pnl-bar"><i class="${r.unrealized >= 0 ? 'pos' : 'neg'}" style="width:${(Math.abs(r.unrealized) / maxAbs) * 50}%"></i></div>
+            <span class="bar-money ${pnlClass(r.unrealized)}">${fmtMoney(r.unrealized, { sign: true, compact: true })}</span>
+            <span class="bar-pnl ${pnlClass(r.unrealized)}">${r.costBasis > 0 ? fmtPct(r.unrealized / r.costBasis) : ''}</span></div>`).join('')}
+      </div>
+      <p class="muted small">So với giá vốn của số coin đang giữ, xếp từ lời nhiều nhất đến lỗ nhiều nhất.</p>
+    </div>` : ''}
     <div class="card">
-      <div class="card-head"><h3>Tỷ trọng & lãi/lỗ</h3>
+      <div class="card-head"><h3>Chi tiết</h3>
         <label class="check"><input type="checkbox" id="cr-dust" ${showDust ? 'checked' : ''}> Hiện coin bụi (&lt; ${fmtMoney(dust)})</label>
       </div>
-      <div class="bars alloc">
-        ${list.slice(0, 15).map((h) => {
-          const p = pnlBy[h.asset];
-          const pct = p?.unrealized != null && p.costBasis > 0 ? p.unrealized / p.costBasis : null;
-          return `
-          <div class="bar-row"><span class="bar-label">${esc(h.asset)}</span>
-            <div class="bar"><i style="width:${total ? (h.value / total) * 100 : 0}%"></i></div>
-            <span class="bar-val">${total ? fmtPct(h.value / total, { sign: false }) : ''}</span>
-            <span class="bar-money">${fmtMoney(h.value, { compact: true })}</span>
-            <span class="bar-pnl ${pnlClass(pct)}">${pct != null ? fmtPct(pct) : isStable(h.asset) ? '' : '—'}</span></div>`;
-        }).join('')}
-      </div>
-      ${pnl ? '<p class="muted small">Cột cuối: lãi/lỗ chưa chốt so với giá vốn của số coin đang giữ.</p>' : ''}
-    </div>
-    <div class="card">
       <div class="table-wrap"><table class="tbl">
         <thead><tr>
           <th>Coin</th><th class="r">Số lượng</th><th class="r hide-sm">Spot / Funding / Earn${wallets.futures ? ' / Futures' : ''}</th><th class="r">Giá</th>

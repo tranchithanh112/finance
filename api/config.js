@@ -13,6 +13,5 @@ export default function handler(req, res) {
     totpRequired: totpEnabled(), // bật 2FA → form đăng nhập hiện ô mã 6 số
     authOk,
     binanceConfigured: authOk ? Boolean(process.env.BINANCE_API_KEY && process.env.BINANCE_API_SECRET) : undefined,
-    tcbsConfigured: authOk ? Boolean(process.env.TCBS_API_KEY) : undefined,
   });
 }

@@ -37,6 +37,11 @@ export function resetTabOrder() {
   try { localStorage.removeItem(KEY); } catch { /* ignore */ }
 }
 
+/** Tab con đang hiện của nhóm (tab Futures có thể bị ẩn trong Cài đặt). */
+export function visibleSubs(group, settings = {}) {
+  return group.subs?.filter((x) => !(x.id === 'futures' && settings.hideFutures));
+}
+
 /** Nhóm chứa tab (vd 'pnl' thuộc nhóm 'crypto'). */
 export function groupOf(tab) {
   return NAV.find((n) => n.id === tab || n.subs?.some((s) => s.id === tab)) || NAV[0];

@@ -511,11 +511,19 @@ input { min-width: 0; }
 
 /* ---- Tỷ trọng & lãi/lỗ (tab Danh mục) ---- */
 .bars.alloc .bar-row { grid-template-columns: 64px 1fr 56px 72px 64px; }
+/* Lãi/lỗ theo coin: thanh hai phía quanh mốc 0 (lời sang phải, lỗ sang trái) */
+.bars.pnl-bars .bar-row { grid-template-columns: 64px 1fr 76px 60px; }
+.pnl-bar { position: relative; height: 8px; background: var(--surface-2); border-radius: 99px; }
+.pnl-bar::after { content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--border); }
+.pnl-bar i { position: absolute; top: 0; bottom: 0; border-radius: 99px; }
+.pnl-bar i.pos { left: 50%; background: var(--pos); }
+.pnl-bar i.neg { right: 50%; background: var(--neg); }
 .bar-money { text-align: right; font-feature-settings: 'tnum'; font-weight: 600; }
 .bar-pnl { text-align: right; font-feature-settings: 'tnum'; font-weight: 600; font-size: 12.5px; }
 @media (max-width: 720px) {
   .bars.alloc .bar-row { grid-template-columns: 50px 1fr 50px 64px; gap: 6px; font-size: 12.5px; }
   .bars.alloc .bar-money { display: none; }
+  .bars.pnl-bars .bar-row { grid-template-columns: 50px 1fr 64px 54px; gap: 6px; font-size: 12.5px; }
 }
 
 /* ---- Trạng thái đang tải (mục 9) ---- */
@@ -561,3 +569,23 @@ body.app-enter main, body.app-enter #lock { transform-origin: 50% 30%; animation
 body.app-enter .topbar { animation: app-in .5s cubic-bezier(.16,1,.3,1) both; }
 body.app-enter #bottom-nav, body.app-enter #fab { animation: nav-in .55s cubic-bezier(.2,.7,.2,1) both .12s; }
 @media (prefers-reduced-motion: reduce) { body.app-enter main, body.app-enter .topbar, body.app-enter #bottom-nav, body.app-enter #fab, body.app-enter #lock { animation: none; } }
+
+/* ---- Nhắc mua định kỳ ---- */
+.nudge { display: flex; align-items: center; gap: 6px; width: 100%; margin: 0 0 16px; padding: 12px 14px; font: inherit; font-size: 14px; text-align: left;
+  color: var(--text); background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-sm);
+  text-decoration: none; cursor: pointer; }
+.nudge span { margin-left: auto; color: var(--accent); font-weight: 600; white-space: nowrap; }
+
+/* ---- Mục tiêu & tóm tắt tháng ---- */
+.goal-top { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
+.goal-top b { font-size: 28px; font-weight: 650; letter-spacing: -0.02em; font-feature-settings: 'tnum'; }
+.goal .progress { height: 8px; margin: 10px 0 4px; }
+.goal .progress i { background: var(--accent); }
+.recap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 18px; margin-top: 6px; }
+.recap-grid > div { display: grid; gap: 3px; align-content: start; min-width: 0; }
+.recap-grid span:first-child { font-size: 13px; color: var(--muted); }
+.recap-grid b { font-size: 18px; font-weight: 600; font-feature-settings: 'tnum'; }
+.recap-grid small { font-size: 12.5px; color: var(--muted); }
+.recap-grid small.pos { color: var(--pos); font-weight: 500; }
+.recap-grid small.neg { color: var(--neg); font-weight: 500; }
+

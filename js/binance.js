@@ -1,4 +1,4 @@
-import { state, local, authHeaders, hasAuth, dropSession } from './store.js';
+import { state, authHeaders, dropSession } from './store.js';
 import { idbGet, idbSet } from './idb.js';
 import { sleep, isStable, DAY } from './util.js';
 import { fetchFuturesAccount } from './futures.js';

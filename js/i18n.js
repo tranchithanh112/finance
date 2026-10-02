@@ -191,14 +191,16 @@ const EXACT = {
   // ---- futures theo năm
   'Theo năm': 'By year', 'Năm': 'Year', 'Đối chiếu với báo cáo PnL của Binance': 'Compare with Binance PnL report',
 
-  // ---- TCBS
-  'Chưa kết nối': 'Not connected', 'Số TK lưu ký (105C…)': 'Custody account no. (105C…)', 'Mã OTP (iOTP)': 'OTP code (iOTP)',
   'Kết nối': 'Connect', '↻ Cập nhật': '↻ Update', 'Ngắt kết nối': 'Disconnect', 'Đang tải…': 'Loading…',
-  'Đã kết nối TCBS': 'TCBS connected', 'Đã cập nhật danh mục TCBS': 'TCBS portfolio updated',
-  'Chưa có TCBS_API_KEY trong Environment Variables của Vercel — thêm vào rồi Redeploy.': 'TCBS_API_KEY is missing from Vercel Environment Variables — add it and redeploy.',
-  'Tài khoản chưa có cổ phiếu — mua xong bấm Cập nhật là số liệu tự hiện.': 'No stocks in the account yet — after buying, tap Update and they will appear.',
-  'Nhập số tài khoản lưu ký TCBS trước': 'Enter your TCBS custody account number first',
-  'Phiên TCBS đã hết hạn, hãy nhập OTP mới': 'TCBS session expired, enter a new OTP',
+  // ---- mục tiêu, tóm tắt tháng, mua định kỳ, lãi/lỗ theo coin
+  'Hiện tab Futures': 'Show Futures tab', '(dữ liệu cũ vẫn được giữ)': '(existing data is kept)',
+  'Lãi/lỗ theo coin': 'P&L by coin', 'Chi tiết': 'Details',
+  'So với giá vốn của số coin đang giữ, xếp từ lời nhiều nhất đến lỗ nhiều nhất.': 'Against the cost basis of the coins you hold, from biggest gain to biggest loss.',
+  'Mục tiêu tài sản': 'Net worth goal', 'vd 1 tỷ, 500tr, 50000': 'e.g. 1b, 500m, 50000', 'Đã đạt mục tiêu.': 'Goal reached.',
+  'Tài sản ròng bạn muốn đạt. App hiện tiến độ và ước tính khi nào đạt dựa trên mức để dành hằng tháng.': 'The net worth you want to reach. The app shows progress and estimates when you will get there from your monthly savings.',
+  'Xóa mục tiêu tài sản?': 'Delete the net worth goal?',
+  'Chi tiêu': 'Spending', 'Chưa nhập thu chi': 'No budget entries', 'Kéo lên:': 'Top gainer:', 'Kéo xuống:': 'Top loser:',
+  'Tháng này chưa mua': 'Not bought yet this month:', 'Mua thêm →': 'Buy more →', 'Mua thêm': 'Buy more',
   // ---- biểu đồ theo thời gian
   'Theo loại': 'By class', '1T': '1M', '3T': '3M', '6T': '6M', '1N': '1Y', 'từ đầu': 'since start', 'chưa chốt': 'unrealized', 'lãi/lỗ từ đầu': 'P&L since start',
   'Mỗi ngày lưu 1 điểm khi bạn mở app / làm mới số dư.': 'One point is saved per day when you open the app / refresh balances.',
@@ -231,6 +233,14 @@ const TERMS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const RULES = [
+  [/^Tháng (\d\d\/\d{4})$/, 'Month $1'],
+  [/^(.+) so với tháng trước$/, '$1 vs last month'],
+  [/^Để dành & đầu tư (.+)$/, 'Saved & invested $1'],
+  [/^của (.+)$/, 'of $1'],
+  [/^Còn (.+) · nhập thu chi vài tháng để ước tính ngày đạt$/, '$1 to go · log a few months of budget to estimate a date'],
+  [/^Còn (.+?)( · dự kiến đạt khoảng)?$/, (m, v, eta) => `${v} to go` + (eta ? ' · expected around' : '')],
+  [/^\(~(\d+) tháng\), với mức tăng ~(.+)\/tháng (từ thu chi|theo xu hướng tài sản)$/,
+    (m, n, v, from) => `(~${n} months), growing ~${v}/month ${from === 'từ thu chi' ? 'from your budget' : 'on the net worth trend'}`],
   [/^Nhập mã 6 số đang hiện trong Authenticator:$/, 'Enter the 6-digit code shown in Authenticator:'],
   [/^Trên điện thoại bấm$/, 'On your phone tap'],
   [/^— hoặc trong app bấm$/, '— or in the app tap'],
@@ -255,9 +265,6 @@ const RULES = [
   [/^: lãi Earn, airdrop[\s\S]*$/, ': Earn interest, airdrops, Pay receipts… (zero cost basis, normal).'],
   [/^(.+): phát hiện giờ UTC([+-]\d+), đã quy về UTC$/, '$1: detected UTC$2 times, converted to UTC'],
   [/^Chưa có phí funding [\s\S]*$/, 'No funding fees yet (liquidation fees may also be missing). Trade History files don\'t include them — also import the Transaction History file for the same years; duplicates are skipped automatically.'],
-  // TCBS (đặt trước các quy tắc chung vì chuỗi bắt đầu bằng "Cập nhật")
-  [/^Gồm (.+) tiền trong TK CK · Giá cập nhật (.+)$/, 'Incl. $1 cash in brokerage · Prices updated $2'],
-  [/^Cập nhật (.+) · (\d+) tiểu khoản · (\d+) mã · tiền (.+)$/, 'Updated $1 · $2 sub-accounts · $3 symbols · cash $4'],
   // thời gian tương đối & đơn vị
   [/(\d+) phút trước/g, '$1 min ago'], [/(\d+) giờ trước/g, '$1 h ago'], [/(\d+) ngày trước/g, '$1 d ago'],
   [/vừa xong/g, 'just now'], [/chưa bao giờ/g, 'never'],
@@ -334,9 +341,6 @@ const RULES = [
   [/^= chưa chốt (.+) · đã chốt (.+)$/, '= unrealized $1 · realized $2'],
   [/^lãi\/lỗ (1T|3T|6T|1N)$/, (m, r) => `P&L ${{ '1T': '1M', '3T': '3M', '6T': '6M', '1N': '1Y' }[r]}`],
   [/^Đã kết nối đến (.+)$/, 'Connected until $1'],
-  [/^Chỉ đọc danh mục và tiền, [\s\S]*$/, 'Read-only: holdings and cash, never places orders. A TCBS session lasts up to 8 hours; when it expires, enter a new OTP (Smart OTP in the TCInvest app). Loaded data is kept and synced to the cloud.'],
-  [/^TCBS API key: (.+)$/, (m, v) => 'TCBS API key: ' + ({ 'đã cấu hình': 'configured', 'chưa cấu hình (không bắt buộc)': 'not configured (optional)' }[v] || v)],
-  [/^TCBS: (.+)$/, (m, v) => 'TCBS: ' + tr(v)],
   [/^Mã Yahoo: [\s\S]*$/, 'Yahoo symbols: US stocks/ETFs as-is (VOO, VTI, QQQ); for Vietnam exchanges add'],
   [/^Xóa (.+) và toàn bộ giao dịch của mã này\?$/, 'Delete $1 and all its transactions?'],
   [/^Không lấy được giá: (.+)$/, 'Could not fetch prices: $1'], [/^Lỗi lấy giá: (.+)$/, 'Price error: $1'],

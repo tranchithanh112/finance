@@ -53,11 +53,10 @@ export function snapshotSeries(snapshots) {
  * Dựng lại giá trị coin (không gồm stablecoin, không gồm ví futures) và vốn đang nắm theo ngày
  * từ lịch sử giao dịch Binance + giá đóng cửa ngày. Cùng phương pháp giá vốn bình quân với tab Lãi/lỗ.
  */
-export function cryptoSeries(history, priceHist, { now = Date.now(), held = null } = {}) {
+export function cryptoSeries(history, priceHist, { now = Date.now() } = {}) {
   const usdAt = makePriceLookup(priceHist);
-  let { events } = buildEvents(history, usdAt);
+  const { events } = buildEvents(history, usdAt);
   if (!events.length) return [];
-  if (held) events = reconcileWithWallet(events, held);
   const pos = new Map(); // asset -> { qty, cost }
   const out = [];
   let i = 0;

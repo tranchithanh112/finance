@@ -86,15 +86,6 @@ test('reconcileWithWallet: lịch sử dư → rút phần dư ở thời điể
   assert.ok(more.length >= 1);
   assert.ok(Math.abs(more.reduce((a, e) => a + e.qty, 0) - 1) < 1e-9);
   assert.ok(more.every((e) => e.value === 0));
-  // cuối chuỗi khớp số coin trong ví
-  const history = {
-    trades: { BNBUSDT: { lastId: 2, rows: [[1, d0, 300, 4, 1200, 0, 'USDT', true]] } },
-    meta: { BNBUSDT: ['BNB', 'USDT'] }, deposits: [], withdrawals: [], dust: [], converts: [],
-  };
-  const days = {}; for (let k = 0; k < 3; k++) days[d0 / DAY + k] = 300;
-  const s = cryptoSeries(history, { BNB: { days } }, { now: d0 + 2 * DAY + 1000, held: new Map([['BNB', 1]]) });
-  assert.equal(s.at(-1).value, 300);
-  assert.equal(s.at(-1).cost, 300);
 });
 
 test('snapshotSeries: ảnh chụp cũ thiếu stable lấy theo ảnh sau đó', () => {

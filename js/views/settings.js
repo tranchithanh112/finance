@@ -2,7 +2,7 @@ import { state, local, saveLocal, commit, replaceState, login, logout } from '..
 import * as sync from '../sync.js';
 import { esc, toast, downloadFile, timeAgo, todayKey, fmtDate } from '../util.js';
 import { fxRate } from '../calc.js';
-import { tabOrder, setTabOrder, resetTabOrder, BOTTOM_MAX } from '../nav.js';
+import { tabOrder, setTabOrder, resetTabOrder, visibleSubs, BOTTOM_MAX } from '../nav.js';
 import { icon } from '../icons.js';
 import { newSecret, checkCode, otpauthUri } from '../totp.js';
 
@@ -45,11 +45,12 @@ export function renderSettings(root, ctx) {
         ${order.map((n, i) => `
           <div class="order-item">
             <span class="ico">${icon(n.icon)}</span>
-            <span class="grow"><b>${esc(n.label)}</b>${n.subs ? `<span class="muted small"> · ${n.subs.map((x) => esc(x.label)).join(', ')}</span>` : ''}</span>
+            <span class="grow"><b>${esc(n.label)}</b>${n.subs ? `<span class="muted small"> · ${visibleSubs(n, s).map((x) => esc(x.label)).join(', ')}</span>` : ''}</span>
             <button class="icon-btn" data-move="${i}" data-dir="-1" ${i === 0 ? 'disabled' : ''} aria-label="Lên">↑</button>
             <button class="icon-btn" data-move="${i}" data-dir="1" ${i === order.length - 1 ? 'disabled' : ''} aria-label="Xuống">↓</button>
           </div>`).join('')}
       </div>
+      <label class="check mt"><input type="checkbox" id="show-futures" ${s.hideFutures ? '' : 'checked'}> Hiện tab Futures <span class="muted small">(dữ liệu cũ vẫn được giữ)</span></label>
     </div>
     <div class="grid2">
       <div class="card">
@@ -71,7 +72,6 @@ export function renderSettings(root, ctx) {
           <li class="${cfg.totpRequired ? 'ok' : ''}">Xác thực 2 bước (TOTP): ${cfg.totpRequired ? 'đang bật' : 'chưa bật'}</li>
           <li class="${cfg.authOk ? 'ok' : 'bad'}">Mật khẩu trên thiết bị này: ${cfg.authOk ? 'đúng' : 'chưa đúng / chưa nhập'}</li>
           <li class="${cfg.binanceConfigured ? 'ok' : 'bad'}">Binance API key: ${cfg.binanceConfigured ? 'đã cấu hình' : cfg.authOk ? 'CHƯA cấu hình' : '—'}</li>
-          ${cfg.tcbsConfigured ? '<li class="ok">TCBS API key: đã cấu hình</li>' : ''}
         </ul>
         ${cfg.totpRequired || cfg.offline ? '' : totpSetupHtml()}
         <p class="muted small">Key Binance chỉ nằm trong Environment Variables của Vercel, trình duyệt không bao giờ thấy.
@@ -143,6 +143,11 @@ export function renderSettings(root, ctx) {
       ctx.rebuildNav();
     };
   });
+  root.querySelector('#show-futures').onchange = (e) => {
+    s.hideFutures = !e.target.checked;
+    commit({ edit: true });
+    ctx.rerender();
+  };
   root.querySelector('#tab-reset').onclick = () => { resetTabOrder(); ctx.rebuildNav(); };
   root.querySelectorAll('[data-palette]').forEach((b) => { b.onclick = () => ctx.setPalette(b.dataset.palette); });
   root.querySelectorAll('[data-mode]').forEach((b) => { b.onclick = () => ctx.setMode(b.dataset.mode); });

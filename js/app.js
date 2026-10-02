@@ -10,7 +10,7 @@ import { captureDrafts, restoreDrafts, isTyping, $, $$, toast, setDisplayCurrenc
 import { icon } from './icons.js';
 import { tr, translateDom, setLang, getLang } from './i18n.js';
 import { loadPalette, setChartAnimation } from './charts.js';
-import { tabOrder, groupOf, lastSub, rememberSub, BOTTOM_MAX } from './nav.js';
+import { tabOrder, groupOf, lastSub, rememberSub, visibleSubs, BOTTOM_MAX } from './nav.js';
 import { renderOverview } from './views/overview.js';
 import { renderCrypto } from './views/crypto.js';
 import { renderPnl, updateProgress } from './views/pnl.js';
@@ -19,7 +19,6 @@ import { renderSettings } from './views/settings.js';
 import { renderFutures } from './views/futures.js';
 import { renderBudget } from './views/budget.js';
 import { generateRecurring, setAnchor } from './budget.js';
-import { fetchTcbs, tcbsLogin, tcbsSession } from './tcbs.js';
 
 const VIEWS = {
   overview: renderOverview,
@@ -39,7 +38,6 @@ let futCache = null;
 let futBusy = '';
 let syncing = { running: false, pct: 0, msg: '' };
 let abort = null;
-let tcbsBusy = false;
 // Giá đóng cửa lịch sử của mã CK (Yahoo) — chỉ lưu trên máy, không sync: { ticker: { at, rows: [[ms, close]] } }
 let histTriedAt = 0;
 let stockHist = (() => { try { return JSON.parse(localStorage.getItem('fin.stockHist') || '{}'); } catch { return {}; } })();
@@ -91,6 +89,9 @@ const ctx = {
     p.series ||= cryptoSeries(state.history, priceHist);
     return p.series;
   },
+
+  /** Giá USD đóng cửa của coin vào ngày chứa thời điểm t (null nếu chưa có giá lịch sử). */
+  priceAt: (asset, t) => makePriceLookup(priceHist)(asset, t),
 
   futuresBusy: () => futBusy,
   futuresPnl() {
@@ -185,35 +186,6 @@ const ctx = {
       toast(`Binance: ${e.message}`, 'error', 8000);
     }
     document.body.classList.remove('is-refreshing');
-    render();
-  },
-
-  tcbsBusy: () => tcbsBusy,
-
-  async tcbsLogin(otp) {
-    try {
-      await tcbsLogin(otp);
-      toast('Đã kết nối TCBS', 'ok');
-    } catch (e) {
-      toast(`TCBS: ${e.message}`, 'error', 8000);
-      return render();
-    }
-    return ctx.syncTcbs();
-  },
-
-  async syncTcbs({ quiet = false } = {}) {
-    if (tcbsBusy || !tcbsSession() || !state.settings.tcbsCustody) return;
-    tcbsBusy = true;
-    render();
-    try {
-      state.broker = { tcbs: await fetchTcbs(state.settings.tcbsCustody), updatedAt: Date.now() };
-      snapshot();
-      commit();
-      if (!quiet) toast('Đã cập nhật danh mục TCBS', 'ok');
-    } catch (e) {
-      if (!quiet || !e.expired) toast(`TCBS: ${e.message}`, 'error', 8000);
-    }
-    tcbsBusy = false;
     render();
   },
 
@@ -489,6 +461,7 @@ function draw() {
   lastDrawn = current;
   applyCurrency();
   loadPalette();
+  if (current === 'futures' && state.settings.hideFutures) current = 'crypto'; // vd mở link #futures sau khi đã ẩn
   const group = groupOf(current);
   $$('#tabs button, #bottom-nav button, #more-panel button').forEach((b) => {
     b.classList.toggle('on', b.dataset.tab === group.id || (b.dataset.more === '1' && moreIds.includes(group.id)));
@@ -499,8 +472,9 @@ function draw() {
   try {
     const root = $(`#tab-${current}`);
     VIEWS[current](root, ctx);
-    if (group.subs) {
-      root.insertAdjacentHTML('afterbegin', `<div class="subnav seg">${group.subs.map((x) =>
+    const subs = visibleSubs(group, state.settings);
+    if (subs?.length > 1) {
+      root.insertAdjacentHTML('afterbegin', `<div class="subnav seg">${subs.map((x) =>
         `<button data-sub="${x.id}" class="${x.id === current ? 'on' : ''}">${esc(x.label)}</button>`).join('')}</div>`);
       root.querySelectorAll('[data-sub]').forEach((b) => { b.onclick = () => go(b.dataset.sub); });
     }
@@ -516,6 +490,7 @@ function go(tab) {
   $('#more-sheet').hidden = true;
   if (tab !== current) window.scrollTo({ top: 0 });
   current = VIEWS[tab] ? tab : 'overview';
+  if (current === 'futures' && state.settings.hideFutures) current = 'crypto';
   rememberSub(groupOf(current).id, current);
   if (location.hash !== '#' + current) history.replaceState(null, '', '#' + current);
   render();
@@ -657,7 +632,7 @@ async function init() {
     const btn = $('#btn-refresh');
     btn.disabled = true;
     btn.classList.add('spin');
-    await Promise.all([ctx.refreshCrypto(), ctx.refreshQuotes(), ctx.syncTcbs({ quiet: true })]);
+    await Promise.all([ctx.refreshCrypto(), ctx.refreshQuotes()]);
     btn.disabled = false;
     btn.classList.remove('spin');
   };
@@ -708,7 +683,6 @@ async function startSession() {
     const stale = Date.now() - (state.crypto.updatedAt || 0) > 5 * 60000;
     if (stale) ctx.refreshCrypto({ quiet: true });
     if (state.stocks.funds.length) ctx.refreshQuotes(false);
-    if (Date.now() - (state.broker?.updatedAt || 0) > 5 * 60000) ctx.syncTcbs({ quiet: true });
   }
 }
 

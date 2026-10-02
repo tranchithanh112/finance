@@ -18,7 +18,8 @@ export function defaultState() {
       extraAssets: ['BTC', 'ETH', 'BNSOL', 'USDC', 'SUI', 'LINK', 'TAO', 'OP', 'U', 'USD1', 'HYPE', 'BNB'],
       includeConvert: true,
       fxManual: null,
-      tcbsCustody: '', // số tài khoản lưu ký TCBS (105C…)
+      hideFutures: false, // ẩn tab Futures (không còn chơi)
+      goal: null, // mục tiêu tài sản ròng { amount, currency }
     },
     crypto: { holdings: [], updatedAt: 0 },
     history: {
@@ -38,7 +39,6 @@ export function defaultState() {
       funds: [], // { ticker, name, currency, source: 'yahoo'|'manual', manualPrice, lastPrice, prevClose, lastPriceAt }
       txs: [], // { id, ticker, date, units (âm = bán), price, fee }
     },
-    broker: { tcbs: null, updatedAt: 0 }, // danh mục + tiền đọc từ TCBS (chỉ đọc)
     fx: { USDVND: 25500, updatedAt: 0 },
     cash: [], // { id, name, amount, currency }
     budget: defaultBudget(), // thu chi cá nhân (VND)
@@ -72,6 +72,8 @@ export async function loadState() {
 
 /** Dọn dữ liệu do bản thử nghiệm (airdrop / Binance Pay) đã ghi vào lịch sử — bản đó đã bị gỡ. */
 export function cleanupState(obj) {
+  delete obj.broker; // kết nối TCBS đã gỡ
+  if (obj.settings) delete obj.settings.tcbsCustody;
   const h = obj.history;
   if (!h) return obj;
   const notPay = (r) => !String(r[0]).startsWith('pay:');

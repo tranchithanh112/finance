@@ -181,7 +181,7 @@ const EXACT = {
 
   // ---- giao diện gọn
   '↻ Đồng bộ': '↻ Sync', 'Lịch sử Binance': 'Binance history', 'Lãi nhất · lỗ nhất': 'Best · worst', 'Ẩn cảnh báo': 'Hide warning',
-  'Tỷ trọng & lãi/lỗ': 'Weight & P&L', 'Phân bổ': 'Allocation', 'Theo tài sản': 'By asset',
+  'Tỷ trọng & lãi/lỗ': 'Weight & P&L', 'Theo tài sản': 'By asset',
   'Cột cuối: lãi/lỗ chưa chốt so với giá vốn của số coin đang giữ.': 'Last column: unrealized P&L vs. cost of the coins held.',
 
   // ---- đối chiếu lịch sử với ví

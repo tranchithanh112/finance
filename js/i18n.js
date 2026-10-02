@@ -161,7 +161,7 @@ const EXACT = {
   'Chưa có Dropbox App Key': 'Missing Dropbox App Key', 'Chưa có Google Client ID': 'Missing Google Client ID',
 
   // ---- đăng nhập / bảo mật
-  'iFinance đang khóa': 'iFinance is locked', 'Mật khẩu ứng dụng': 'App password', 'Mã xác thực 2 bước': '2-step code',
+  'iFinance đang khóa': 'iFinance is locked', 'Đã có bản mới — chạm để cập nhật': 'A new version is available — tap to update', 'Mật khẩu ứng dụng': 'App password', 'Mã xác thực 2 bước': '2-step code',
   'Đăng nhập để xem số liệu. Dữ liệu trên máy được ẩn cho tới khi đăng nhập.': 'Sign in to see your numbers. Data on this device stays hidden until you do.',
   'Xóa dữ liệu trên thiết bị này': 'Erase data on this device', 'Sai mật khẩu ứng dụng': 'Wrong app password',
   'Không kết nối được server — kiểm tra mạng rồi thử lại.': 'Cannot reach the server — check your connection and try again.',

@@ -1,22 +1,46 @@
-// Service worker tối giản: ưu tiên mạng (luôn lấy bản mới nhất), mất mạng thì dùng bản đã cache.
-// Không bao giờ cache /api (dữ liệu tài khoản).
-const CACHE = 'finance-shell-v1';
+// Service worker: mở app tức thì từ bản đã lưu (stale-while-revalidate), đồng thời tải bản mới ở nền
+// cho lần mở sau. Không bao giờ cache /api (dữ liệu tài khoản).
+const CACHE = 'finance-shell-v2';
+// Thư viện / font bên ngoài cũng được lưu để mở app không phải chờ mạng
+const CDN = ['https://cdn.jsdelivr.net/', 'https://fonts.googleapis.com/', 'https://fonts.gstatic.com/'];
 
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener('activate', (e) => e.waitUntil((async () => {
+  for (const k of await caches.keys()) if (k !== CACHE) await caches.delete(k); // dọn cache bản cũ
+  await self.clients.claim();
+})()));
 
 self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
-  e.respondWith(
-    fetch(e.request)
-      .then((res) => {
-        if (res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(e.request, copy));
+  const req = e.request;
+  const url = new URL(req.url);
+  if (req.method !== 'GET') return;
+  const sameOrigin = url.origin === location.origin;
+  if (sameOrigin && url.pathname.startsWith('/api/')) return;
+  if (!sameOrigin && !CDN.some((p) => req.url.startsWith(p))) return;
+
+  e.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    // Trang chính: bỏ query (?code=… khi Dropbox chuyển về) để luôn dùng chung 1 bản đã lưu
+    const key = req.mode === 'navigate' ? new Request(new URL('./', location).href) : req;
+    const cached = await cache.match(key, { ignoreSearch: req.mode === 'navigate' });
+    const before = req.mode === 'navigate' && cached ? cached.clone() : null; // để so sánh, vì `cached` sẽ trả cho trang
+    const network = fetch(req)
+      .then(async (res) => {
+        if (res.ok || res.type === 'opaque') {
+          // Trang chính đổi nội dung → báo app có bản mới (hiện nút tải lại)
+          if (before && res.ok) {
+            const [a, b] = await Promise.all([before.text(), res.clone().text()]);
+            if (a !== b) (await self.clients.matchAll()).forEach((c) => c.postMessage('update-ready'));
+          }
+          await cache.put(key, res.clone());
         }
         return res;
       })
-      .catch(() => caches.match(e.request, { ignoreSearch: true }).then((r) => r || caches.match('./'))),
-  );
+      .catch(() => null);
+    if (cached) {
+      e.waitUntil(network); // cập nhật nền
+      return cached;
+    }
+    return (await network) || (await cache.match('./')) || Response.error();
+  })());
 });

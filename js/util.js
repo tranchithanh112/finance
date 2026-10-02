@@ -112,6 +112,7 @@ export function toast(msg, type = 'info', ms = 4000) {
   el.textContent = tr(msg);
   box.appendChild(el);
   setTimeout(() => el.remove(), ms);
+  return el;
 }
 
 export function downloadFile(name, text, type = 'application/json') {

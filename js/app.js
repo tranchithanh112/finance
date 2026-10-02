@@ -446,7 +446,18 @@ document.addEventListener('focusout', () => {
   setTimeout(() => { if (pendingRender && !isTyping()) render(); }, 200);
 });
 
+/** Ẩn màn hình chờ (chỉ lần đầu) với hiệu ứng mờ dần. */
+function hideSplash() {
+  const sp = document.getElementById('splash');
+  if (!sp || sp.classList.contains('hide')) return;
+  requestAnimationFrame(() => {
+    sp.classList.add('hide');
+    setTimeout(() => sp.remove(), 400);
+  });
+}
+
 function draw() {
+  hideSplash();
   if (isLocked()) return renderLock();
   applyCurrency();
   loadPalette();
@@ -573,7 +584,10 @@ onCommit(() => {
 
 async function init() {
   await loadState();
-  priceHist = await getPriceHistory();
+  // Lịch sử giá khá nặng → đọc sau lần vẽ đầu, xong thì tính lại PnL và vẽ lại
+  getPriceHistory().then((h) => { priceHist = h; pnlCache = null; futCache = null; render(); }).catch(() => {});
+  // Chart.js tải song song (async): tải xong thì vẽ lại để hiện biểu đồ
+  if (!window.Chart) document.querySelector('script[src*="chart.js"]')?.addEventListener('load', () => render());
   current = location.hash.slice(1) || 'overview';
   runRecurring();
 
@@ -664,4 +678,11 @@ init();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
+  // App mở từ bản đã lưu; khi có bản mới thì báo để tải lại
+  navigator.serviceWorker.addEventListener('message', (e) => {
+    if (e.data !== 'update-ready') return;
+    const el = toast('Đã có bản mới — chạm để cập nhật', 'info', 15000);
+    el.style.cursor = 'pointer';
+    el.onclick = () => location.reload();
+  });
 }

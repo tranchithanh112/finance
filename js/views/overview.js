@@ -131,7 +131,7 @@ export function renderOverview(root, ctx) {
       </div>
 
       <div class="card">
-        <div class="card-head"><h3>Nợ</h3><small class="muted">${b.debts.length ? 'Trả hằng tháng ' + vnd(H.debtMonthly) : 'Không có nợ 👍'}</small></div>
+        <div class="card-head"><h3>Nợ</h3><small class="muted">${b.debts.length ? 'Trả hằng tháng ' + vnd(H.debtMonthly) : 'Không có nợ'}</small></div>
         <table class="tbl">
           <tbody>
             ${b.debts.map((d) => `

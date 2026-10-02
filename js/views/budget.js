@@ -30,7 +30,7 @@ function accSelect(name, sel) {
   const list = accounts();
   if (!list.length) return '';
   return `<select name="${name}" title="Tự cộng/trừ vào tài khoản">
-    ${list.map((c) => `<option value="${esc(c.id)}" ${c.id === sel ? 'selected' : ''}>🏦 ${esc(c.name)}</option>`).join('')}
+    ${list.map((c) => `<option value="${esc(c.id)}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
     <option value="none" ${sel === 'none' ? 'selected' : ''}>Không trừ vào tài khoản</option></select>`;
 }
 
@@ -135,7 +135,7 @@ export function renderBudget(root, ctx) {
             return `<div class="tx"><span class="tx-icon">${esc(c?.icon || '•')}</span>
               <span class="tx-main"><b>${esc(c?.name || t.cat)}</b>${t.note ? `<span class="muted small"> · ${esc(t.note)}</span>` : ''}
                 ${t.id.startsWith('rec:') ? '<span class="tag">định kỳ</span>' : ''}
-                ${t.acc && accName(t.acc) ? `<span class="tag">🏦 ${esc(accName(t.acc))}</span>` : ''}</span>
+                ${t.acc && accName(t.acc) ? `<span class="tag">${esc(accName(t.acc))}</span>` : ''}</span>
               <span class="tx-amt ${t.type === 'income' ? 'pos' : ''}">${t.type === 'income' ? '+' : '−'}${vnd(t.amount)}</span>
               <button class="link danger" data-del="${esc(t.id)}" aria-label="Xóa">✕</button></div>`;
           }).join('')}</div>`).join('') : '<p class="empty">Chưa có giao dịch trong tháng.</p>'}
@@ -179,7 +179,7 @@ function configHtml(b, pctSum) {
     <div class="table-wrap"><table class="tbl mini">
       <thead><tr><th>Khoản</th><th class="r">Số tiền</th><th class="r">Ngày</th><th>Chu kỳ</th><th>Từ tháng</th><th></th></tr></thead>
       <tbody>${b.recurring.map((r) => `<tr>
-        <td>${esc(b.categories.find((c) => c.id === r.cat)?.icon || '')} ${esc(b.categories.find((c) => c.id === r.cat)?.name || r.cat)}${r.note ? ` · ${esc(r.note)}` : ''}${r.acc && accName(r.acc) ? ` <span class="tag">🏦 ${esc(accName(r.acc))}</span>` : ''}</td>
+        <td>${esc(b.categories.find((c) => c.id === r.cat)?.icon || '')} ${esc(b.categories.find((c) => c.id === r.cat)?.name || r.cat)}${r.note ? ` · ${esc(r.note)}` : ''}${r.acc && accName(r.acc) ? ` <span class="tag">${esc(accName(r.acc))}</span>` : ''}</td>
         <td class="r ${r.type === 'income' ? 'pos' : ''}">${r.type === 'income' ? '+' : '−'}${vnd(r.amount)}</td>
         <td class="r">${r.day}</td><td>${EVERY[r.every || 1] || `${r.every} tháng`}</td><td>${esc(r.startMonth)}</td>
         <td class="r"><button class="link danger" data-del-rec="${esc(r.id)}">Xóa</button></td></tr>`).join('') ||

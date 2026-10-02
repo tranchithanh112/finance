@@ -44,7 +44,7 @@ const EXACT = {
   'Tự cộng/trừ theo thu chi · tính vào quỹ dự phòng': 'Auto-adjusted by transactions · counts toward emergency fund',
   'Sửa số dư': 'Edit balance', 'Chưa có — tiền gửi ngân hàng, tiền mặt, vàng…': 'None yet — bank deposits, cash, gold…',
   'Tên (vd: Tiết kiệm VCB)': 'Name (e.g. Savings account)', 'Số dư (vd 52tr)': 'Balance (e.g. 52m)',
-  'Nợ': 'Debts', 'Không có nợ 👍': 'No debts 👍', 'Sửa dư nợ': 'Edit balance',
+  'Nợ': 'Debts', 'Không có nợ': 'No debts', 'Sửa dư nợ': 'Edit balance',
   'Thẻ tín dụng, vay mua nhà/xe, vay người quen…': 'Credit cards, mortgage/car loans, personal loans…',
   'Tên khoản nợ': 'Debt name', 'Dư nợ': 'Balance', 'Trả / tháng': 'Payment / month', 'Lãi %/năm': 'Rate %/yr',
   'Stablecoin': 'Stablecoins', 'Tiền mặt & khác': 'Cash & other', 'Thu': 'Income', 'Tiêu dùng': 'Spending',

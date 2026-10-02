@@ -449,7 +449,7 @@ document.addEventListener('focusout', () => {
 // ================= Màn hình chờ =================
 // Hiện tối thiểu SPLASH_MIN; trong lúc đó tải xong lịch sử giá, Chart.js và lần đồng bộ đầu
 // (tối đa SPLASH_MAX) để khi màn chờ tắt, giao diện đã ở trạng thái hoàn chỉnh — không nhảy, không khựng.
-const SPLASH_MIN = 1800;
+const SPLASH_MIN = 1500;
 const SPLASH_MAX = 3500;
 const startupGates = [];
 let splashPlanned = false;
@@ -469,11 +469,12 @@ function hideSplash() {
     splashRevealing = true;
     render(); // vẽ bản cuối (có hiệu ứng biểu đồ) ngay trước khi lộ ra
     splashRevealing = false;
-    document.body.classList.add('app-enter');
-    requestAnimationFrame(() => {
+    sp.classList.add('out'); // logo + tên mờ dần
+    setTimeout(() => {
+      document.body.classList.add('app-enter'); // app phóng vào trong lúc nền màn chờ tan
       sp.classList.add('hide');
-      setTimeout(() => { sp.remove(); document.body.classList.remove('app-enter'); }, 600);
-    });
+      setTimeout(() => { sp.remove(); document.body.classList.remove('app-enter'); }, 700);
+    }, 300);
   });
 }
 

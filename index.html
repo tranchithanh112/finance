@@ -15,11 +15,6 @@
         if (p && p !== 'bronze') d.setAttribute('data-palette', p);
         if (localStorage.getItem('fin.lang') === 'en') d.lang = 'en';
       } catch (e) {}
-      // Font tải song song, không chặn việc vẽ trang (chưa tải xong thì dùng font hệ thống)
-      var f = document.createElement('link');
-      f.rel = 'stylesheet';
-      f.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap';
-      document.head.appendChild(f);
     })();
   </script>
   <style>
@@ -28,19 +23,18 @@
     @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { background: #0e0c0a; } }
     html[data-theme="dark"] { background: #0e0c0a; }
     #splash { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 14px; background: inherit; background-color: #f6f2ec; color: #6b5b4a; font: 600 15px/1.2 system-ui, -apple-system, sans-serif;
-      transition: opacity .5s ease, transform .5s cubic-bezier(.2,.7,.2,1); }
-    @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) #splash { background-color: #0e0c0a; color: #b8a68f; } }
-    html[data-theme="dark"] #splash { background-color: #0e0c0a; color: #b8a68f; }
-    #splash img { width: 76px; height: 76px; border-radius: 20px; box-shadow: 0 10px 30px rgb(0 0 0 / .25); animation: sp-pop .5s ease-out both, sp-breathe 2.4s ease-in-out .5s infinite; }
-    #splash .sp-name { letter-spacing: .02em; opacity: .9; }
-    #splash .sp-bar { width: 96px; height: 3px; border-radius: 3px; background: rgb(127 110 90 / .2); overflow: hidden; }
-    #splash .sp-bar i { display: block; width: 40%; height: 100%; border-radius: 3px; background: #b8905f; animation: sp-load 1s ease-in-out infinite; }
-    #splash.hide { opacity: 0; transform: scale(1.06); pointer-events: none; }
-    @keyframes sp-pop { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
-    @keyframes sp-breathe { 50% { transform: scale(1.04); } }
-    @keyframes sp-load { from { transform: translateX(-110%); } to { transform: translateX(260%); } }
-    @media (prefers-reduced-motion: reduce) { #splash img, #splash .sp-bar i { animation: none; } }
+      gap: 16px; background-color: #f6f2ec; color: #3a2f25; font: 600 20px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      letter-spacing: -0.01em; transition: opacity .45s ease; }
+    @media (prefers-color-scheme: dark) { html:not([data-theme="light"]) #splash { background-color: #0e0c0a; color: #ece4d8; } }
+    html[data-theme="dark"] #splash { background-color: #0e0c0a; color: #ece4d8; }
+    #splash img { width: 84px; height: 84px; border-radius: 20px; }
+    #splash img, #splash .sp-name { animation: sp-in .6s cubic-bezier(.2,.7,.2,1) both; }
+    #splash .sp-name { animation-delay: .12s; }
+    /* Mở màn: logo + tên mờ dần, rồi nền tan ra để lộ app đang phóng vào */
+    #splash.out img, #splash.out .sp-name { transition: opacity .35s ease, transform .35s ease; opacity: 0; transform: scale(.96); animation: none; }
+    #splash.hide { opacity: 0; pointer-events: none; }
+    @keyframes sp-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { #splash img, #splash .sp-name { animation: none; } }
   </style>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -51,15 +45,14 @@
   <title>iF Finance</title>
   <meta name="robots" content="noindex">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/refined.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js" integrity="sha384-dug+JxfBvklEQdJ4AYuBBAIScUz0bVN73xpy273gcAwHjb3qI0fXmuYNaNfdyYJG" crossorigin="anonymous" async></script>
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
-  <div id="splash" aria-hidden="true"><img src="icons/icon.svg" alt=""><div class="sp-name">iFinance</div><div class="sp-bar"><i></i></div></div>
+  <div id="splash" aria-hidden="true"><img src="icons/icon.svg" alt=""><div class="sp-name">iFinance</div></div>
   <header class="topbar">
     <div class="brand">
       <span class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--logo-a)"/><stop offset=".55" style="stop-color:var(--logo-b)"/><stop offset="1" style="stop-color:var(--logo-c)"/></linearGradient><linearGradient id="logo-gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--logo-fg1)"/><stop offset="1" style="stop-color:var(--logo-fg2)"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#logo-g)"/><path d="M4 25.5 L11 21 L16 23 L28 13" fill="none" style="stroke:var(--logo-fg1)" stroke-opacity=".3" stroke-width="1.2" stroke-linecap="round"/><circle cx="10.6" cy="9" r="2.3" fill="url(#logo-gg)"/><rect x="8.8" y="12.6" width="3.6" height="11.4" rx="1.3" style="fill:var(--logo-i)"/><rect x="15.4" y="7.6" width="3.7" height="16.4" rx="1.3" fill="url(#logo-gg)"/><rect x="15.4" y="7.6" width="10.2" height="3.6" rx="1.3" fill="url(#logo-gg)"/><rect x="15.4" y="14.3" width="7.8" height="3.4" rx="1.2" fill="url(#logo-gg)"/></svg></span>

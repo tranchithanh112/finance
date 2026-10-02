@@ -1,0 +1,77 @@
+/* ================= Lớp "tiết chế" =================
+   Bớt các chi tiết trang trí kiểu giao diện sinh tự động (chuyển sắc, quầng sáng, chữ in hoa giãn,
+   bo tròn to, đổ bóng khắp nơi) để giao diện gọn và "có chủ ý" như một app tài chính do người thiết kế:
+   font hệ thống, nền phẳng + viền mảnh, số liệu là trọng tâm, nút chính đơn sắc. */
+
+:root {
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: -0.003em;
+}
+h1, h2, h3 { letter-spacing: -0.012em; }
+.card h3, .card-head h3 { font-size: 15px; font-weight: 600; }
+
+/* Thẻ: phẳng, chỉ viền mảnh */
+.card, .kpi { box-shadow: none; }
+.logo { box-shadow: none; border-radius: 8px; }
+
+/* Ô số liệu: nhãn viết thường, số là trọng tâm */
+.kpi > span, .kpi.hero > span {
+  text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; color: var(--muted);
+}
+.kpi b { font-weight: 600; letter-spacing: -0.02em; }
+.kpi small { font-size: 12.5px; }
+
+/* Ô chính (tài sản ròng, tổng giá trị…): bỏ nền chuyển sắc / lưới / quầng sáng — chỉ con số lớn */
+.kpi.hero {
+  background: transparent; border: 0; color: var(--text); box-shadow: none;
+  padding: 6px 4px 10px; overflow: visible;
+}
+.kpi.hero::before, .kpi.hero::after { display: none; }
+.kpi.hero b { font-size: 36px; font-weight: 650; letter-spacing: -0.03em; color: var(--text); margin: 2px 0 4px; }
+.kpi.hero b.pos { color: var(--pos); }
+.kpi.hero b.neg { color: var(--neg); }
+.kpi.hero small { color: var(--muted); }
+.kpi.hero .pos { color: var(--pos); }
+.kpi.hero .neg { color: var(--neg); }
+@media (max-width: 720px) {
+  .kpi.hero { padding: 4px 2px 8px; }
+  .kpi.hero b { font-size: 34px; }
+}
+
+/* Bảng: tiêu đề cột viết thường */
+.tbl th { text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 500; }
+
+/* Nút chính & lựa chọn đang chọn: đơn sắc (chữ / nền đảo màu), không chuyển sắc, không phát sáng */
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); box-shadow: none; }
+.btn.primary:hover:not(:disabled) { filter: none; opacity: .88; border-color: var(--text); }
+.chip { border-radius: var(--radius-sm); }
+.chip.on { background: var(--text); color: var(--bg); border-color: var(--text); box-shadow: none; }
+.seg { border-radius: 9px; }
+.seg button { border-radius: 7px; }
+.seg button.on { box-shadow: 0 0 0 1px var(--border); }
+
+/* Thanh tab trên máy tính: chỉ gạch chân */
+.tabs button.on { background: none; box-shadow: inset 0 -2px 0 var(--text); color: var(--text); }
+
+/* Nút điều khiển trên thanh trên cùng */
+.icon-btn, select.cur { border-radius: var(--radius-sm); }
+
+/* Nút + nổi: đơn sắc, bóng nhẹ */
+@media (max-width: 720px) {
+  .fab {
+    background: var(--text); border: 0;
+    box-shadow: 0 4px 14px rgb(0 0 0 / .22);
+  }
+  .fab svg.i { color: var(--bg); }
+}
+
+/* Thông báo, bảng chọn: bo vừa phải */
+.toast { border-radius: 10px; }
+.tag { border-radius: 6px; }
+.tx-icon, .order-item .ico { border-radius: 10px; }
+.jar, .order-item, .tips { border-radius: 10px; }

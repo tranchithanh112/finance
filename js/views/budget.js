@@ -4,7 +4,7 @@ import { donut, bars, PALETTE } from '../charts.js';
 import {
   parseAmount, monthSummary, shiftMonth, monthKey, localToday, catMap, generateRecurring, SPEND_JARS,
 } from '../budget.js';
-import { esc, fmtMoney, fmtPct, uid, toast } from '../util.js';
+import { esc, fmtMoney, fmtPct, uid, toast, captureDrafts, restoreDrafts } from '../util.js';
 import { locale } from '../i18n.js';
 
 const ui = { month: null, type: 'expense', cat: null, showConfig: false, date: null };
@@ -215,7 +215,14 @@ function bind(root, ctx, b) {
     btn.onclick = () => { ui.month = shiftMonth(ui.month, Number(btn.dataset.month)); ctx.rerender(); };
   });
   root.querySelectorAll('[data-type]').forEach((btn) => {
-    btn.onclick = () => { ui.type = btn.dataset.type; ui.cat = null; ctx.rerender(); };
+    btn.onclick = () => {
+      // đổi Chi ↔ Thu: giữ số tiền / ghi chú / ngày đang nhập
+      const drafts = captureDrafts(root.querySelector('#tx-add'));
+      ui.type = btn.dataset.type;
+      ui.cat = null;
+      ctx.rerender();
+      restoreDrafts(document.querySelector('#tx-add'), drafts);
+    };
   });
   root.querySelectorAll('[data-cat]').forEach((btn) => {
     btn.onclick = () => {

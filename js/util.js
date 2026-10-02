@@ -121,3 +121,38 @@ export function downloadFile(name, text, type = 'application/json') {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+
+// ---- Giữ nội dung đang nhập dở khi giao diện vẽ lại ----
+const FIELD = 'input:not([type=password]):not([type=file]):not([type=hidden]):not([type=submit]):not([type=button]), textarea, select';
+const fieldKey = (el) => `${el.form?.id || el.closest('[id]')?.id || ''}|${el.name || el.id}`;
+const changed = (el) => (el.type === 'checkbox' || el.type === 'radio' ? el.checked !== el.defaultChecked
+  : el.tagName === 'SELECT' ? [...el.options].some((o) => o.selected !== o.defaultSelected) : el.value !== el.defaultValue);
+
+/** Lưu các ô người dùng đã sửa (khác giá trị mặc định) trong `root`. */
+export function captureDrafts(root) {
+  const out = new Map();
+  if (!root) return out;
+  for (const el of root.querySelectorAll(FIELD)) {
+    if ((el.name || el.id) && changed(el)) out.set(fieldKey(el), el.type === 'checkbox' || el.type === 'radio' ? el.checked : el.value);
+  }
+  return out;
+}
+
+/** Điền lại nội dung đã lưu vào các ô tương ứng sau khi vẽ lại. */
+export function restoreDrafts(root, drafts) {
+  if (!root || !drafts?.size) return;
+  for (const el of root.querySelectorAll(FIELD)) {
+    const k = fieldKey(el);
+    if (!drafts.has(k)) continue;
+    const v = drafts.get(k);
+    if (el.type === 'checkbox' || el.type === 'radio') el.checked = v;
+    else el.value = v;
+    el.dispatchEvent(new Event('input', { bubbles: true })); // cập nhật phần xem trước (vd "= 45.000 ₫")
+  }
+}
+
+/** Đang gõ trong một ô nhập của nội dung chính? */
+export function isTyping() {
+  const a = document.activeElement;
+  return Boolean(a && a.matches?.(`${FIELD}, [contenteditable]`) && a.closest('main'));
+}

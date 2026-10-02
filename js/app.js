@@ -6,7 +6,7 @@ import { computePnl, buildEvents } from './pnl.js';
 import { cryptoSeries, stockSeries, reconcileWithWallet } from './series.js';
 import { totals, fxRate, toUSD, fundPrice } from './calc.js';
 import * as sync from './sync.js';
-import { $, $$, toast, setDisplayCurrency, isStable, esc, isPrivate, setPrivate } from './util.js';
+import { captureDrafts, restoreDrafts, isTyping, $, $$, toast, setDisplayCurrency, isStable, esc, isPrivate, setPrivate } from './util.js';
 import { icon } from './icons.js';
 import { tr, translateDom, setLang, getLang } from './i18n.js';
 import { loadPalette } from './charts.js';
@@ -47,7 +47,7 @@ let stockHist = (() => { try { return JSON.parse(localStorage.getItem('fin.stock
 // ================= Actions =================
 
 const ctx = {
-  rerender: render,
+  rerender: () => render(true), // thao tác của người dùng → vẽ ngay
   serverConfig: () => serverCfg,
   syncState: () => syncing,
 
@@ -428,7 +428,25 @@ function unlock() {
   else render();
 }
 
-function render() {
+// Vẽ lại do tác vụ nền (đồng bộ, làm mới giá…) không được cướp focus khi đang gõ:
+// hoãn tới khi rời ô nhập, và giữ nguyên nội dung đang nhập dở. Thao tác của người dùng (ctx.rerender) vẽ ngay.
+let pendingRender = false;
+
+function render(force = false) {
+  if (!force && !isLocked() && isTyping()) { pendingRender = true; return; }
+  pendingRender = false;
+  const tab = document.querySelector('main .tab:not([hidden])');
+  const drafts = force ? null : captureDrafts(tab);
+  draw();
+  if (drafts?.size) restoreDrafts(document.querySelector('main .tab:not([hidden])'), drafts);
+}
+
+document.addEventListener('focusout', () => {
+  // chờ focus chuyển sang ô kế tiếp (vd bấm từ Số tiền sang Ghi chú) rồi mới kiểm tra
+  setTimeout(() => { if (pendingRender && !isTyping()) render(); }, 200);
+});
+
+function draw() {
   if (isLocked()) return renderLock();
   applyCurrency();
   loadPalette();

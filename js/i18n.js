@@ -200,7 +200,7 @@ const EXACT = {
   'Tài sản ròng bạn muốn đạt. App hiện tiến độ và ước tính khi nào đạt dựa trên mức để dành hằng tháng.': 'The net worth you want to reach. The app shows progress and estimates when you will get there from your monthly savings.',
   'Xóa mục tiêu tài sản?': 'Delete the net worth goal?',
   'Chi tiêu': 'Spending', 'Chưa nhập thu chi': 'No budget entries', 'Kéo lên:': 'Top gainer:', 'Kéo xuống:': 'Top loser:',
-  'Tháng này chưa mua': 'Not bought yet this month:', 'Mua thêm →': 'Buy more →', 'Mua thêm': 'Buy more',
+  'Tháng này chưa mua': 'Not bought yet this month:', 'chưa có giá': 'no price yet', 'Mua thêm →': 'Buy more →', 'Mua thêm': 'Buy more',
   // ---- biểu đồ theo thời gian
   'Theo loại': 'By class', '1T': '1M', '3T': '3M', '6T': '6M', '1N': '1Y', 'từ đầu': 'since start', 'chưa chốt': 'unrealized', 'lãi/lỗ từ đầu': 'P&L since start',
   'Mỗi ngày lưu 1 điểm khi bạn mở app / làm mới số dư.': 'One point is saved per day when you open the app / refresh balances.',
@@ -233,6 +233,7 @@ const TERMS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const RULES = [
+  [/^Yahoo Finance không có giá cho (.+) \(thường là quỹ mở\) — đã chuyển sang nhập tay\. Nhập NAV hiện tại của quỹ\.$/, 'Yahoo Finance has no price for $1 (usually an open-ended fund) — switched to manual. Enter the fund\'s current NAV.'],
   [/^Tháng (\d\d\/\d{4})$/, 'Month $1'],
   [/^(.+) so với tháng trước$/, '$1 vs last month'],
   [/^Để dành & đầu tư (.+)$/, 'Saved & invested $1'],

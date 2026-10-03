@@ -262,6 +262,8 @@ input { min-width: 0; }
 .sortable:hover, .sortable.active { color: var(--text); }
 .sortable.active::after { content: ' ↓'; }
 .sub { font-size: 11.5px; color: var(--muted); }
+.row-actions { display: flex; gap: 10px; margin-top: 4px; font-size: 12.5px; white-space: nowrap; }
+.row-actions .link { font-size: inherit; padding: 0; }
 .nowrap { white-space: nowrap; }
 .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
 .tag.ok { background: color-mix(in srgb, var(--pos) 14%, transparent); color: var(--pos); }

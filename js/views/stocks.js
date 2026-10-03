@@ -68,21 +68,21 @@ export function renderStocks(root, ctx) {
       <div class="card-head"><h3>Danh mục</h3><button class="btn" id="st-quotes">↻ Cập nhật giá</button></div>
       <div class="table-wrap"><table class="tbl">
         <thead><tr><th>Mã</th><th class="r">Số CCQ/CP</th><th class="r">Giá vốn TB</th><th class="r">Giá hiện tại</th>
-          <th class="r">Giá trị</th><th class="r">Tỷ trọng</th><th class="r">Lãi/lỗ</th><th class="r">%</th><th></th></tr></thead>
+          <th class="r">Giá trị</th><th class="r">Tỷ trọng</th><th class="r">Lãi/lỗ</th><th class="r">%</th></tr></thead>
         <tbody>${pos.map((p) => `
           <tr>
-            <td><b>${esc(p.ticker)}</b><div class="sub">${esc(p.name || '')}</div></td>
+            <td><b>${esc(p.ticker)}</b><div class="sub">${esc(p.name || '')}</div>
+              <div class="row-actions"><button class="link" data-buy="${esc(p.ticker)}">Mua thêm</button>
+                <button class="link" data-edit="${esc(p.ticker)}">Sửa</button>
+                <button class="link danger" data-del="${esc(p.ticker)}">Xóa</button></div></td>
             <td class="r">${fmtQty(p.units)}</td>
-            <td class="r">${fmtNative(p.avg, p.currency)}</td>
-            <td class="r">${fmtNative(p.price, p.currency)}${p.source === 'manual' ? '<div class="sub">nhập tay</div>' : ''}</td>
+            <td class="r">${p.units ? fmtNative(p.avg, p.currency) : '—'}</td>
+            <td class="r">${p.price ? fmtNative(p.price, p.currency) : '—'}${p.source === 'manual' ? '<div class="sub">nhập tay</div>' : p.price ? '' : '<div class="sub">chưa có giá</div>'}</td>
             <td class="r"><b>${fmtMoney(p.valueUSD)}</b></td>
             <td class="r">${value ? fmtPct(p.valueUSD / value, { sign: false }) : ''}</td>
             <td class="r ${pnlClass(p.totalUSD)}">${fmtMoney(p.totalUSD, { sign: true })}</td>
             <td class="r ${pnlClass(p.unrealized)}">${p.cost ? fmtPct(p.unrealized / p.cost) : '—'}</td>
-            <td class="r nowrap"><button class="link" data-buy="${esc(p.ticker)}">Mua thêm</button>
-              <button class="link" data-edit="${esc(p.ticker)}">Sửa</button>
-              <button class="link danger" data-del="${esc(p.ticker)}">Xóa</button></td>
-          </tr>`).join('') || '<tr><td colspan="9" class="empty">Chưa có mã nào — thêm ở form phía trên.</td></tr>'}
+          </tr>`).join('') || '<tr><td colspan="8" class="empty">Chưa có mã nào — thêm ở form phía trên.</td></tr>'}
         </tbody>
       </table></div>
     </div>
@@ -120,7 +120,13 @@ export function renderStocks(root, ctx) {
   root.querySelector('#st-quotes').onclick = () => ctx.refreshQuotes(true);
   root.querySelector('#fund-cancel')?.addEventListener('click', () => { editing = null; ctx.rerender(); });
 
-  root.querySelector('#fund-form').onsubmit = (e) => {
+  // Mã sàn Việt Nam (.VN) → tiền tệ VND
+  const fundForm = root.querySelector('#fund-form');
+  fundForm.ticker.addEventListener('input', () => {
+    if (/\.VN$/i.test(fundForm.ticker.value.trim())) fundForm.currency.value = 'VND';
+  });
+
+  root.querySelector('#fund-form').onsubmit = async (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));
     const ticker = f.ticker.trim().toUpperCase();
@@ -130,11 +136,26 @@ export function renderStocks(root, ctx) {
     };
     const ex = state.stocks.funds.find((x) => x.ticker === ticker);
     if (ex && !editing) return toast('Mã đã tồn tại', 'error');
+    // Yahoo không có quỹ mở (DCDS, VESAF…): chuyển sang nhập tay thay vì giữ một mã báo lỗi mãi
+    let needNav = false;
+    if (data.source === 'yahoo' && ex?.source !== 'yahoo') {
+      const btn = e.target.querySelector('button.primary');
+      btn.disabled = true;
+      const q = await ctx.checkQuote(ticker);
+      btn.disabled = false;
+      if (q?.currency && ['USD', 'VND'].includes(q.currency)) data.currency = q.currency;
+      if (q === null) {
+        data.source = 'manual';
+        needNav = data.manualPrice == null;
+        toast(`Yahoo Finance không có giá cho ${ticker} (thường là quỹ mở) — đã chuyển sang nhập tay. Nhập NAV hiện tại của quỹ.`, 'info', 9000);
+      }
+    }
     if (ex) Object.assign(ex, data);
     else state.stocks.funds.push(data);
-    editing = null;
+    editing = needNav ? ticker : null; // mở lại form để điền NAV
     commit({ edit: true });
     ctx.rerender();
+    if (needNav) root.querySelector('#fund-form [name=manualPrice]')?.focus();
     if (data.source === 'yahoo') ctx.refreshQuotes(false);
   };
 

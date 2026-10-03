@@ -213,6 +213,19 @@ const ctx = {
     } catch { /* bỏ qua, lần sau thử lại */ }
   },
 
+  /** Hỏi Yahoo giá 1 mã. Trả về quote, null nếu Yahoo không có mã này, undefined nếu không hỏi được (mất mạng…). */
+  async checkQuote(symbol) {
+    if (!hasAuth()) return undefined;
+    try {
+      const r = await fetch(`/api/quote?symbols=${encodeURIComponent(symbol)}`, { headers: authHeaders() });
+      if (!r.ok) return undefined;
+      const data = await r.json();
+      if (data.quotes?.[symbol]) return data.quotes[symbol];
+      // chỉ coi là "không có mã" khi Yahoo nói rõ vậy; lỗi tạm thời (429, 5xx) thì không kết luận
+      return /not found|delisted|no data|HTTP 404/i.test(data.errors?.[symbol] || '') ? null : undefined;
+    } catch { return undefined; }
+  },
+
   async refreshQuotes(showToast = false) {
     const funds = state.stocks.funds.filter((f) => f.source !== 'manual');
     if (!hasAuth()) return;

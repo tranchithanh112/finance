@@ -118,7 +118,7 @@ const EXACT = {
   'Giá trị chứng khoán / quỹ': 'Stocks / funds value', 'Vốn đang nắm': 'Cost basis', 'Hôm nay': 'Today', 'Phân bổ': 'Allocation',
   'Chưa có vị thế.': 'No positions yet.', 'Thêm quỹ / mã chứng khoán': 'Add fund / ticker', 'Mã': 'Ticker', 'Tên': 'Name',
   'Tiền tệ': 'Currency', 'Nguồn giá': 'Price source', 'Yahoo Finance (tự động)': 'Yahoo Finance (auto)',
-  'Nhập tay (NAV quỹ mở)': 'Manual (open-end fund NAV)', 'Giá nhập tay': 'Manual price', 'NAV / giá hiện tại': 'NAV / current price',
+  'Nhập tay': 'Manual', 'Fmarket (NAV quỹ mở, tự động)': 'Fmarket (open-end fund NAV, automatic)', 'Giá nhập tay': 'Manual price', 'NAV / giá hiện tại': 'NAV / current price',
   'Thêm mã': 'Add ticker', '↻ Cập nhật giá': '↻ Update prices', 'Số CCQ/CP': 'Units', '%': '%', 'nhập tay': 'manual',
   'Chưa có mã nào — thêm ở form phía trên.': 'No tickers yet — add one above.', 'Giá / đơn vị': 'Price / unit',
   'Thành tiền': 'Total', 'Chưa có giao dịch.': 'No transactions yet.', 'Mã đã tồn tại': 'Ticker already exists',
@@ -233,6 +233,8 @@ const TERMS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const RULES = [
+  [/^(.+): lấy NAV tự động từ Fmarket \((.+)\)$/, '$1: NAV fetched automatically from Fmarket ($2)'],
+  [/^(.+): Yahoo không có, đã chuyển sang lấy NAV từ Fmarket$/, '$1: not on Yahoo, switched to NAV from Fmarket'],
   [/^Yahoo Finance không có giá cho (.+) \(thường là quỹ mở\) — đã chuyển sang nhập tay\. Nhập NAV hiện tại của quỹ\.$/, 'Yahoo Finance has no price for $1 (usually an open-ended fund) — switched to manual. Enter the fund\'s current NAV.'],
   [/^Tháng (\d\d\/\d{4})$/, 'Month $1'],
   [/^(.+) so với tháng trước$/, '$1 vs last month'],
@@ -357,7 +359,7 @@ const RULES = [
   [/^\(đã có từ env (\w+)\)$/, '(provided by env $1)'],
   [/^Cấu hình$/, 'Set'],
   [/^trên Vercel,\s+nhập mật khẩu ứng dụng trong tab Cài đặt rồi bấm làm mới\.$/, 'in Vercel, enter the app password in Settings, then refresh.'],
-  [/^\(vd E1VFVN30\.VN\)\.\s+Quỹ mở [\s\S]*$/, '(e.g. E1VFVN30.VN). Open-end funds (VESAF, DCDS, VFMVSF…): choose "Manual" and update the NAV periodically.'],
+  [/^\(vd E1VFVN30\.VN\)\.\s+Quỹ mở [\s\S]*$/, '(e.g. E1VFVN30.VN). Open-end funds (DCDS, VESAF, DCBF…): choose "Fmarket" for automatic NAV; if Fmarket doesn\'t list it, choose "Manual".'],
   [/^\), chọn định dạng CSV[\s\S]*$/, '), choose CSV, up to 1 year per file — import one year at a time. Duplicates between CSV and API are skipped automatically. Trade History files also work — they include P&L and fees, but not funding.'],
   [/^\(trống = tự động, hiện (.+)\)$/, '(empty = automatic, currently $1)'],
   [/^Tỷ giá USD\/VND cố định$/, 'Fixed USD/VND rate'],

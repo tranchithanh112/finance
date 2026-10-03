@@ -4,7 +4,7 @@ import { computeFutures, syncFuturesIncome, csvToIncome, mergeIncome, emptyFutur
 import { makePriceLookup } from './pnl.js';
 import { computePnl, buildEvents } from './pnl.js';
 import { cryptoSeries, stockSeries, reconcileWithWallet } from './series.js';
-import { totals, fxRate, toUSD, fundPrice } from './calc.js';
+import { totals, fxRate, toUSD, fundPrice, quoteSymbol } from './calc.js';
 import * as sync from './sync.js';
 import { captureDrafts, restoreDrafts, isTyping, $, $$, toast, setDisplayCurrency, isStable, esc, isPrivate, setPrivate } from './util.js';
 import { icon } from './icons.js';
@@ -202,12 +202,12 @@ const ctx = {
     if (!stale.length || !hasAuth() || Date.now() - histTriedAt < 60e3) return;
     histTriedAt = Date.now();
     try {
-      const r = await fetch(`/api/quote?history=5y&symbols=${encodeURIComponent(stale.map((f) => f.ticker).join(','))}`, {
+      const r = await fetch(`/api/quote?history=5y&symbols=${encodeURIComponent(stale.map(quoteSymbol).join(','))}`, {
         headers: authHeaders(),
       });
       const data = await r.json();
       if (!r.ok) return;
-      for (const f of stale) stockHist[f.ticker] = { at: Date.now(), rows: data.history?.[f.ticker] || stockHist[f.ticker]?.rows || [] };
+      for (const f of stale) stockHist[f.ticker] = { at: Date.now(), rows: data.history?.[quoteSymbol(f)] || stockHist[f.ticker]?.rows || [] };
       try { localStorage.setItem('fin.stockHist', JSON.stringify(stockHist)); } catch { /* đầy bộ nhớ thì thôi */ }
       if (current === 'stocks') render();
     } catch { /* bỏ qua, lần sau thử lại */ }
@@ -229,19 +229,33 @@ const ctx = {
   async refreshQuotes(showToast = false) {
     const funds = state.stocks.funds.filter((f) => f.source !== 'manual');
     if (!hasAuth()) return;
-    const symbols = [...funds.map((f) => f.ticker), 'VND=X'];
+    // Mã .VN chưa từng có giá Yahoo: thử luôn Fmarket (quỹ mở) để tự chuyển nguồn
+    const probe = funds.filter((f) => f.source === 'yahoo' && /\.VN$/i.test(f.ticker) && !f.lastPrice);
+    const fmSym = (f) => quoteSymbol({ ...f, source: 'fmarket' });
+    const symbols = [...funds.map(quoteSymbol), ...probe.map(fmSym), 'VND=X'];
     try {
       const r = await fetch(`/api/quote?symbols=${encodeURIComponent(symbols.join(','))}`, {
         headers: authHeaders(),
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || r.status);
+      const moved = [];
+      for (const f of probe) {
+        if (data.quotes[f.ticker] || !data.quotes[fmSym(f)]) continue;
+        Object.assign(f, { source: 'fmarket', currency: 'VND' });
+        delete data.errors?.[f.ticker];
+        moved.push(f.ticker);
+      }
       for (const f of funds) {
-        const q = data.quotes[f.ticker];
-        if (q) Object.assign(f, { lastPrice: q.price, prevClose: q.prevClose, lastPriceAt: Date.now(), name: f.name || q.name });
+        const q = data.quotes[quoteSymbol(f)];
+        if (q) Object.assign(f, { lastPrice: q.price, prevClose: q.prevClose, lastPriceAt: Date.now(), priceTime: q.time || null, name: f.name || q.name });
+      }
+      if (moved.length) {
+        state.editedAt = Date.now(); // đổi nguồn giá là thay đổi của người dùng → đồng bộ sang máy khác
+        toast(`${moved.join(', ')}: Yahoo không có, đã chuyển sang lấy NAV từ Fmarket`, 'ok', 7000);
       }
       if (data.quotes['VND=X']) state.fx = { USDVND: data.quotes['VND=X'].price, updatedAt: Date.now() };
-      const errs = Object.keys(data.errors || {}).filter((s) => s !== 'VND=X');
+      const errs = Object.keys(data.errors || {}).filter((s) => s !== 'VND=X' && !probe.some((f) => fmSym(f) === s)).map((s) => s.replace(/^FMARKET:/, ''));
       snapshot();
       commit();
       ctx.refreshStockHistory();

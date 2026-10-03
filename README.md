@@ -7,7 +7,7 @@ Dashboard danh mục đầu tư cá nhân: **crypto trên Binance** + **chứng 
 - **Crypto**: số dư Spot + Funding + Simple Earn, giá trị, tỷ trọng %, giá vốn TB và PnL từng coin.
 - **Lịch sử & PnL**: đọc toàn bộ lịch sử lệnh, nạp/rút, Convert, đổi dust → tính lãi/lỗ **đã chốt + chưa chốt** của từng coin đang giữ, đã thoát hoặc từng nắm giữ; xem chi tiết từng lệnh.
 - **Futures**: lãi/lỗ USDⓈ-M + COIN-M từ trước tới nay (đóng lệnh, phí, funding, thanh lý), theo cặp và theo tháng, vị thế đang mở; ví futures được cộng vào tổng tài sản.
-- **Chứng khoán**: quỹ ETF/quỹ chỉ số (VOO, VTI, E1VFVN30.VN, FUEVFVND.VN…) lấy giá tự động từ Yahoo Finance, hoặc nhập NAV tay cho quỹ mở; nhập giao dịch mua/bán (DCA).
+- **Chứng khoán**: quỹ ETF/quỹ chỉ số (VOO, VTI, E1VFVN30.VN, FUEVFVND.VN…) lấy giá tự động từ Yahoo Finance; quỹ mở Việt Nam (DCDS, VESAF, DCBF…) lấy NAV từ Fmarket (API web không chính thức — hỏng thì giữ giá cũ, chuyển sang nhập tay được); nhập giao dịch mua/bán (DCA).
 - **Đồng bộ** toàn bộ dữ liệu dưới dạng 1 file JSON lên **Dropbox** hoặc **Google Drive**, hoặc xuất/nhập file thủ công.
 - Hiển thị USD hoặc VND (tỷ giá tự động hoặc cố định).
 
@@ -22,7 +22,7 @@ Dashboard danh mục đầu tư cá nhân: **crypto trên Binance** + **chứng 
 ```
 index.html, css/, js/     ← frontend thuần (HTML + ES modules, Chart.js từ CDN)
 api/binance.js           ← proxy CHỈ ĐỌC tới Binance, ký HMAC bằng key trong env Vercel
-api/quote.js             ← giá chứng khoán / tỷ giá từ Yahoo Finance
+api/quote.js             ← giá chứng khoán / tỷ giá từ Yahoo Finance, NAV quỹ mở (mã FMARKET:…) qua api/_fmarket.js
 api/config.js            ← cấu hình công khai (client id Dropbox/Google) + kiểm tra mật khẩu
 ```
 

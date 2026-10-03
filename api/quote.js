@@ -1,8 +1,10 @@
 import { checkAuth } from './_lib.js';
+import { fmarketQuote, fmarketHistory } from './_fmarket.js';
 
 // Lấy giá chứng khoán / quỹ ETF / tỷ giá từ Yahoo Finance (không cần API key).
 // GET /api/quote?symbols=VOO,E1VFVN30.VN,VND=X
 // GET /api/quote?symbols=E1VFVN30.VN&history=5y → thêm giá đóng cửa ngày: history[sym] = [[ms, close], ...]
+// Mã dạng FMARKET:DCDS → NAV quỹ mở từ Fmarket (Yahoo không có quỹ mở Việt Nam).
 export default async function handler(req, res) {
   if (!checkAuth(req, res)) return;
   const symbols = String(req.query.symbols || '')
@@ -17,6 +19,16 @@ export default async function handler(req, res) {
   const errors = {};
   const history = {};
   await Promise.all(symbols.map(async (sym) => {
+    if (/^FMARKET:/i.test(sym)) {
+      const code = sym.slice(8);
+      try {
+        quotes[sym] = await fmarketQuote(code);
+        if (range) history[sym] = await fmarketHistory(code, Number.parseInt(range, 10) || 10);
+      } catch (e) {
+        errors[sym] = e.message;
+      }
+      return;
+    }
     try {
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=${range || '5d'}&interval=1d`;
       const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (finance-dashboard)' } });

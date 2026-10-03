@@ -18,6 +18,9 @@ export function cryptoTotal() {
   return state.crypto.holdings.reduce((a, h) => a + (h.value || 0), 0);
 }
 
+/** Mã gửi cho /api/quote: quỹ mở lấy NAV từ Fmarket (FMARKET:DCDS), còn lại hỏi Yahoo. */
+export const quoteSymbol = (f) => (f.source === 'fmarket' ? 'FMARKET:' + String(f.ticker).toUpperCase().replace(/\.VN$/, '') : f.ticker);
+
 export function fundPrice(f) {
   return f.source === 'manual' ? Number(f.manualPrice) || 0 : Number(f.lastPrice) || Number(f.manualPrice) || 0;
 }

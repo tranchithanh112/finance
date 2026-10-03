@@ -1,5 +1,5 @@
 import { state, commit } from '../store.js';
-import { stockPositions, fxRate } from '../calc.js';
+import { stockPositions, fxRate, quoteSymbol } from '../calc.js';
 import { donut, PALETTE } from '../charts.js';
 import { historyCard, bindHistory } from './history-card.js';
 import { dcaDue } from '../insights.js';
@@ -52,7 +52,8 @@ export function renderStocks(root, ctx) {
           <label>Tiền tệ<select name="currency">${['USD', 'VND'].map((c) => `<option ${ed?.currency === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
           <label>Nguồn giá<select name="source">
             <option value="yahoo" ${ed?.source !== 'manual' ? 'selected' : ''}>Yahoo Finance (tự động)</option>
-            <option value="manual" ${ed?.source === 'manual' ? 'selected' : ''}>Nhập tay (NAV quỹ mở)</option></select></label>
+            <option value="fmarket" ${ed?.source === 'fmarket' ? 'selected' : ''}>Fmarket (NAV quỹ mở, tự động)</option>
+            <option value="manual" ${ed?.source === 'manual' ? 'selected' : ''}>Nhập tay</option></select></label>
           <label>Giá nhập tay<input name="manualPrice" type="number" step="any" value="${esc(ed?.manualPrice ?? '')}" placeholder="NAV / giá hiện tại"></label>
           <div class="form-actions">
             <button class="btn primary">${ed ? 'Lưu' : 'Thêm mã'}</button>
@@ -60,7 +61,7 @@ export function renderStocks(root, ctx) {
           </div>
         </form>
         <p class="muted small">Mã Yahoo: cổ phiếu/ETF Mỹ để nguyên (VOO, VTI, QQQ); sàn Việt Nam thêm <code>.VN</code> (vd E1VFVN30.VN).
-          Quỹ mở (VESAF, DCDS, VFMVSF…) chọn "Nhập tay" và cập nhật NAV định kỳ.</p>
+          Quỹ mở (DCDS, VESAF, DCBF…) chọn "Fmarket" để lấy NAV tự động; quỹ Fmarket không có thì chọn "Nhập tay".</p>
       </div>
     </div>
 
@@ -71,13 +72,13 @@ export function renderStocks(root, ctx) {
           <th class="r">Giá trị</th><th class="r">Tỷ trọng</th><th class="r">Lãi/lỗ</th><th class="r">%</th></tr></thead>
         <tbody>${pos.map((p) => `
           <tr>
-            <td><b>${esc(p.ticker)}</b><div class="sub">${esc(p.name || '')}</div>
+            <td><b>${esc(p.ticker)}</b><div class="sub clip" title="${esc(p.name || '')}">${esc(p.name || '')}</div>
               <div class="row-actions"><button class="link" data-buy="${esc(p.ticker)}">Mua thêm</button>
                 <button class="link" data-edit="${esc(p.ticker)}">Sửa</button>
                 <button class="link danger" data-del="${esc(p.ticker)}">Xóa</button></div></td>
             <td class="r">${fmtQty(p.units)}</td>
             <td class="r">${p.units ? fmtNative(p.avg, p.currency) : '—'}</td>
-            <td class="r">${p.price ? fmtNative(p.price, p.currency) : '—'}${p.source === 'manual' ? '<div class="sub">nhập tay</div>' : p.price ? '' : '<div class="sub">chưa có giá</div>'}</td>
+            <td class="r">${p.price ? fmtNative(p.price, p.currency) : '—'}${p.source === 'manual' ? '<div class="sub">nhập tay</div>' : p.source === 'fmarket' ? `<div class="sub">Fmarket${p.priceTime ? ' · ' + timeAgo(p.priceTime) : ''}</div>` : p.price ? '' : '<div class="sub">chưa có giá</div>'}</td>
             <td class="r"><b>${fmtMoney(p.valueUSD)}</b></td>
             <td class="r">${value ? fmtPct(p.valueUSD / value, { sign: false }) : ''}</td>
             <td class="r ${pnlClass(p.totalUSD)}">${fmtMoney(p.totalUSD, { sign: true })}</td>
@@ -145,9 +146,16 @@ export function renderStocks(root, ctx) {
       btn.disabled = false;
       if (q?.currency && ['USD', 'VND'].includes(q.currency)) data.currency = q.currency;
       if (q === null) {
-        data.source = 'manual';
-        needNav = data.manualPrice == null;
-        toast(`Yahoo Finance không có giá cho ${ticker} (thường là quỹ mở) — đã chuyển sang nhập tay. Nhập NAV hiện tại của quỹ.`, 'info', 9000);
+        // Quỹ mở: thử lấy NAV từ Fmarket, không có nữa mới chuyển sang nhập tay
+        const fm = await ctx.checkQuote(quoteSymbol({ ticker, source: 'fmarket' }));
+        if (fm) {
+          Object.assign(data, { source: 'fmarket', currency: 'VND', name: data.name || fm.name });
+          toast(`${ticker}: lấy NAV tự động từ Fmarket (${fmtNative(fm.price, 'VND')})`, 'ok', 7000);
+        } else {
+          data.source = 'manual';
+          needNav = data.manualPrice == null;
+          toast(`Yahoo Finance không có giá cho ${ticker} (thường là quỹ mở) — đã chuyển sang nhập tay. Nhập NAV hiện tại của quỹ.`, 'info', 9000);
+        }
       }
     }
     if (ex) Object.assign(ex, data);
@@ -156,7 +164,7 @@ export function renderStocks(root, ctx) {
     commit({ edit: true });
     ctx.rerender();
     if (needNav) root.querySelector('#fund-form [name=manualPrice]')?.focus();
-    if (data.source === 'yahoo') ctx.refreshQuotes(false);
+    if (data.source !== 'manual') ctx.refreshQuotes(false);
   };
 
   root.querySelector('#tx-form').onsubmit = (e) => {

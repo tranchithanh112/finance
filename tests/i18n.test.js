@@ -20,6 +20,20 @@ test('dịch câu cố định, câu có số và tên danh mục', () => {
   assert.equal(tr('Futures: 3 bản ghi mới · bỏ qua COIN-M (chưa mở tài khoản hoặc key thiếu quyền)'), 'Futures: 3 new records · skipped COIN-M (account not opened or key lacks permission)');
   assert.equal(tr('Đã xóa Vietcombank'), 'Deleted Vietcombank');
   assert.equal(tr('Server lỗi (HTTP 502)'), 'Server error (HTTP 502)');
+  // tab Thu chi (giao diện mới)
+  assert.equal(tr('Giao dịch'), 'Transactions');
+  assert.equal(tr('Còn tiêu được tháng này'), 'Left to spend this month');
+  assert.equal(tr('Đã xóa khoản chi 45.000 ₫'), 'Expense deleted: 45.000 ₫');
+  assert.equal(tr('Đã khôi phục khoản thu'), 'Income restored');
+  assert.equal(tr('Đã xóa danh mục Ăn uống'), 'Category deleted: Food');
+  assert.equal(tr('Sửa khoản thu'), 'Edit income');
+  assert.equal(tr('Ngày 5 · Hằng tháng · Vietcombank'), 'Day 5 · Monthly · Vietcombank');
+  assert.equal(tr('Chưa có khoản nào trong tháng 10/2026'), 'No entries in Oct 2026');
+  assert.equal(tr('Tổng 95% — cần đúng 100%'), 'Total 95% — must be exactly 100%');
+  // "Danh mục" / "Tháng 10/2026" nghĩa khác nhau tùy tab: ở Thu chi dịch riêng, chỗ khác giữ nguyên
+  assert.equal(tr('Danh mục'), 'Portfolio');
+  assert.equal(tr('Danh mục', 'budget'), 'Categories');
+  assert.equal(tr('Tháng 10/2026', 'budget'), 'Oct 2026');
 });
 
 test('tiếng Việt: giữ nguyên', () => {

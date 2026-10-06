@@ -3,7 +3,7 @@
 Dashboard danh mục đầu tư cá nhân: **crypto trên Binance** + **chứng khoán / quỹ chỉ số** + tiền mặt, không cần build, deploy lên Vercel.
 
 - **Tổng quan — sức khỏe tài chính**: tài sản ròng (trừ nợ), dòng tiền tháng, tỷ lệ tiết kiệm, quỹ dự phòng (số tháng chi tiêu), lãi/lỗ đầu tư, **điểm sức khỏe tài chính 0–100** kèm gợi ý, phân bổ tài sản, tài sản ròng theo thời gian, tiền mặt và nợ.
-- **Thu chi**: ghi thu/chi nhanh (gõ `45k`, `1.2tr`), chia thu nhập vào 4 hũ (Thiết yếu, Tiết kiệm, Đầu tư, Hưởng thụ — tỷ lệ tùy chỉnh), khoản định kỳ tự thêm mỗi tháng (lương, hóa đơn…), biểu đồ chi theo danh mục & 6 tháng gần nhất.
+- **Thu chi**: thẻ "Còn tiêu được" (kèm số tiền tiêu được mỗi ngày), bấm **+** để ghi nhanh (nút 000 / nghìn / triệu, chọn danh mục dạng lưới), bấm vào một khoản để sửa, xóa có **Hoàn tác**; chia thu nhập vào 4 hũ (Thiết yếu, Tiết kiệm, Đầu tư, Hưởng thụ — tỷ lệ tùy chỉnh), khoản tự động hằng tháng (lương, hóa đơn…); màn Báo cáo: tiêu vào đâu, để dành bao nhiêu, 6 tháng gần nhất.
 - **Crypto**: số dư Spot + Funding + Simple Earn, giá trị, tỷ trọng %, giá vốn TB và PnL từng coin.
 - **Lịch sử & PnL**: đọc toàn bộ lịch sử lệnh, nạp/rút, Convert, đổi dust → tính lãi/lỗ **đã chốt + chưa chốt** của từng coin đang giữ, đã thoát hoặc từng nắm giữ; xem chi tiết từng lệnh.
 - **Futures**: lãi/lỗ USDⓈ-M + COIN-M từ trước tới nay (đóng lệnh, phí, funding, thanh lý), theo cặp và theo tháng, vị thế đang mở; ví futures được cộng vào tổng tài sản.

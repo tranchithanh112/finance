@@ -49,8 +49,6 @@ h1, h2, h3 { letter-spacing: -0.012em; }
 /* Nút chính & lựa chọn đang chọn: đơn sắc (chữ / nền đảo màu), không chuyển sắc, không phát sáng */
 .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); box-shadow: none; }
 .btn.primary:hover:not(:disabled) { filter: none; opacity: .88; border-color: var(--text); }
-.chip { border-radius: var(--radius-sm); }
-.chip.on { background: var(--text); color: var(--bg); border-color: var(--text); box-shadow: none; }
 .seg { border-radius: 9px; }
 .seg button { border-radius: 7px; }
 .seg button.on { box-shadow: 0 0 0 1px var(--border); }
@@ -73,5 +71,5 @@ h1, h2, h3 { letter-spacing: -0.012em; }
 /* Thông báo, bảng chọn: bo vừa phải */
 .toast { border-radius: 10px; }
 .tag { border-radius: 6px; }
-.tx-icon, .order-item .ico { border-radius: 10px; }
-.jar, .order-item, .tips { border-radius: 10px; }
+.bd-ic, .order-item .ico { border-radius: 10px; }
+.order-item, .tips { border-radius: 10px; }

@@ -17,7 +17,7 @@ import { renderPnl, updateProgress } from './views/pnl.js';
 import { renderStocks } from './views/stocks.js';
 import { renderSettings } from './views/settings.js';
 import { renderFutures } from './views/futures.js';
-import { renderBudget } from './views/budget.js';
+import { renderBudget, openNewEntry } from './views/budget.js';
 import { generateRecurring, setAnchor } from './budget.js';
 
 const VIEWS = {
@@ -663,12 +663,7 @@ async function init() {
     if (b) go(lastSub(b.dataset.tab));
   });
   $('#more-sheet').onclick = (e) => { if (e.target.id === 'more-sheet') $('#more-sheet').hidden = true; };
-  $('#fab').onclick = () => {
-    go('budget');
-    const input = document.getElementById('qa-amount');
-    input?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    input?.focus();
-  };
+  $('#fab').onclick = () => openNewEntry(ctx); // bảng ghi thu chi mở ngay trên tab đang xem
   $('#btn-theme').onclick = () => {
     const order = ['auto', 'light', 'dark'];
     setTheme(order[(order.indexOf(theme()) + 1) % order.length]);

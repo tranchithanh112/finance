@@ -106,8 +106,8 @@ export function line(canvas, labels, datasets, { money = true } = {}) {
   });
 }
 
-/** Biểu đồ cột nhóm (vd thu / chi theo tháng). Giá trị là USD, hiển thị theo tiền tệ đang chọn. */
-export function bars(canvas, labels, datasets) {
+/** Biểu đồ cột nhóm (vd thu / chi theo tháng). Mặc định giá trị là USD, hiển thị theo tiền tệ đang chọn; fmt để đổi cách hiện số. */
+export function bars(canvas, labels, datasets, { fmt = fmtMoney } = {}) {
   mount(canvas, {
     type: 'bar',
     data: {
@@ -119,11 +119,11 @@ export function bars(canvas, labels, datasets) {
       interaction: { mode: 'index', intersect: false },
       scales: {
         x: { ticks: { color: css('--muted') }, grid: { display: false } },
-        y: { ticks: { color: css('--muted'), callback: (v) => fmtMoney(v, { compact: true }) }, grid: { color: css('--grid') } },
+        y: { ticks: { color: css('--muted'), callback: (v) => fmt(v, { compact: true }) }, grid: { color: css('--grid') } },
       },
       plugins: {
         legend: { labels: { color: css('--text'), boxWidth: 10 } },
-        tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${fmtMoney(c.raw)}` } },
+        tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${fmt(c.raw)}` } },
       },
     },
   });

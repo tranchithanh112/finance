@@ -161,6 +161,9 @@
 :root[data-palette="glass"] .kpi,
 :root[data-palette="glass"] .sheet-panel,
 :root[data-palette="glass"] .toast,
+:root[data-palette="glass"] .sheet-dlg,
+:root[data-palette="glass"] .bd-day,
+:root[data-palette="glass"] .bd-sum span,
 :root[data-palette="glass"] .icon-btn,
 :root[data-palette="glass"] select.cur,
 :root[data-palette="glass"] .pill {
@@ -170,7 +173,7 @@
 :root[data-palette="glass"] .bottom-nav { background: var(--topbar-bg); }
 :root[data-palette="glass"] { --ring-inner: var(--bg); }
 :root[data-palette="glass"] .kpi.hero::before { opacity: .25; }
-:root[data-palette="glass"] .tx-icon, :root[data-palette="glass"] .jar { background: var(--surface-2); }
+:root[data-palette="glass"] .bd-ic { background: var(--surface-2); }
 
 /* ================= Chọn theme trong Cài đặt ================= */
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }

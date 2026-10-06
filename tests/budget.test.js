@@ -2,7 +2,69 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseAmount, defaultBudget, generateRecurring, monthSummary, recentAverage, healthScore, mergeBudget, shiftMonth,
+  spendingBudget, dayLabel, formatAmountInput, applyAmountKey, restoreTx,
 } from '../js/budget.js';
+
+test('spendingBudget: còn tiêu được, mỗi ngày, vượt, tháng cũ, chưa có thu nhập', () => {
+  const b = defaultBudget(); // Thiết yếu 30% + Hưởng thụ 15% = 45% thu nhập
+  b.txs = [
+    { id: 'i', date: '2026-10-05', type: 'income', amount: 20_000_000, cat: 'salary' },
+    { id: 'a', date: '2026-10-06', type: 'expense', amount: 3_000_000, cat: 'food' }, // Thiết yếu
+    { id: 'b', date: '2026-10-06', type: 'expense', amount: 1_000_000, cat: 'cafe' }, // Hưởng thụ
+    { id: 'c', date: '2026-10-06', type: 'expense', amount: 5_000_000, cat: 'saving' }, // để dành: không tính
+  ];
+  const r = spendingBudget(monthSummary(b, '2026-10'), '2026-10', '2026-10-06');
+  assert.equal(r.budget, 9_000_000);
+  assert.equal(r.spent, 4_000_000);
+  assert.equal(r.left, 5_000_000);
+  assert.equal(r.status, 'ok');
+  assert.equal(r.daysLeft, 26); // 06 → 31/10, tính cả hôm nay
+  assert.equal(Math.round(r.perDay), Math.round(5_000_000 / 26));
+
+  b.txs.push({ id: 'd', date: '2026-10-07', type: 'expense', amount: 6_000_000, cat: 'shopping' });
+  const over = spendingBudget(monthSummary(b, '2026-10'), '2026-10', '2026-10-07');
+  assert.equal(over.status, 'over');
+  assert.equal(over.left, -1_000_000);
+  assert.equal(over.perDay, null);
+
+  const past = spendingBudget(monthSummary(b, '2026-10'), '2026-10', '2026-11-02');
+  assert.equal(past.daysLeft, null);
+  assert.equal(past.perDay, null);
+
+  assert.equal(spendingBudget(monthSummary(b, '2026-09'), '2026-09', '2026-09-03').status, 'noIncome');
+});
+
+test('dayLabel: hôm nay, hôm qua (cả qua tháng), ngày khác', () => {
+  assert.equal(dayLabel('2026-10-06', '2026-10-06'), 'Hôm nay');
+  assert.equal(dayLabel('2026-10-05', '2026-10-06'), 'Hôm qua');
+  assert.equal(dayLabel('2026-09-30', '2026-10-01'), 'Hôm qua');
+  assert.match(dayLabel('2026-10-03', '2026-10-06'), /03\/10/);
+});
+
+test('ô số tiền: tự thêm dấu chấm, nút 000 / nghìn / triệu', () => {
+  assert.equal(formatAmountInput('45000'), '45.000');
+  assert.equal(formatAmountInput('1234567'), '1.234.567');
+  assert.equal(formatAmountInput('45.0001'), '450.001');
+  assert.equal(formatAmountInput('007'), '7');
+  assert.equal(formatAmountInput('45k'), '45k'); // kiểu tắt: giữ nguyên
+  assert.equal(formatAmountInput(''), '');
+  assert.equal(applyAmountKey('45', '000'), '45.000');
+  assert.equal(applyAmountKey('45', 'k'), '45.000');
+  assert.equal(applyAmountKey('4.500', 'k'), '4.500.000');
+  assert.equal(applyAmountKey('1,5', 'tr'), '1.500.000');
+  assert.equal(applyAmountKey('', 'k'), '');
+  assert.equal(parseAmount(applyAmountKey('1,5', 'tr')), 1_500_000);
+});
+
+test('restoreTx: hoàn tác xóa vẫn còn sau khi gộp với máy đã biết lần xóa', () => {
+  const tx = { id: 'old', date: '2026-10-01', type: 'expense', amount: 1000, cat: 'food', u: 1 };
+  const local = { ...defaultBudget(), txs: [], deleted: { old: 5 } };
+  const copy = restoreTx(local, tx, 'new');
+  assert.equal(copy.id, 'new');
+  assert.equal(copy.amount, 1000);
+  const remote = { ...defaultBudget(), txs: [tx], deleted: { old: 5 } };
+  assert.deepEqual(mergeBudget(local, remote).txs.map((t) => t.id), ['new']);
+});
 
 test('parseAmount hiểu cách gõ tiền kiểu Việt', () => {
   assert.equal(parseAmount('45k'), 45000);
@@ -108,4 +170,19 @@ test('số dư tài khoản: tự cộng lương, trừ chi sau mốc chốt; ch
   // nhập thêm khoản chi cùng ngày sau khi chốt → vẫn được trừ
   txs.push({ id: 'late', date: '2026-09-06', type: 'expense', amount: 100e3, acc: 'vcb', u: 6000 });
   assert.equal(accountBalance(vcb, txs).balance, 61.8e6);
+});
+
+test('sửa / hoàn tác cùng ngày sau khi chốt số dư: không trừ tiền 2 lần', async () => {
+  const { accountBalance, setAnchor } = await import('../js/budget.js');
+  const vcb = { id: 'vcb', name: 'VCB', currency: 'VND' };
+  setAnchor(vcb, 10e6, 2000, '2026-10-06');
+  // ghi lúc 1000 (trước khi chốt), sửa ghi chú lúc 3000 → u tăng nhưng thời điểm ghi gốc (at) vẫn trước mốc
+  const edited = { id: 't', date: '2026-10-06', type: 'expense', amount: 100e3, acc: 'vcb', at: 1000, u: 3000 };
+  assert.equal(accountBalance(vcb, [edited]).balance, 10e6);
+  // hoàn tác xóa: bản sao giữ thời điểm ghi gốc (dữ liệu cũ chưa có at → lấy u)
+  const copy = restoreTx({ txs: [] }, { id: 'old', date: '2026-10-06', type: 'expense', amount: 100e3, acc: 'vcb', u: 1000 }, 'n');
+  assert.equal(copy.at, 1000);
+  assert.equal(accountBalance(vcb, [copy]).balance, 10e6);
+  // ghi sau mốc chốt thì vẫn trừ
+  assert.equal(accountBalance(vcb, [{ ...edited, at: 2500 }]).balance, 9.9e6);
 });

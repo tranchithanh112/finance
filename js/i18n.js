@@ -74,6 +74,38 @@ const EXACT = {
   'Xóa khoản định kỳ này? (Các giao dịch đã sinh vẫn được giữ)': 'Delete this recurring item? (Existing transactions are kept)',
   'Xóa khoản nợ này?': 'Delete this debt?',
 
+  // thu chi (giao diện mới)
+  'Báo cáo': 'Report', 'Thiết lập': 'Setup', '+ Ghi khoản mới': '+ New entry', 'Ghi khoản mới': 'New entry',
+  'Ghi khoản đầu tiên': 'Add your first entry', 'Ghi khoản thu': 'Add income',
+  'Thu vào': 'Income', 'Tiêu': 'Spent', 'Để dành': 'Saved', 'Hôm qua': 'Yesterday',
+  'Còn tiêu được': 'Left to spend', 'Còn tiêu được tháng này': 'Left to spend this month', 'Còn lại': 'Left over',
+  'Đã tiêu quá': 'Over budget by', 'Xem 4 hũ': 'Show 4 jars', 'Ẩn 4 hũ': 'Hide 4 jars',
+  'Ghi lương hoặc thu nhập để biết còn tiêu được bao nhiêu.': 'Add your salary or other income to see how much you can still spend.',
+  'Tài khoản': 'Account', 'nghìn': 'thousand', 'triệu': 'million', 'Đóng': 'Close',
+  'Sửa khoản chi': 'Edit expense', 'Sửa khoản thu': 'Edit income', 'Lưu khoản chi': 'Save expense', 'Lưu khoản thu': 'Save income',
+  'Lưu thay đổi': 'Save changes', 'Không bắt buộc': 'Optional', 'Xóa khoản này': 'Delete this entry',
+  'Nhập số tiền lớn hơn 0': 'Enter an amount greater than 0', 'Chọn ngày': 'Pick a date',
+  'Không tìm thấy khoản này — có thể vừa bị xóa trên máy khác': "Couldn't find this entry — it may have just been deleted on another device",
+  'Đã cập nhật khoản chi': 'Expense updated', 'Đã cập nhật khoản thu': 'Income updated',
+  'Đã khôi phục khoản chi': 'Expense restored', 'Đã khôi phục khoản thu': 'Income restored',
+  'Tiêu vào đâu': 'Where your money went', 'Chưa có khoản tiêu nào trong tháng.': 'No spending this month.',
+  'Chưa có khoản để dành nào trong tháng.': 'Nothing saved or invested this month.',
+  'Khoản tự động hằng tháng': 'Recurring entries', '+ Thêm': '+ Add', 'Chưa có khoản tự động nào.': 'No recurring entries yet.',
+  'Lương, tiền nhà, hóa đơn… tự ghi vào đúng ngày, không cần nhập tay mỗi tháng.': 'Salary, rent, bills… are logged automatically on their day — no need to enter them every month.',
+  'Sửa khoản tự động': 'Edit recurring entry', 'Thêm khoản tự động': 'Add recurring entry', 'Xóa khoản tự động': 'Delete recurring entry',
+  'Vào ngày': 'Day of month', 'Lặp lại': 'Repeat', 'Bắt đầu từ': 'Starting from',
+  'Thay đổi áp dụng cho các lần sau; các khoản đã ghi giữ nguyên.': 'Changes apply from now on; entries already logged stay as they are.',
+  'Đã xóa khoản tự động (các khoản đã ghi vẫn giữ)': 'Recurring entry deleted (entries already logged are kept)',
+  'Đã khôi phục khoản tự động': 'Recurring entry restored',
+  'Chia thu nhập': 'Income split',
+  'Mỗi khi có thu nhập, app chia theo tỷ lệ này để tính "Còn tiêu được" và mục tiêu để dành.': 'Whenever income comes in, the app splits it by these ratios to work out "Left to spend" and your savings targets.',
+  'chi tiêu cần thiết': 'must-have spending', 'chi cho bản thân': 'spending on yourself', 'tiền để dành': 'money set aside', 'tiền đầu tư': 'money invested',
+  'Quỹ dự phòng nên đủ mấy tháng chi tiêu': 'Emergency fund target (months of spending)', 'Tổng 100% ✓': 'Total 100% ✓',
+  'Số tháng quỹ dự phòng phải từ 1 đến 24': 'Emergency fund months must be between 1 and 24', 'Đã lưu cách chia thu nhập': 'Income split saved',
+  'Sửa danh mục': 'Edit category', 'Xóa danh mục': 'Delete category', 'Biểu tượng': 'Icon', 'Thuộc hũ': 'Jar', 'Ví dụ: Tiền nhà': 'e.g. Rent',
+  'Nhập tên danh mục': 'Enter a category name', 'Đã có danh mục tên này': 'A category with this name already exists',
+  'Không tìm thấy danh mục này — có thể vừa bị xóa trên máy khác': "Couldn't find this category — it may have just been deleted on another device",
+
   // ---- crypto
   'Chưa có dữ liệu Binance': 'No Binance data yet', 'Tải số dư Binance': 'Load Binance balances',
   'Tổng giá trị crypto': 'Total crypto value', 'Futures (ký quỹ)': 'Futures (margin)', 'Phân bổ danh mục': 'Allocation',
@@ -249,6 +281,14 @@ const TERMS = [
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+// Vài chữ nghĩa khác nhau tùy tab nên không dùng chung được: "Danh mục" là Portfolio ở Crypto / Chứng khoán nhưng là
+// Categories ở tab Thu chi và các bảng của nó; "Tháng 10/2026" ở Tổng quan vẫn là "Month 10/2026", ở Thu chi là "Oct 2026".
+const BUDGET_SCOPE = '#tab-budget, .sheet-dlg';
+const BUDGET_ONLY = [
+  [/^Danh mục$/, 'Categories'],
+  [/^Tháng (\d+)\/(\d{4})$/, (m, a, y) => `${MONTHS[a - 1]} ${y}`],
+];
+
 const RULES = [
   [/^(.+): lấy NAV tự động từ Fmarket \((.+)\)$/, '$1: NAV fetched automatically from Fmarket ($2)'],
   [/^(.+): Yahoo không có, đã chuyển sang lấy NAV từ Fmarket$/, '$1: not on Yahoo, switched to NAV from Fmarket'],
@@ -399,6 +439,24 @@ const RULES = [
   [/^Chỉ đang giữ (.+)$/, 'You only hold $1'],
   [/^Đã thêm giao dịch (mua|bán) (.+)$/, (m, s, t) => `Added ${s === 'mua' ? 'buy' : 'sell'} transaction for ${t}`],
   [/^Đã xóa giao dịch (.+)$/, 'Deleted $1 transaction'],
+  // thu chi (giao diện mới) — các câu "Đã … khoản / danh mục" phải đứng trước 3 câu chung bên dưới
+  [/^Chưa có khoản nào trong tháng (\d+)\/(\d{4})$/, (m, a, y) => `No entries in ${MONTHS[a - 1]} ${y}`],
+  [/^Đã tiêu (\d+)% ngân sách$/, 'Spent $1% of budget'], [/^Đã tiêu (.+) \/ (.+)$/, 'Spent $1 / $2'],
+  [/^≈ (.+) mỗi ngày$/, '≈ $1 a day'], [/^đã để (.+) \/ mục tiêu (.+)$/, 'saved $1 / target $2'],
+  [/Tự động hằng tháng/g, 'Recurring'],
+  [/^Tháng này bạn giữ lại được (\d+)% thu nhập\.$/, 'This month you kept $1% of your income.'],
+  [/^Tháng này bạn tiêu nhiều hơn thu nhập (.+)\.$/, 'This month you spent $1 more than you earned.'],
+  [/^Ngày (\d+)(?: · (Hằng tháng|Hằng năm|(\d+) tháng\/lần))?( · .+)?$/, (m, d, e, n, rest = '') =>
+    `Day ${d}` + (e ? ` · ${e === 'Hằng tháng' ? 'Monthly' : e === 'Hằng năm' ? 'Yearly' : `Every ${n} months`}` : '') + rest],
+  [/^Danh mục (thu|chi)$/, (m, k) => `${k === 'thu' ? 'Income' : 'Expense'} category`],
+  [/^Đã xóa khoản (chi|thu) (.+)$/, (m, k, v) => `${k === 'chi' ? 'Expense' : 'Income'} deleted: ${v}`],
+  [/^Đã lưu khoản tự động (.+?)(?: · đã ghi (\d+) khoản đến hôm nay)?$/, (m, name, n) =>
+    `Recurring entry saved: ${name}` + (n ? ` · ${n} ${n === '1' ? 'entry' : 'entries'} logged up to today` : '')],
+  [/^Đã (lưu|thêm|xóa|khôi phục) danh mục (.+)$/, (m, v, n) =>
+    `Category ${{ 'lưu': 'saved', 'thêm': 'added', 'xóa': 'deleted', 'khôi phục': 'restored' }[v]}: ${n}`],
+  [/^Không xóa được: còn (\d+) khoản dùng danh mục này$/, (m, n) =>
+    `Can't delete: ${n} ${n === '1' ? 'entry still uses' : 'entries still use'} this category`],
+  [/^Tổng (\d+)% — cần đúng 100%$/, 'Total $1% — must be exactly 100%'],
   [/^Đã khôi phục (.+)$/, 'Restored $1'],
   [/^Đã thêm (.+)$/, 'Added $1'],
   [/^Đã xóa (.+)$/, 'Deleted $1'],
@@ -406,12 +464,15 @@ const RULES = [
 
 const TERMS_RE = TERMS.map(([vi, en]) => [new RegExp(vi.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&'), 'g'), en]);
 
-/** Dịch 1 chuỗi (giữ nguyên khoảng trắng đầu/cuối). */
-export function tr(s) {
+/** Dịch 1 chuỗi (giữ nguyên khoảng trắng đầu/cuối). scope = 'budget' khi chuỗi nằm trong tab Thu chi (xem BUDGET_ONLY). */
+export function tr(s, scope) {
   if (lang === 'vi' || s == null) return s;
   const str = String(s);
   const core = str.trim();
   if (!core) return str;
+  if (scope === 'budget') {
+    for (const [re, rep] of BUDGET_ONLY) if (re.test(core)) return str.replace(core, core.replace(re, rep));
+  }
   let out = EXACT[core];
   if (out == null) {
     if (/ · CK /.test(core)) return str.replace(' · CK ', ' · Stocks ');
@@ -434,19 +495,20 @@ const ATTRS = ['placeholder', 'title', 'aria-label', 'label'];
 /** Dịch toàn bộ chữ trong 1 vùng DOM. */
 export function translateDom(root) {
   if (lang === 'vi' || !root) return;
+  const scopeOf = (el) => (el?.closest(BUDGET_SCOPE) ? 'budget' : undefined);
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const nodes = [];
   while (walker.nextNode()) nodes.push(walker.currentNode);
   for (const n of nodes) {
     if (n.parentElement?.closest('script,style,code')) continue;
-    const v = tr(n.nodeValue);
+    const v = tr(n.nodeValue, scopeOf(n.parentElement));
     if (v !== n.nodeValue) n.nodeValue = v;
   }
   for (const el of [root, ...root.querySelectorAll('[placeholder],[title],[aria-label],optgroup[label]')]) {
     for (const a of ATTRS) {
       const v = el.getAttribute(a);
       if (v) {
-        const t = tr(v);
+        const t = tr(v, scopeOf(el));
         if (t !== v) el.setAttribute(a, t);
       }
     }

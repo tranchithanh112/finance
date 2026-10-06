@@ -126,7 +126,8 @@ const TOAST_ICON = { ok: 'check', error: 'alert', info: 'info' };
  */
 export function toast(msg, type = 'info', opts = {}) {
   const { ms, action } = typeof opts === 'number' ? { ms: opts } : opts;
-  const box = document.getElementById('toasts');
+  // Bảng (dialog.showModal) nằm trên mọi lớp khác → khi đang mở bảng, hiện thông báo ngay trong bảng
+  const box = document.querySelector('dialog[open] .sheet-toasts') || document.getElementById('toasts');
   while (box.children.length >= 3) box.firstElementChild.remove();
   const el = document.createElement('div');
   el.className = `toast ${type}`;

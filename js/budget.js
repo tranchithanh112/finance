@@ -129,6 +129,65 @@ export function monthSummary(b, ym) {
   };
 }
 
+/**
+ * Thẻ "Còn tiêu được": ngân sách tiêu dùng = phần thu nhập của hũ Thiết yếu + Hưởng thụ.
+ * S = monthSummary(b, ym). status: 'noIncome' (tháng chưa có thu nhập) | 'ok' | 'over'.
+ * daysLeft / perDay chỉ có ở tháng hiện tại (tính cả hôm nay).
+ */
+export function spendingBudget(S, ym, today = localToday()) {
+  const jars = S.jars.filter((j) => SPEND_JARS.has(j.id));
+  const budget = jars.reduce((a, j) => a + j.alloc, 0);
+  const spent = jars.reduce((a, j) => a + j.used, 0);
+  const left = budget - spent;
+  const status = S.income <= 0 ? 'noIncome' : left < 0 ? 'over' : 'ok';
+  let daysLeft = null;
+  if (ym === monthKey(today)) {
+    const [y, m] = ym.split('-').map(Number);
+    daysLeft = new Date(Date.UTC(y, m, 0)).getUTCDate() - Number(today.slice(8, 10)) + 1;
+  }
+  return { budget, spent, left, status, daysLeft, perDay: daysLeft && left > 0 ? left / daysLeft : null };
+}
+
+/** Nhãn nhóm ngày trong danh sách: "Hôm nay", "Hôm qua", hoặc thứ + ngày/tháng. */
+export function dayLabel(date, today = localToday(), loc = 'vi-VN') {
+  if (date === today) return 'Hôm nay';
+  const y = new Date(today + 'T00:00:00Z');
+  y.setUTCDate(y.getUTCDate() - 1);
+  if (date === y.toISOString().slice(0, 10)) return 'Hôm qua';
+  const s = new Date(date + 'T00:00').toLocaleDateString(loc, { weekday: 'short', day: '2-digit', month: '2-digit' });
+  return s.charAt(0).toUpperCase() + s.slice(1); // "th 7, 03/10" → "Th 7, 03/10"
+}
+
+const DIGITS = /^[\d.]+$/;
+
+/** Ô số tiền: chỉ có chữ số (và dấu chấm) → thêm dấu chấm hàng nghìn; kiểu gõ tắt (45k, 1,5tr) giữ nguyên. */
+export function formatAmountInput(s) {
+  const raw = String(s ?? '');
+  if (!DIGITS.test(raw)) return raw;
+  return raw.replace(/\./g, '').replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+/** Nút nhanh dưới ô số tiền: '000' thêm 3 số 0; 'k' / 'tr' nhân số đang gõ với nghìn / triệu. */
+export function applyAmountKey(s, key) {
+  const raw = String(s ?? '').trim();
+  if (!raw) return '';
+  if (key === '000') return DIGITS.test(raw) ? formatAmountInput(raw + '000') : raw;
+  // "4.500" là bốn nghìn rưỡi (dấu chấm hàng nghìn); "1,5" là một phẩy năm
+  const n = DIGITS.test(raw) ? Number(raw.replace(/\./g, '')) : Number(raw.replace(',', '.'));
+  if (!(n > 0)) return raw;
+  return formatAmountInput(String(Math.round(n * (key === 'tr' ? 1e6 : 1e3))));
+}
+
+/**
+ * Hoàn tác xóa giao dịch: thêm lại bản sao với id mới. Không gỡ dấu xóa của id cũ được, vì dấu xóa
+ * được gộp giữa các máy (mergeBudget) — máy kia vẫn còn dấu xóa sẽ xóa lại ở lần đồng bộ sau.
+ */
+export function restoreTx(b, tx, id) {
+  const copy = { ...tx, id, at: tx.at ?? tx.u, u: Date.now() }; // giữ lúc ghi gốc: số dư tài khoản không bị trừ lại
+  b.txs.push(copy);
+  return copy;
+}
+
 /** Trung bình các tháng đầy đủ gần nhất (bỏ tháng hiện tại nếu còn dang dở). */
 export function recentAverage(b, months = 3, today = localToday()) {
   const cur = monthKey(today);
@@ -216,7 +275,8 @@ export function mergeBudget(a, b) {
 
 export function afterAnchor(t, c) {
   if (!c.anchorDate) return false;
-  return t.date > c.anchorDate || (t.date === c.anchorDate && (t.u || 0) > (c.anchorAt || 0));
+  // at = lúc ghi khoản này lần đầu (u đổi mỗi lần sửa → không dùng u, kẻo sửa xong bị trừ lần nữa)
+  return t.date > c.anchorDate || (t.date === c.anchorDate && (t.at ?? t.u ?? 0) > (c.anchorAt || 0));
 }
 
 /** { balance, delta, count } — balance theo đơn vị tiền của tài khoản (giao dịch thu chi luôn là VND). */

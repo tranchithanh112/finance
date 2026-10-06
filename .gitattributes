@@ -1,0 +1,2 @@
+# Hash CSP trong vercel.json tính trên nội dung LF của script inline — giữ LF kể cả khi checkout trên Windows
+index.html text eol=lf

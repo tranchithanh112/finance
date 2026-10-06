@@ -26,7 +26,7 @@ api/quote.js             ← giá chứng khoán / tỷ giá từ Yahoo Finance,
 api/config.js            ← cấu hình công khai (client id Dropbox/Google) + kiểm tra mật khẩu
 ```
 
-Binance không cho gọi API có chữ ký trực tiếp từ trình duyệt (CORS, và secret sẽ bị lộ), nên key được giữ trong **Environment Variables của Vercel** và một serverless function nhỏ ký request thay bạn. Proxy chỉ cho phép một danh sách endpoint đọc dữ liệu cố định; mọi request đều cần header mật khẩu `APP_PASSWORD`.
+Binance không cho gọi API có chữ ký trực tiếp từ trình duyệt (CORS, và secret sẽ bị lộ), nên key được giữ trong **Environment Variables của Vercel** và một serverless function nhỏ ký request thay bạn. Proxy chỉ cho phép một danh sách endpoint đọc dữ liệu cố định; mọi request đều cần phiên đăng nhập (đổi từ `APP_PASSWORD` qua `/api/session`).
 
 Dữ liệu (lịch sử lệnh, danh mục…) lưu trong IndexedDB của trình duyệt. Mật khẩu và token OAuth chỉ nằm trên thiết bị, không bao giờ được sync.
 

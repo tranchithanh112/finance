@@ -1,5 +1,5 @@
 // Cấu hình công khai (không bí mật) để trình duyệt biết client id cho Dropbox / Google Drive.
-// Nếu có header x-app-password, trả thêm trạng thái xác thực và key Binance.
+// Nếu có header x-app-session hợp lệ, trả thêm trạng thái xác thực và key Binance.
 import { isAuthed, totpEnabled } from './_lib.js';
 
 export default function handler(req, res) {

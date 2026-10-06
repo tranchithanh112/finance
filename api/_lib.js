@@ -1,9 +1,9 @@
 import crypto from 'node:crypto';
 
 // Xác thực mọi API route (trừ /api/config, /api/session):
-//  - Ưu tiên header x-app-session: phiên do /api/session cấp, ký HMAC bằng APP_PASSWORD, có hạn.
+//  - Header x-app-session: phiên do /api/session cấp, ký HMAC bằng APP_PASSWORD, có hạn.
 //    Trình duyệt chỉ giữ phiên này, không giữ mật khẩu; đổi APP_PASSWORD trên Vercel → mọi phiên cũ mất hiệu lực.
-//  - x-app-password (cách cũ) vẫn được chấp nhận để thiết bị cũ tự đổi sang phiên — trừ khi đã bật 2FA (TOTP_SECRET).
+//  - x-app-password chỉ được nhận ở /api/session (thiết bị cũ còn lưu mật khẩu tự đổi sang phiên qua migrateAuth).
 
 export const SESSION_DAYS = 30;
 
@@ -77,8 +77,9 @@ export function passwordOk(req) {
 }
 
 export function isAuthed(req) {
-  // Khi bật 2FA, chỉ chấp nhận phiên (mật khẩu trần không đủ để gọi API)
-  return verifySession(req.headers['x-app-session']) || (!totpEnabled() && passwordOk(req));
+  // Chỉ chấp nhận phiên. Mật khẩu chỉ dùng ở /api/session (có làm chậm khi sai) —
+  // nếu API khác cũng nhận mật khẩu thì có thể dò mật khẩu qua đó mà không bị làm chậm.
+  return verifySession(req.headers['x-app-session']);
 }
 
 export function checkAuth(req, res) {

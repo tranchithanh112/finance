@@ -24,12 +24,12 @@ test('phiên đăng nhập: ký HMAC, hết hạn, đổi mật khẩu là mất
   assert.equal(verifySession(undefined, k1, now), false);
 });
 
-test('isAuthed nhận phiên hoặc mật khẩu (thiết bị cũ)', () => {
+test('isAuthed chỉ nhận phiên — mật khẩu trần không gọi được API (chống dò mật khẩu không bị làm chậm)', () => {
   const pw = testPassword();
   process.env.APP_PASSWORD = pw;
   const { token } = issueSession();
   assert.equal(isAuthed({ headers: { 'x-app-session': token } }), true);
-  assert.equal(isAuthed({ headers: { 'x-app-password': pw } }), true);
+  assert.equal(isAuthed({ headers: { 'x-app-password': pw } }), false);
   assert.equal(isAuthed({ headers: { 'x-app-password': 'wrong' } }), false);
   assert.equal(isAuthed({ headers: {} }), false);
 });
@@ -63,15 +63,14 @@ test('TOTP theo RFC 6238 (vector chuẩn) và cửa sổ ±30 giây', async () =
   assert.equal(verifyTotp('abc', secret, t), false);
 });
 
-test('bật 2FA: mật khẩu trần không đủ, phiên cũ mất hiệu lực', async () => {
+test('bật 2FA: phiên cũ mất hiệu lực', async () => {
   const { issueSession, isAuthed } = await import('../api/_lib.js');
   const pw = testPassword();
   process.env.APP_PASSWORD = pw;
   delete process.env.TOTP_SECRET;
   const old = issueSession().token;
-  assert.equal(isAuthed({ headers: { 'x-app-password': pw } }), true);
+  assert.equal(isAuthed({ headers: { 'x-app-session': old } }), true);
   process.env.TOTP_SECRET = base32Encode(crypto.randomBytes(20));
-  assert.equal(isAuthed({ headers: { 'x-app-password': pw } }), false);
   assert.equal(isAuthed({ headers: { 'x-app-session': old } }), false);
   assert.equal(isAuthed({ headers: { 'x-app-session': issueSession().token } }), true);
   delete process.env.TOTP_SECRET;

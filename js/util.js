@@ -36,9 +36,10 @@ const MASK = '••••••';
 /** Phần chữ của số tiền VND (không dấu): 45.000 ₫; gọn: 1,5 tr / 2,3 tỷ. */
 function vndText(abs, compact) {
   const en = getLang() === 'en';
-  if (compact && abs >= 1e9) return (abs / 1e9).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + (en ? 'B ₫' : ' tỷ');
-  if (compact && abs >= 1e6) return (abs / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + (en ? 'M ₫' : ' tr');
-  return abs.toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' ₫';
+  const loc = locale(); // tiếng Anh: 45,000 ₫ · 7.1M ₫ — tiếng Việt: 45.000 ₫ · 7,1 tr
+  if (compact && abs >= 1e9) return (abs / 1e9).toLocaleString(loc, { maximumFractionDigits: 2 }) + (en ? 'B ₫' : ' tỷ');
+  if (compact && abs >= 1e6) return (abs / 1e6).toLocaleString(loc, { maximumFractionDigits: 1 }) + (en ? 'M ₫' : ' tr');
+  return abs.toLocaleString(loc, { maximumFractionDigits: 0 }) + ' ₫';
 }
 
 /** Số tiền VND cố định — thu chi luôn tính bằng VND, không đổi theo tiền tệ hiển thị. */
@@ -70,7 +71,7 @@ export function fmtMoney(usd, { sign = false, compact = false } = {}) {
 export function fmtNative(v, cur) {
   if (v == null || !Number.isFinite(v)) return '—';
   if (privacy) return MASK;
-  if (cur === 'VND') return Math.round(v).toLocaleString('vi-VN') + ' ₫';
+  if (cur === 'VND') return Math.round(v).toLocaleString(locale()) + ' ₫';
   return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + (cur && cur !== 'USD' ? ' ' + cur : ' $');
 }
 

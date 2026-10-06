@@ -1,9 +1,9 @@
 import { state, commit } from '../store.js';
 import { openSheet } from '../sheet.js';
-import { parseAmount, formatAmountInput, generateRecurring, catMap, monthKey, localToday, shiftMonth } from '../budget.js';
+import { parseAmount, generateRecurring, catMap, monthKey, localToday, shiftMonth } from '../budget.js';
 import { esc, uid, toast, fmtVnd } from '../util.js';
 import { tr } from '../i18n.js';
-import { amountField, bindAmount, typeSwitch, bindTypeAndCats, accountField, lastAccount } from './budget-entry.js';
+import { amountField, amountText, bindAmount, typeSwitch, bindTypeAndCats, accountField, lastAccount } from './budget-entry.js';
 
 // Màn "Thiết lập" của tab Thu chi: khoản tự động hằng tháng, danh mục, chia thu nhập (tỷ lệ hũ).
 // Mỗi mục là danh sách; bấm để sửa trong bảng có nhãn rõ ràng.
@@ -97,7 +97,7 @@ function openRec(r, ctx) {
     title: editing ? 'Sửa khoản tự động' : 'Thêm khoản tự động',
     body: `<form class="entry" novalidate>
       ${typeSwitch()}
-      ${amountField(r ? formatAmountInput(String(r.amount)) : '', !editing)}
+      ${amountField(r ? amountText(r.amount) : '', !editing)}
       <div class="entry-cats"></div>
       <div class="field-row">
         <label class="field"><span>Vào ngày</span><select name="day">

@@ -158,24 +158,26 @@ export function dayLabel(date, today = localToday(), loc = 'vi-VN') {
   return s.charAt(0).toUpperCase() + s.slice(1); // "th 7, 03/10" → "Th 7, 03/10"
 }
 
-const DIGITS = /^[\d.]+$/;
+// sep = dấu nhóm nghìn: '.' (tiếng Việt: 45.000, "1,5" là một phẩy năm) hoặc ',' (tiếng Anh: 45,000, "1.5")
+const grouped = (raw, sep) => (sep === ',' ? /^[\d,]+$/ : /^[\d.]+$/).test(raw);
 
-/** Ô số tiền: chỉ có chữ số (và dấu chấm) → thêm dấu chấm hàng nghìn; kiểu gõ tắt (45k, 1,5tr) giữ nguyên. */
-export function formatAmountInput(s) {
+/** Ô số tiền: chỉ có chữ số và dấu nhóm nghìn → nhóm lại cho dễ đọc; kiểu gõ tắt (45k, 1,5tr) giữ nguyên. */
+export function formatAmountInput(s, sep = '.') {
   const raw = String(s ?? '');
-  if (!DIGITS.test(raw)) return raw;
-  return raw.replace(/\./g, '').replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  if (!grouped(raw, sep)) return raw;
+  return raw.split(sep).join('').replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, sep);
 }
 
 /** Nút nhanh dưới ô số tiền: '000' thêm 3 số 0; 'k' / 'tr' nhân số đang gõ với nghìn / triệu. */
-export function applyAmountKey(s, key) {
+export function applyAmountKey(s, key, sep = '.') {
   const raw = String(s ?? '').trim();
   if (!raw) return '';
-  if (key === '000') return DIGITS.test(raw) ? formatAmountInput(raw + '000') : raw;
-  // "4.500" là bốn nghìn rưỡi (dấu chấm hàng nghìn); "1,5" là một phẩy năm
-  const n = DIGITS.test(raw) ? Number(raw.replace(/\./g, '')) : Number(raw.replace(',', '.'));
+  const isGrouped = grouped(raw, sep);
+  if (key === '000') return isGrouped ? formatAmountInput(raw + '000', sep) : raw;
+  // số đã nhóm ("4.500") là số nguyên; còn lại là số thập phân đang gõ ("1,5" / "1.5")
+  const n = isGrouped ? Number(raw.split(sep).join('')) : Number(sep === '.' ? raw.replace(',', '.') : raw);
   if (!(n > 0)) return raw;
-  return formatAmountInput(String(Math.round(n * (key === 'tr' ? 1e6 : 1e3))));
+  return formatAmountInput(String(Math.round(n * (key === 'tr' ? 1e6 : 1e3))), sep);
 }
 
 /**

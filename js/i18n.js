@@ -74,6 +74,13 @@ const EXACT = {
   'Xóa khoản định kỳ này? (Các giao dịch đã sinh vẫn được giữ)': 'Delete this recurring item? (Existing transactions are kept)',
   'Xóa khoản nợ này?': 'Delete this debt?',
 
+  // bảng sửa số dư / dư nợ (Tổng quan)
+  'Nhập số dư thực tế hiện tại (xem trong app ngân hàng). Các khoản thu chi ghi sau lúc này sẽ tự cộng / trừ vào số dư.':
+    'Enter the actual current balance (check your banking app). Entries recorded after this are added / subtracted automatically.',
+  'Nhập số tiền còn nợ hiện tại.': 'Enter the amount still owed.', 'Nhập số tiền hợp lệ': 'Enter a valid amount',
+  'Không tìm thấy tài khoản này — có thể vừa bị xóa trên máy khác': 'Account not found — it may have just been deleted on another device',
+  'Không tìm thấy khoản nợ này — có thể vừa bị xóa trên máy khác': 'Debt not found — it may have just been deleted on another device',
+
   // thu chi (giao diện mới)
   'Báo cáo': 'Report', 'Thiết lập': 'Setup', '+ Ghi khoản mới': '+ New entry', 'Ghi khoản mới': 'New entry',
   'Ghi khoản đầu tiên': 'Add your first entry', 'Ghi khoản thu': 'Add income',
@@ -356,8 +363,8 @@ const RULES = [
   [/^Đã lưu khoản thu (.+)$/, 'Income saved: $1'], [/^Đã lưu khoản chi (.+)$/, 'Expense saved: $1'],
   [/^Tổng tỷ lệ đang là (\d+)%, cần bằng 100%$/, 'Ratios add up to $1%, they must equal 100%'],
   [/^(\d+) tháng$/, '$1 months'],
-  [/^Số dư thực tế hiện tại của "(.+)" \((\w+)(, vd 52tr hoặc 52\.000\.000)?\)$/, (m, n, c, v) => `Actual current balance of "${n}" (${c}${v ? ', e.g. 52m or 52,000,000' : ''})`],
-  [/^Dư nợ mới của "(.+)"$/, 'New balance of "$1"'],
+  // bảng sửa số dư / dư nợ (Tổng quan)
+  [/^Sửa số dư · (.+)$/, 'Edit balance · $1'], [/^Sửa dư nợ · (.+)$/, 'Edit debt · $1'], [/^Số tiền \((\w+)\)$/, 'Amount ($1)'],
   // crypto / pnl
   [/^Hiện coin bụi \(< (.+)\)$/, 'Show dust (< $1)'],
   [/^Spot \/ Funding \/ Earn/, 'Spot / Funding / Earn'],

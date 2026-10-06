@@ -2,11 +2,16 @@ import { state, commit } from '../store.js';
 import { openSheet } from '../sheet.js';
 import { parseAmount, formatAmountInput, applyAmountKey, localToday, dayLabel, restoreTx, catMap } from '../budget.js';
 import { esc, uid, toast, fmtVnd } from '../util.js';
-import { tr, translateDom, locale } from '../i18n.js';
+import { tr, translateDom, locale, getLang } from '../i18n.js';
 
 // Bảng ghi / sửa 1 khoản thu chi + các phần dùng chung với bảng "khoản tự động" (Thiết lập).
 
 const KIND = { expense: 'chi', income: 'thu' };
+
+/** Dấu nhóm nghìn trong ô số tiền theo ngôn ngữ: 45.000 (tiếng Việt) / 45,000 (tiếng Anh). */
+const amountSep = () => (getLang() === 'en' ? ',' : '.');
+/** Số tiền có sẵn (khi sửa) → chữ hiện trong ô số tiền. */
+export const amountText = (n) => formatAmountInput(String(n), amountSep());
 
 /** Tài khoản VND có thể gắn với thu chi (tự cộng / trừ số dư). */
 const vndAccounts = () => state.cash.filter((c) => c.currency === 'VND');
@@ -48,7 +53,8 @@ export function bindAmount(root) {
   const input = root.querySelector('.amt-input');
   const preview = root.querySelector('.amt-preview');
   const update = () => {
-    const shown = formatAmountInput(input.value);
+    const sep = amountSep();
+    const shown = formatAmountInput(input.value, sep);
     if (shown !== input.value) {
       // giữ con trỏ sau đúng số chữ số bên trái nó (dấu chấm tự thêm / bớt không làm con trỏ nhảy về cuối)
       const digits = input.value.slice(0, input.selectionStart ?? input.value.length).replace(/\D/g, '').length;
@@ -58,13 +64,13 @@ export function bindAmount(root) {
       input.setSelectionRange(i, i);
     }
     const v = parseAmount(input.value);
-    // "= 45.000 ₫" chỉ cần khi gõ kiểu tắt (45k, 1,5tr) — gõ số thường thì ô đã tự thêm dấu chấm
-    preview.textContent = /[^\d.]/.test(input.value) && v > 0 ? `= ${v.toLocaleString('vi-VN')} ₫` : '';
+    // "= 45.000 ₫" chỉ cần khi gõ kiểu tắt (45k, 1,5tr) — gõ số thường thì ô đã tự nhóm nghìn
+    preview.textContent = /\D/.test(input.value.split(sep).join('')) && v > 0 ? `= ${v.toLocaleString(locale())} ₫` : '';
     input.classList.remove('invalid');
   };
   input.addEventListener('input', update);
   root.querySelectorAll('[data-key]').forEach((b) => {
-    b.onclick = () => { input.value = applyAmountKey(input.value, b.dataset.key); update(); input.focus(); };
+    b.onclick = () => { input.value = applyAmountKey(input.value, b.dataset.key, amountSep()); update(); input.focus(); };
   });
   update();
   return input;
@@ -131,7 +137,7 @@ export function openEntry({ tx = null, type = 'expense', date = null, onDone = (
     title: title(),
     body: `<form class="entry" novalidate>
       ${typeSwitch()}
-      ${amountField(tx ? formatAmountInput(String(tx.amount)) : '', !editing)}
+      ${amountField(tx ? amountText(tx.amount) : '', !editing)}
       <div class="entry-cats"></div>
       <label class="field"><span>Ghi chú</span>
         <input name="note" placeholder="Không bắt buộc" autocomplete="off" maxlength="120" value="${esc(tx?.note || '')}"></label>

@@ -56,6 +56,16 @@ test('ô số tiền: tự thêm dấu chấm, nút 000 / nghìn / triệu', () 
   assert.equal(parseAmount(applyAmountKey('1,5', 'tr')), 1_500_000);
 });
 
+test('ô số tiền kiểu tiếng Anh: nhóm nghìn bằng dấu phẩy, dấu chấm là thập phân', () => {
+  assert.equal(formatAmountInput('45000', ','), '45,000');
+  assert.equal(formatAmountInput('45,0001', ','), '450,001');
+  assert.equal(formatAmountInput('1.5', ','), '1.5'); // số thập phân đang gõ: giữ nguyên
+  assert.equal(applyAmountKey('45', '000', ','), '45,000');
+  assert.equal(applyAmountKey('4,500', 'k', ','), '4,500,000');
+  assert.equal(applyAmountKey('1.5', 'tr', ','), '1,500,000');
+  assert.equal(parseAmount(applyAmountKey('1.5', 'tr', ',')), 1_500_000);
+});
+
 test('restoreTx: hoàn tác xóa vẫn còn sau khi gộp với máy đã biết lần xóa', () => {
   const tx = { id: 'old', date: '2026-10-01', type: 'expense', amount: 1000, cat: 'food', u: 1 };
   const local = { ...defaultBudget(), txs: [], deleted: { old: 5 } };

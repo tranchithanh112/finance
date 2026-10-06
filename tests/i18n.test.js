@@ -15,6 +15,8 @@ test('dịch câu cố định, câu có số và tên danh mục', () => {
   assert.equal(tr('Spot $1 · Futures — · CK —'), 'Spot $1 · Futures — · Stocks —');
   assert.equal(tr('BTC'), 'BTC');
   assert.equal(tr('Hoàn tác'), 'Undo');
+  assert.equal(tr('Sửa số dư · Vietcombank'), 'Edit balance · Vietcombank');
+  assert.equal(tr('Số tiền (USD)'), 'Amount (USD)');
   assert.equal(tr('Đã xóa giao dịch VOO'), 'Deleted VOO transaction');
   assert.equal(tr('Đã thêm giao dịch bán VOO'), 'Added sell transaction for VOO');
   assert.equal(tr('Futures: 3 bản ghi mới · bỏ qua COIN-M (chưa mở tài khoản hoặc key thiếu quyền)'), 'Futures: 3 new records · skipped COIN-M (account not opened or key lacks permission)');

@@ -4,6 +4,8 @@ import { donut, bars, PALETTE } from '../charts.js';
 import { snapshotSeries } from '../series.js';
 import { goalProgress, snapshotTrend, monthRecap, dcaDue } from '../insights.js';
 import { historyCard, bindHistory, histMode } from './history-card.js';
+import { openSheet } from '../sheet.js';
+import { amountField, amountText, bindAmount } from './budget-entry.js';
 import {
   monthSummary, recentAverage, healthScore, debtMonthlyVnd, parseAmount, setAnchor, monthKey, localToday, shiftMonth, SPEND_JARS,
 } from '../budget.js';
@@ -281,15 +283,21 @@ export function renderOverview(root, ctx) {
   root.querySelectorAll('[data-edit-cash]').forEach((btn) => {
     btn.onclick = () => {
       const c = state.cash.find((x) => x.id === btn.dataset.editCash);
-      const cur = Math.round(cashBalance(c).balance * 100) / 100;
-      const v = prompt(`Số dư thực tế hiện tại của "${c.name}" (${c.currency}${c.currency === 'VND' ? ', vd 52tr hoặc 52.000.000' : ''})`, cur);
-      if (v == null || !String(v).trim()) return; // Hủy hoặc để trống → không đổi
-      const n = c.currency === 'VND' ? parseAmount(v) : Number(String(v).replace(',', '.'));
-      if (!Number.isFinite(n)) return toast('Số không hợp lệ', 'error');
-      setAnchor(c, n);
-      commit({ edit: true });
-      ctx.rerender();
-      toast(`Đã cập nhật số dư ${c.name}`, 'ok');
+      if (!c) return;
+      openAmountSheet({
+        title: `Sửa số dư · ${c.name}`,
+        hint: 'Nhập số dư thực tế hiện tại (xem trong app ngân hàng). Các khoản thu chi ghi sau lúc này sẽ tự cộng / trừ vào số dư.',
+        currency: c.currency,
+        value: Math.round(cashBalance(c).balance * 100) / 100,
+        onSave: (n) => {
+          const cur = state.cash.find((x) => x.id === c.id); // đọc lại: đồng bộ nền có thể đã thay state
+          if (!cur) return toast('Không tìm thấy tài khoản này — có thể vừa bị xóa trên máy khác', 'error');
+          setAnchor(cur, n);
+          commit({ edit: true });
+          ctx.rerender();
+          toast(`Đã cập nhật số dư ${cur.name}`, 'ok');
+        },
+      });
     };
   });
   root.querySelectorAll('[data-del-cash]').forEach((btn) => {
@@ -330,13 +338,22 @@ export function renderOverview(root, ctx) {
   root.querySelectorAll('[data-edit-debt]').forEach((btn) => {
     btn.onclick = () => {
       const d = b.debts.find((x) => x.id === btn.dataset.editDebt);
-      const v = prompt(`Dư nợ mới của "${d.name}"`, d.balance);
-      if (v == null || !String(v).trim()) return; // Hủy hoặc để trống → không đổi
-      const n = d.currency === 'VND' ? parseAmount(v) : Number(String(v).replace(',', '.'));
-      if (!Number.isFinite(n)) return toast('Số không hợp lệ', 'error');
-      d.balance = n;
-      saveDebts();
-      toast(`Đã cập nhật dư nợ ${d.name}`, 'ok');
+      if (!d) return;
+      openAmountSheet({
+        title: `Sửa dư nợ · ${d.name}`,
+        hint: 'Nhập số tiền còn nợ hiện tại.',
+        currency: d.currency,
+        value: d.balance,
+        onSave: (n) => {
+          const cur = state.budget.debts.find((x) => x.id === d.id); // đọc lại: đồng bộ nền có thể đã thay state
+          if (!cur) return toast('Không tìm thấy khoản nợ này — có thể vừa bị xóa trên máy khác', 'error');
+          cur.balance = n;
+          state.budget.configAt = Date.now();
+          commit({ edit: true });
+          ctx.rerender();
+          toast(`Đã cập nhật dư nợ ${cur.name}`, 'ok');
+        },
+      });
     };
   });
   root.querySelectorAll('[data-del-debt]').forEach((btn) => {
@@ -347,5 +364,36 @@ export function renderOverview(root, ctx) {
       saveDebts();
       if (d) toast(`Đã xóa khoản nợ ${d.name}`, 'ok');
     };
+  });
+}
+
+/** Bảng nhập 1 số tiền (thay hộp prompt của trình duyệt). VND có nút 000 / nghìn / triệu; USD gõ số thập phân. */
+function openAmountSheet({ title, hint, currency, value, onSave }) {
+  const vnd = currency === 'VND';
+  openSheet({
+    title,
+    body: `<form class="entry" novalidate>
+      <p class="muted small">${esc(hint)}</p>
+      ${vnd ? amountField(amountText(value), true)
+        : `<label class="field"><span>Số tiền (${esc(currency)})</span>
+          <input name="amount" inputmode="decimal" autocomplete="off" value="${esc(value)}" autofocus></label>`}
+      <button class="btn primary big">Lưu</button>
+    </form>`,
+    onMount: (el, close) => {
+      const input = vnd ? bindAmount(el) : el.querySelector('[name=amount]');
+      input.addEventListener('input', () => input.classList.remove('invalid'));
+      el.querySelector('form').onsubmit = (e) => {
+        e.preventDefault();
+        const raw = input.value.trim();
+        const n = vnd ? parseAmount(raw) : Number(raw.replace(',', '.'));
+        if (!raw || !Number.isFinite(n) || n < 0) {
+          input.classList.add('invalid');
+          input.focus();
+          return toast('Nhập số tiền hợp lệ', 'error');
+        }
+        close();
+        onSave(n);
+      };
+    },
   });
 }

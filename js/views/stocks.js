@@ -3,7 +3,7 @@ import { stockPositions, fxRate, quoteSymbol } from '../calc.js';
 import { donut, PALETTE } from '../charts.js';
 import { historyCard, bindHistory } from './history-card.js';
 import { dcaDue } from '../insights.js';
-import { esc, fmtMoney, fmtNative, fmtQty, fmtPct, fmtDate, pnlClass, uid, timeAgo, todayKey, toast } from '../util.js';
+import { esc, fmtMoney, fmtNative, fmtQty, fmtPct, fmtDate, pnlClass, uid, timeAgo, todayKey, toast, locale } from '../util.js';
 
 let editing = null; // ticker đang sửa
 
@@ -35,7 +35,7 @@ export function renderStocks(root, ctx) {
       <div class="kpi"><span>Vốn đang nắm</span><b>${fmtMoney(cost)}</b></div>
       <div class="kpi"><span>Lãi/lỗ chưa chốt</span><b class="${pnlClass(unreal)}">${fmtMoney(unreal, { sign: true })}</b><small>${cost ? fmtPct(unreal / cost) : ''}</small></div>
       <div class="kpi"><span>Đã chốt</span><b class="${pnlClass(real)}">${fmtMoney(real, { sign: true })}</b></div>
-      <div class="kpi"><span>Hôm nay</span><b class="${pnlClass(day)}">${fmtMoney(day, { sign: true })}</b><small>USD/VND ${Math.round(fxRate()).toLocaleString('vi-VN')}</small></div>
+      <div class="kpi"><span>Hôm nay</span><b class="${pnlClass(day)}">${fmtMoney(day, { sign: true })}</b><small>USD/VND ${Math.round(fxRate()).toLocaleString(locale())}</small></div>
     </div>
 
     ${due.map((tk) => `<button type="button" class="nudge" data-buy="${esc(tk)}">Tháng này chưa mua <b>${esc(tk.replace(/\.VN$/, ''))}</b><span>Mua thêm →</span></button>`).join('')}

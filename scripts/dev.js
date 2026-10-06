@@ -50,8 +50,14 @@ http.createServer(async (req, res) => {
     }
     return;
   }
-  let p = path.normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, '');
-  if (p.endsWith('/')) p += 'index.html';
+  let p;
+  try {
+    p = path.normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, '');
+  } catch {
+    return res.writeHead(400).end('Bad request'); // URL mã hóa sai (vd /%E0%A4%A) — không để sập server
+  }
+  // Windows: path.normalize('/') = '\' → xét dấu "/" trên URL gốc chứ không phải đường dẫn đã chuẩn hóa
+  if (url.pathname.endsWith('/')) p = path.join(p, 'index.html');
   const file = path.join(root, p);
   // không phục vụ file ẩn (.env.local…) hay thư mục nội bộ
   if (/(^|[/\\])\.|^[/\\]?(scripts|tests|node_modules)[/\\]/.test(p)) return res.writeHead(404).end('Not found');

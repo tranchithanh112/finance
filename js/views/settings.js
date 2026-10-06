@@ -1,6 +1,6 @@
 import { state, local, saveLocal, commit, replaceState, login, logout } from '../store.js';
 import * as sync from '../sync.js';
-import { esc, toast, downloadFile, timeAgo, todayKey, fmtDate } from '../util.js';
+import { esc, toast, downloadFile, timeAgo, todayKey, fmtDate, locale } from '../util.js';
 import { fxRate } from '../calc.js';
 import { tabOrder, setTabOrder, resetTabOrder, visibleSubs, BOTTOM_MAX } from '../nav.js';
 import { icon } from '../icons.js';
@@ -110,7 +110,7 @@ export function renderSettings(root, ctx) {
         <form id="st-form" class="form-grid">
           <label>Tiền tệ hiển thị<select name="displayCurrency">${['USD', 'VND'].map((c) => `<option ${s.displayCurrency === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
           <label>Ẩn coin bụi dưới (USD)<input name="dustUsd" type="number" step="any" value="${esc(s.dustUsd)}"></label>
-          <label>Tỷ giá USD/VND cố định <small class="muted">(trống = tự động, hiện ${Math.round(fxRate()).toLocaleString('vi-VN')})</small>
+          <label>Tỷ giá USD/VND cố định <small class="muted">(trống = tự động, hiện ${Math.round(fxRate()).toLocaleString(locale())})</small>
             <input name="fxManual" type="number" step="any" value="${esc(s.fxManual ?? '')}"></label>
           <label>Lịch sử Binance bắt đầu từ<input name="historyStart" type="date" value="${esc(s.historyStart)}"></label>
           <label class="span2">Quote dùng để quét lệnh (phẩy ngăn cách)<input name="scanQuotes" value="${esc(s.scanQuotes.join(', '))}"></label>

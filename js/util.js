@@ -1,4 +1,5 @@
 import { tr, getLang, locale } from './i18n.js';
+import { icon } from './icons.js';
 
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -32,6 +33,21 @@ export function setPrivate(on) {
 }
 const MASK = '••••••';
 
+/** Phần chữ của số tiền VND (không dấu): 45.000 ₫; gọn: 1,5 tr / 2,3 tỷ. */
+function vndText(abs, compact) {
+  const en = getLang() === 'en';
+  if (compact && abs >= 1e9) return (abs / 1e9).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + (en ? 'B ₫' : ' tỷ');
+  if (compact && abs >= 1e6) return (abs / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + (en ? 'M ₫' : ' tr');
+  return abs.toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' ₫';
+}
+
+/** Số tiền VND cố định — thu chi luôn tính bằng VND, không đổi theo tiền tệ hiển thị. */
+export function fmtVnd(v, { sign = false, compact = false } = {}) {
+  if (v == null || !Number.isFinite(v)) return '—';
+  if (privacy) return MASK;
+  return (v < 0 ? '−' : sign && v > 0 ? '+' : '') + vndText(Math.abs(v), compact);
+}
+
 export function fmtMoney(usd, { sign = false, compact = false } = {}) {
   if (usd == null || !Number.isFinite(usd)) return '—';
   if (privacy) return MASK;
@@ -39,10 +55,7 @@ export function fmtMoney(usd, { sign = false, compact = false } = {}) {
   const abs = Math.abs(v);
   let s;
   if (money.cur === 'VND') {
-    const en = getLang() === 'en';
-    if (compact && abs >= 1e9) s = (abs / 1e9).toLocaleString('vi-VN', { maximumFractionDigits: 2 }) + (en ? 'B ₫' : ' tỷ');
-    else if (compact && abs >= 1e6) s = (abs / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + (en ? 'M ₫' : ' tr');
-    else s = abs.toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' ₫';
+    s = vndText(abs, compact);
   } else {
     const d = abs !== 0 && abs < 1 ? 4 : 2;
     if (compact && abs >= 1e6) s = '$' + (abs / 1e6).toLocaleString('en-US', { maximumFractionDigits: 2 }) + 'M';
@@ -105,14 +118,48 @@ export { locale };
 
 export const todayKey = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
 
-export function toast(msg, type = 'info', ms = 4000) {
+const TOAST_ICON = { ok: 'check', error: 'alert', info: 'info' };
+
+/**
+ * Thông báo nhỏ. Tham số 3: số ms, hoặc { ms, action: { label, run } } — vd nút "Hoàn tác".
+ * Lỗi hiện lâu hơn và được đọc ngay (role="alert"). Chạm để tắt; tối đa 3 cái cùng lúc.
+ */
+export function toast(msg, type = 'info', opts = {}) {
+  const { ms, action } = typeof opts === 'number' ? { ms: opts } : opts;
   const box = document.getElementById('toasts');
+  while (box.children.length >= 3) box.firstElementChild.remove();
   const el = document.createElement('div');
   el.className = `toast ${type}`;
-  el.textContent = tr(msg);
+  el.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  el.innerHTML = icon(TOAST_ICON[type] || 'info');
+  const text = document.createElement('span');
+  text.className = 'toast-msg';
+  text.textContent = tr(msg);
+  el.append(text);
+  let timer;
+  const close = () => { clearTimeout(timer); el.remove(); };
+  if (action) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toast-action';
+    btn.textContent = tr(action.label);
+    btn.onclick = (e) => { e.stopPropagation(); close(); action.run(); };
+    el.append(btn);
+  }
+  el.onclick = close;
   box.appendChild(el);
-  setTimeout(() => el.remove(), ms);
+  timer = setTimeout(close, ms ?? (action ? 6000 : type === 'error' ? 7000 : 4000));
   return el;
+}
+
+/** Thao tác kết thúc bằng tải lại trang: lưu thông báo tạm, hiện sau khi trang mở lại (showFlash). */
+export function flashAfterReload(msg, type = 'ok') {
+  try { sessionStorage.setItem('fin.flash', JSON.stringify([msg, type])); } catch { /* bỏ qua */ }
+}
+export function showFlash() {
+  let f = null;
+  try { f = JSON.parse(sessionStorage.getItem('fin.flash') || 'null'); sessionStorage.removeItem('fin.flash'); } catch { /* bỏ qua */ }
+  if (f) toast(f[0], f[1]);
 }
 
 export function downloadFile(name, text, type = 'application/json') {

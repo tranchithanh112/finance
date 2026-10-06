@@ -361,12 +361,22 @@ input { min-width: 0; }
   max-width: min(420px, calc(100vw - 32px));
 }
 .toast {
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
   background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent);
-  padding: 11px 14px; border-radius: 12px; box-shadow: var(--shadow-lg); font-size: 13px; font-weight: 500;
+  padding: 11px 14px; border-radius: 12px; box-shadow: var(--shadow-lg); font-size: 14px; font-weight: 500; line-height: 1.35;
   animation: in .22s ease-out;
 }
+.toast > svg.i { width: 18px; height: 18px; flex: none; color: var(--accent); }
 .toast.ok { border-left-color: var(--pos); }
+.toast.ok > svg.i { color: var(--pos); }
 .toast.error { border-left-color: var(--neg); }
+.toast.error > svg.i { color: var(--neg); }
+.toast-msg { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.toast-action {
+  flex: none; border: 0; background: none; color: var(--accent); font: inherit; font-weight: 700;
+  padding: 6px 8px; margin: -6px -8px -6px 0; border-radius: 8px; cursor: pointer;
+}
+.pill.busy { opacity: .6; cursor: progress; }
 @keyframes in { from { transform: translateY(10px); opacity: 0; } }
 
 /* ================= Tab con & thứ tự tab ================= */

@@ -88,7 +88,7 @@ export function mergeIncome(store, records) {
 
 // ================= Đồng bộ qua API =================
 
-async function syncOne(bn, store, src, path, startT, log) {
+async function syncOne(bn, store, src, path, startT, log, skipped) {
   const recent = Date.now() - 89 * DAY;
   let start = store.cursors[src] ?? startT;
   let total = 0;
@@ -102,6 +102,7 @@ async function syncOne(bn, store, src, path, startT, log) {
       if (firstCall && start < recent) { start = recent; firstCall = false; continue; }
       if (e.status === 400 || e.status === 401 || e.status === 403 || e.status === 404) {
         log(`${src.toUpperCase()}: bỏ qua (${e.message})`);
+        skipped.push({ src, status: e.status, message: e.message });
         return total;
       }
       throw e;
@@ -123,11 +124,13 @@ async function syncOne(bn, store, src, path, startT, log) {
   return total;
 }
 
+/** Tải income futures mới. Trả về { added, skipped: [{ src, status, message }] } — nguồn bị bỏ qua (chưa mở tài khoản / key thiếu quyền). */
 export async function syncFuturesIncome(bn, store, startT, log = () => {}) {
-  const um = await syncOne(bn, store, 'um', '/fapi/v1/income', startT, log);
-  const cm = await syncOne(bn, store, 'cm', '/dapi/v1/income', startT, log);
+  const skipped = [];
+  const um = await syncOne(bn, store, 'um', '/fapi/v1/income', startT, log, skipped);
+  const cm = await syncOne(bn, store, 'cm', '/dapi/v1/income', startT, log, skipped);
   store.updatedAt = Date.now();
-  return um + cm;
+  return { added: um + cm, skipped };
 }
 
 /** Số dư ví futures + vị thế đang mở. */

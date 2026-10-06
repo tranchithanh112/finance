@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { csvToIncome, mergeIncome, computeFutures, emptyFutures, parseCsv, detectOffsetHours, shiftRecords, fileNameOffsetHours } from '../js/futures.js';
+import { csvToIncome, mergeIncome, computeFutures, emptyFutures, parseCsv, detectOffsetHours, shiftRecords, fileNameOffsetHours, syncFuturesIncome } from '../js/futures.js';
 
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-6, `${a} ≈ ${b}`);
 
@@ -124,4 +124,15 @@ test('đọc múi giờ từ tên file', () => {
   assert.equal(fileNameOffsetHours('history GMT-5.csv'), -5);
   assert.equal(fileNameOffsetHours('Binance-UTC-2024.csv'), 0);
   assert.equal(fileNameOffsetHours('Binance-Lịch sử-2023.csv'), 0);
+});
+
+test('syncFuturesIncome: trả về nguồn bị bỏ qua thay vì im lặng báo 0 bản ghi', async () => {
+  const store = emptyFutures();
+  const bn = async (path) => {
+    if (path === '/dapi/v1/income') throw Object.assign(new Error('Unauthorized'), { status: 401 });
+    return [];
+  };
+  const r = await syncFuturesIncome(bn, store, Date.now());
+  assert.equal(r.added, 0);
+  assert.deepEqual(r.skipped, [{ src: 'cm', status: 401, message: 'Unauthorized' }]);
 });

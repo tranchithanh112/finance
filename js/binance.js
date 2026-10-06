@@ -72,12 +72,14 @@ export function usdPrice(asset, tick) {
 // ================= Số dư (Spot + Funding + Earn) =================
 
 export async function fetchHoldings() {
+  const missing = []; // phần không tải được (vd key thiếu quyền) → app báo cho người dùng thay vì im lặng
+  const optional = (label, p) => p.catch(() => { if (!missing.includes(label)) missing.push(label); return null; });
   const [tick, account, funding, flex, locked, futures] = await Promise.all([
     fetchTickerPrices(),
     bn('/api/v3/account', { omitZeroBalances: true }),
-    bn('/sapi/v1/asset/get-funding-asset', {}).catch(() => null),
-    bn('/sapi/v1/simple-earn/flexible/position', { size: 100 }).catch(() => null),
-    bn('/sapi/v1/simple-earn/locked/position', { size: 100 }).catch(() => null),
+    optional('Funding', bn('/sapi/v1/asset/get-funding-asset', {})),
+    optional('Earn', bn('/sapi/v1/simple-earn/flexible/position', { size: 100 })),
+    optional('Earn', bn('/sapi/v1/simple-earn/locked/position', { size: 100 })),
     fetchFuturesAccount(bn).catch(() => null),
   ]);
 
@@ -112,7 +114,7 @@ export async function fetchHoldings() {
     return { ...h, total, price, value: total * price };
   });
   holdings.sort((a, b) => b.value - a.value);
-  return { holdings, tick, futures };
+  return { holdings, tick, futures, missing };
 }
 
 // ================= Lịch sử giá (nến ngày) để định giá giao dịch cũ =================

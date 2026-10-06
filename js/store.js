@@ -95,7 +95,12 @@ function persist() {
   clearTimeout(persistTimer);
   persistTimer = setTimeout(() => {
     idbSet('state', state).catch(() => {
-      try { localStorage.setItem('fin.state', JSON.stringify(state)); } catch { /* quota */ }
+      try {
+        localStorage.setItem('fin.state', JSON.stringify(state));
+      } catch {
+        // cả IndexedDB lẫn localStorage đều không ghi được (thường do đầy bộ nhớ) → app hiện lỗi
+        if (typeof window !== 'undefined') window.dispatchEvent(new Event('fin:save-failed'));
+      }
     });
   }, 300);
 }
@@ -145,13 +150,22 @@ export function authHeaders() {
   return {};
 }
 
-/** Đổi mật khẩu (+ mã 2FA nếu server bật) lấy phiên. Trả về true nếu đúng. Mật khẩu không được lưu lại. */
+/**
+ * Đổi mật khẩu (+ mã 2FA nếu server bật) lấy phiên. Mật khẩu không được lưu lại.
+ * true = đúng; false = sai mật khẩu / mã (HTTP 401); mất mạng / server lỗi → throw với lời dễ hiểu.
+ */
 export async function login(password, otp = '') {
   const headers = { 'x-app-password': password };
   if (otp) headers['x-app-otp'] = String(otp).replace(/\s/g, '');
-  const r = await fetch('/api/session', { method: 'POST', headers });
+  let r;
+  try {
+    r = await fetch('/api/session', { method: 'POST', headers });
+  } catch {
+    throw new Error('Không kết nối được server — kiểm tra mạng rồi thử lại.');
+  }
   const data = await r.json().catch(() => ({}));
-  if (!r.ok || !data.token) return false;
+  if (r.status === 401) return false;
+  if (!r.ok || !data.token) throw new Error(data.error || `Server lỗi (HTTP ${r.status})`);
   local.session = { token: data.token, exp: data.exp };
   delete local.appPassword;
   saveLocal();

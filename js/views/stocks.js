@@ -118,7 +118,10 @@ export function renderStocks(root, ctx) {
 
   bindHistory(root, hist, ctx);
   ctx.refreshStockHistory();
-  root.querySelector('#st-quotes').onclick = () => ctx.refreshQuotes(true);
+  root.querySelector('#st-quotes').onclick = (e) => {
+    e.currentTarget.disabled = true; // vẽ lại khi xong sẽ mở lại nút
+    ctx.refreshQuotes(true);
+  };
   root.querySelector('#fund-cancel')?.addEventListener('click', () => { editing = null; ctx.rerender(); });
 
   // Mã sàn Việt Nam (.VN) → tiền tệ VND
@@ -139,13 +142,16 @@ export function renderStocks(root, ctx) {
     if (ex && !editing) return toast('Mã đã tồn tại', 'error');
     // Yahoo không có quỹ mở (DCDS, VESAF…): chuyển sang nhập tay thay vì giữ một mã báo lỗi mãi
     let needNav = false;
+    let told = false; // đã có thông báo riêng (chuyển nguồn) thì không báo thêm
     if (data.source === 'yahoo' && ex?.source !== 'yahoo') {
       const btn = e.target.querySelector('button.primary');
       btn.disabled = true;
       const q = await ctx.checkQuote(ticker);
       btn.disabled = false;
       if (q?.currency && ['USD', 'VND'].includes(q.currency)) data.currency = q.currency;
+      if (q === undefined) toast(`Chưa kiểm tra được giá của ${ticker} — sẽ thử lại khi làm mới giá`, 'info', 7000);
       if (q === null) {
+        told = true;
         // Quỹ mở: thử lấy NAV từ Fmarket, không có nữa mới chuyển sang nhập tay
         const fm = await ctx.checkQuote(quoteSymbol({ ticker, source: 'fmarket' }));
         if (fm) {
@@ -163,6 +169,7 @@ export function renderStocks(root, ctx) {
     editing = needNav ? ticker : null; // mở lại form để điền NAV
     commit({ edit: true });
     ctx.rerender();
+    if (!told) toast(ex ? `Đã lưu mã ${ticker}` : `Đã thêm mã ${ticker}`, 'ok');
     if (needNav) root.querySelector('#fund-form [name=manualPrice]')?.focus();
     if (data.source !== 'manual') ctx.refreshQuotes(false);
   };
@@ -170,10 +177,19 @@ export function renderStocks(root, ctx) {
   root.querySelector('#tx-form').onsubmit = (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));
-    const units = Number(f.units) * (f.side === 'sell' ? -1 : 1);
-    state.stocks.txs.push({ id: uid(), ticker: f.ticker, date: f.date, units, price: Number(f.price), fee: Number(f.fee) || 0 });
+    const qty = Number(f.units);
+    const price = Number(f.price);
+    if (!(qty > 0)) return toast('Số lượng phải lớn hơn 0', 'error');
+    if (!(price > 0)) return toast('Giá phải lớn hơn 0', 'error');
+    if (f.side === 'sell') {
+      const held = state.stocks.txs.filter((t) => t.ticker === f.ticker).reduce((a, t) => a + t.units, 0);
+      if (qty > held + 1e-9) return toast(`Chỉ đang giữ ${fmtQty(held)} ${f.ticker}`, 'error');
+    }
+    const units = qty * (f.side === 'sell' ? -1 : 1);
+    state.stocks.txs.push({ id: uid(), ticker: f.ticker, date: f.date, units, price, fee: Number(f.fee) || 0 });
     commit({ edit: true });
     ctx.rerender();
+    toast(`Đã thêm giao dịch ${f.side === 'sell' ? 'bán' : 'mua'} ${f.ticker}`, 'ok');
   };
 
   // "Mua thêm": điền sẵn mã, ngày hôm nay và giá hiện tại vào form giao dịch — chỉ cần nhập số lượng
@@ -201,13 +217,27 @@ export function renderStocks(root, ctx) {
       state.stocks.txs = state.stocks.txs.filter((x) => x.ticker !== t);
       commit({ edit: true });
       ctx.rerender();
+      toast(`Đã xóa ${t}`, 'ok');
     };
   });
   root.querySelectorAll('[data-del-tx]').forEach((b) => {
     b.onclick = () => {
-      state.stocks.txs = state.stocks.txs.filter((x) => x.id !== b.dataset.delTx);
+      const i = state.stocks.txs.findIndex((x) => x.id === b.dataset.delTx);
+      if (i < 0) return;
+      const [tx] = state.stocks.txs.splice(i, 1);
       commit({ edit: true });
       ctx.rerender();
+      toast(`Đã xóa giao dịch ${tx.ticker}`, 'ok', {
+        action: {
+          label: 'Hoàn tác',
+          run: () => {
+            state.stocks.txs.splice(Math.min(i, state.stocks.txs.length), 0, tx);
+            commit({ edit: true });
+            ctx.rerender();
+            toast('Đã khôi phục giao dịch', 'ok');
+          },
+        },
+      });
     };
   });
 }

@@ -6,7 +6,7 @@ import { computePnl, buildEvents } from './pnl.js';
 import { cryptoSeries, stockSeries, reconcileWithWallet } from './series.js';
 import { totals, fxRate, toUSD, fundPrice, quoteSymbol } from './calc.js';
 import * as sync from './sync.js';
-import { captureDrafts, restoreDrafts, isTyping, $, $$, toast, setDisplayCurrency, isStable, esc, isPrivate, setPrivate } from './util.js';
+import { captureDrafts, restoreDrafts, isTyping, $, $$, toast, flashAfterReload, showFlash, setDisplayCurrency, isStable, esc, isPrivate, setPrivate } from './util.js';
 import { icon } from './icons.js';
 import { tr, translateDom, setLang, getLang } from './i18n.js';
 import { loadPalette, setChartAnimation } from './charts.js';
@@ -71,15 +71,17 @@ const ctx = {
     pnlCache = null;
     commit({ edit: true });
     render();
+    toast(`Đã bỏ ${qty.toPrecision(6)} ${asset} khỏi lịch sử`, 'ok');
   },
 
   undoAdjust(id) {
     const r = (state.history.adjust || []).find((x) => x[0] === id);
-    if (!r) return;
+    if (!r) return toast('Không tìm thấy điều chỉnh này — có thể đã được hoàn tác', 'info');
     r[4] = 'x';
     pnlCache = null;
     commit({ edit: true });
     render();
+    toast('Đã hoàn tác', 'ok');
   },
   /** Giá trị coin & vốn theo ngày, dựng lại từ lịch sử (cache cùng PnL). */
   cryptoSeries() {
@@ -110,9 +112,16 @@ const ctx = {
     render();
     try {
       const startT = Date.parse(state.settings.historyStart) || Date.parse('2019-09-01');
-      const n = await syncFuturesIncome(bn, state.futures, startT, (m) => { futBusy = m; if (current === 'futures') render(); });
+      const { added, skipped } = await syncFuturesIncome(bn, state.futures, startT, (m) => { futBusy = m; if (current === 'futures') render(); });
       await ensureFuturesPrices();
-      toast(`Futures: ${n} bản ghi mới`, 'ok');
+      const names = skipped.map((s) => (s.src === 'um' ? 'USDⓈ-M' : 'COIN-M')).join(', ');
+      if (skipped.length === 2 && skipped.every((s) => s.status === 401 || s.status === 403)) {
+        toast('Không đọc được Futures: API key chưa bật quyền đọc Futures', 'error', 8000);
+      } else if (skipped.length) {
+        toast(`Futures: ${added} bản ghi mới · bỏ qua ${names} (chưa mở tài khoản hoặc key thiếu quyền)`, 'info', 8000);
+      } else {
+        toast(`Futures: ${added} bản ghi mới`, 'ok');
+      }
     } catch (e) {
       toast(`Futures: ${e.message}`, 'error', 8000);
     }
@@ -125,6 +134,7 @@ const ctx = {
   async importFuturesCsv(files) {
     let added = 0;
     let rows = 0;
+    let failed = 0;
     for (const file of files) {
       try {
         const parsed = csvToIncome(await file.text()).records;
@@ -135,12 +145,14 @@ const ctx = {
         rows += records.length;
         added += mergeIncome(state.futures, records);
       } catch (e) {
+        failed++;
         toast(`${file.name}: ${e.message}`, 'error', 8000);
       }
     }
+    if (failed === files.length) return; // mọi file đều lỗi: đã báo từng file, không báo tổng kiểu thành công
     futBusy = 'Tải giá lịch sử…';
     render();
-    await ensureFuturesPrices().catch(() => {});
+    await ensureFuturesPrices().catch(() => toast('Chưa tải được giá lịch sử — lãi/lỗ COIN-M có thể chưa đúng, thử lại sau', 'info', 7000));
     futBusy = '';
     futCache = null;
     commit();
@@ -154,6 +166,7 @@ const ctx = {
     futCache = null;
     commit();
     render();
+    toast('Đã xóa lịch sử futures', 'ok');
   },
 
   async loadServerConfig() {
@@ -174,14 +187,15 @@ const ctx = {
     }
     document.body.classList.add('is-refreshing'); // khung mờ nhấp nháy trên các ô số trong lúc tải
     try {
-      const { holdings, futures } = await fetchHoldings();
+      const { holdings, futures, missing } = await fetchHoldings();
       state.crypto = { holdings, updatedAt: Date.now() };
       if (futures?.ok) state.futures.account = futures;
       pnlCache = null;
       futCache = null;
       snapshot();
       commit();
-      if (!quiet) toast('Đã cập nhật số dư Binance', 'ok');
+      if (!quiet && missing.length) toast(`Đã cập nhật số dư Binance — chưa lấy được: ${missing.join(', ')}`, 'info', 8000);
+      else if (!quiet) toast('Đã cập nhật số dư Binance', 'ok');
     } catch (e) {
       toast(`Binance: ${e.message}`, 'error', 8000);
     }
@@ -228,7 +242,7 @@ const ctx = {
 
   async refreshQuotes(showToast = false) {
     const funds = state.stocks.funds.filter((f) => f.source !== 'manual');
-    if (!hasAuth()) return;
+    if (!hasAuth()) { if (showToast) toast('Nhập mật khẩu ứng dụng trong tab Cài đặt trước', 'error'); render(); return; } // vẽ lại → mở khóa nút vừa bấm
     // Mã .VN chưa từng có giá Yahoo: thử luôn Fmarket (quỹ mở) để tự chuyển nguồn
     const probe = funds.filter((f) => f.source === 'yahoo' && /\.VN$/i.test(f.ticker) && !f.lastPrice);
     const fmSym = (f) => quoteSymbol({ ...f, source: 'fmarket' });
@@ -404,15 +418,23 @@ function renderLock() {
     const f = new FormData(e.target);
     const btn = e.target.querySelector('button.primary');
     btn.disabled = true;
-    const ok = await login(f.get('pw'), f.get('otp') || '').catch(() => false);
+    let ok;
+    try {
+      ok = await login(f.get('pw'), f.get('otp') || '');
+    } catch (err) {
+      btn.disabled = false;
+      return toast(err.message, 'error'); // mất mạng / server lỗi — không phải sai mật khẩu
+    }
     btn.disabled = false;
     if (!ok) return toast(otp ? 'Sai mật khẩu hoặc mã xác thực 2 bước' : 'Sai mật khẩu ứng dụng', 'error');
     await ctx.loadServerConfig();
     unlock();
+    toast('Đã đăng nhập', 'ok');
   };
   $('#lock-wipe').onclick = async () => {
     if (!confirm('Xóa toàn bộ dữ liệu của app trên thiết bị này? File trên cloud (Dropbox / Drive) không bị ảnh hưởng.')) return;
     await wipeDevice();
+    flashAfterReload('Đã xóa dữ liệu trên thiết bị này'); // sau wipeDevice (hàm này xóa sessionStorage)
     location.reload();
   };
 }
@@ -472,7 +494,7 @@ function hideSplash() {
     setTimeout(() => {
       document.body.classList.add('app-enter'); // app phóng vào trong lúc nền màn chờ tan
       sp.classList.add('hide');
-      setTimeout(() => { sp.remove(); document.body.classList.remove('app-enter'); }, 700);
+      setTimeout(() => { sp.remove(); document.body.classList.remove('app-enter'); showFlash(); }, 700);
     }, 300);
   });
 }
@@ -613,6 +635,12 @@ onCommit(() => {
 // ================= Init =================
 
 async function init() {
+  let saveWarned = false; // báo 1 lần mỗi phiên
+  window.addEventListener('fin:save-failed', () => {
+    if (saveWarned) return;
+    saveWarned = true;
+    toast('Không lưu được vào máy (bộ nhớ trình duyệt đầy). Hãy Xuất JSON để sao lưu.', 'error', 12000);
+  });
   await loadState();
   // Lịch sử giá khá nặng → đọc sau lần vẽ đầu, xong thì tính lại PnL và vẽ lại
   startupGates.push(getPriceHistory().then((h) => { priceHist = h; pnlCache = null; futCache = null; render(); }).catch(() => {}));
@@ -665,12 +693,18 @@ async function init() {
   };
   $('#sync-status').onclick = async () => {
     if (!sync.syncEnabled()) return go('settings');
+    const pill = $('#sync-status');
+    if (pill.disabled) return;
+    pill.disabled = true;
+    pill.classList.add('busy'); // đang đồng bộ: mờ nút, không cho bấm lần nữa
     try {
       const r = await ctx.smartSync();
       toast({ pulled: 'Đã nhận dữ liệu từ cloud', pushed: 'Đã tải lên cloud', merged: 'Đã gộp dữ liệu 2 bên', same: 'Đã đồng bộ' }[r], 'ok');
     } catch (e) {
       toast(`Sync: ${e.message}`, 'error');
     }
+    pill.disabled = false;
+    pill.classList.remove('busy');
   };
 
   await migrateAuth(); // thiết bị cũ còn lưu mật khẩu → đổi sang phiên, xóa mật khẩu

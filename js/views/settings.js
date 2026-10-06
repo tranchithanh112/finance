@@ -157,9 +157,14 @@ export function renderSettings(root, ctx) {
   if (pwForm) pwForm.onsubmit = async (e) => {
     e.preventDefault();
     const f = new FormData(e.target);
-    const ok = await login(f.get('pw'), f.get('otp') || '').catch(() => false);
+    let ok;
+    try {
+      ok = await login(f.get('pw'), f.get('otp') || '');
+    } catch (err) {
+      return toast(err.message, 'error'); // mất mạng / server lỗi — không phải sai mật khẩu
+    }
     await ctx.loadServerConfig();
-    toast(ok ? 'Đã đăng nhập' : ctx.serverConfig().totpRequired ? 'Sai mật khẩu hoặc mã xác thực 2 bước' : 'Mật khẩu sai hoặc server chưa cấu hình', ok ? 'ok' : 'error');
+    toast(ok ? 'Đã đăng nhập' : ctx.serverConfig().totpRequired ? 'Sai mật khẩu hoặc mã xác thực 2 bước' : 'Sai mật khẩu ứng dụng', ok ? 'ok' : 'error');
     ctx.rerender();
   };
   bindTotpSetup(root, ctx);
@@ -167,6 +172,7 @@ export function renderSettings(root, ctx) {
     logout();
     await ctx.loadServerConfig();
     ctx.rerender();
+    toast('Đã đăng xuất', 'ok');
   });
 
   const saveOauth = () => {
@@ -175,13 +181,17 @@ export function renderSettings(root, ctx) {
     local.googleClientId = f.get('googleClientId').trim();
     saveLocal();
   };
-  const run = (fn, ok) => async () => {
+  // fn trả về false = người dùng đã hủy (bấm Hủy ở hộp xác nhận) → không báo gì
+  const run = (fn, ok) => async (e) => {
+    const btn = e?.currentTarget;
+    if (btn) btn.disabled = true; // khóa nút trong lúc chạy, tránh bấm 2 lần
     try {
       const r = await fn();
-      if (ok) toast(typeof ok === 'function' ? ok(r) : ok, 'ok');
+      if (ok && r !== false) toast(typeof ok === 'function' ? ok(r) : ok, 'ok');
     } catch (err) {
       toast(err.message, 'error', 7000);
     }
+    if (btn) btn.disabled = false;
     ctx.rerender();
   };
   const bind = (id, fn) => { const el = root.querySelector(id); if (el) el.onclick = fn; };
@@ -190,14 +200,18 @@ export function renderSettings(root, ctx) {
   bind('#sy-google', run(async () => { saveOauth(); await sync.googleLogin(true); await ctx.smartSync(); }, 'Đã kết nối Google Drive'));
   bind('#sy-disconnect', run(async () => sync.disconnect(), 'Đã ngắt kết nối'));
   bind('#sy-smart', run(() => ctx.smartSync(), (r) => ({ pulled: 'Đã nhận dữ liệu từ cloud', pushed: 'Đã tải lên cloud', merged: 'Đã gộp dữ liệu 2 bên', same: 'Đã đồng bộ' }[r] || 'OK')));
-  bind('#sy-push', run(() => sync.push(), 'Đã ghi đè lên cloud'));
+  bind('#sy-push', run(() => (confirm('Dữ liệu trên cloud sẽ bị thay bằng dữ liệu trên máy này. Tiếp tục?') ? sync.push() : false), 'Đã ghi đè lên cloud'));
   bind('#sy-pull', run(async () => {
-    if (!confirm('Dữ liệu trên máy này sẽ bị thay bằng dữ liệu trên cloud. Tiếp tục?')) return;
+    if (!confirm('Dữ liệu trên máy này sẽ bị thay bằng dữ liệu trên cloud. Tiếp tục?')) return false;
     if (!(await sync.pull())) throw new Error('Chưa có file trên cloud');
     ctx.afterStateReplaced();
   }, 'Đã tải từ cloud'));
   const auto = root.querySelector('#sy-auto');
-  if (auto) auto.onchange = () => { local.autoSync = auto.checked; saveLocal(); };
+  if (auto) auto.onchange = () => {
+    local.autoSync = auto.checked;
+    saveLocal();
+    toast(auto.checked ? 'Đã bật tự động đồng bộ' : 'Đã tắt tự động đồng bộ', 'ok');
+  };
 
   root.querySelector('#st-form').onsubmit = (e) => {
     e.preventDefault();
@@ -219,31 +233,38 @@ export function renderSettings(root, ctx) {
   };
 
   root.querySelector('#bk-export').onclick = () => {
-    downloadFile(`finance-portfolio-${todayKey()}.json`, JSON.stringify({ app: 'finance-dashboard', exportedAt: Date.now(), state }));
+    const name = `finance-portfolio-${todayKey()}.json`;
+    downloadFile(name, JSON.stringify({ app: 'finance-dashboard', exportedAt: Date.now(), state }));
+    toast(`Đã xuất file ${name}`, 'ok');
   };
   root.querySelector('#bk-import').onchange = async (e) => {
-    const file = e.target.files[0];
+    const input = e.target;
+    const file = input.files[0];
     if (!file) return;
+    if (!confirm('Dữ liệu trên máy này sẽ bị thay bằng dữ liệu trong file. Tiếp tục?')) { input.value = ''; return; }
     try {
       replaceState(sync.parsePayload(await file.text()));
       commit({ edit: true });
       ctx.afterStateReplaced();
       toast('Đã nhập dữ liệu', 'ok');
     } catch (err) {
-      toast(err.message, 'error');
+      toast(err instanceof SyntaxError ? 'File không phải JSON hợp lệ' : err.message, 'error');
     }
+    input.value = ''; // chọn lại đúng file đó lần sau vẫn chạy
   };
   root.querySelector('#bk-clear-history').onclick = () => {
     if (!confirm('Xóa toàn bộ lịch sử giao dịch Binance đã tải? (Có thể đồng bộ lại)')) return;
     state.history = { trades: {}, meta: {}, checked: {}, deposits: [], withdrawals: [], dust: [], converts: [], cursors: {}, updatedAt: 0 };
     commit();
     ctx.afterStateReplaced();
+    toast('Đã xóa lịch sử Binance', 'ok');
   };
   root.querySelector('#bk-reset').onclick = () => {
     if (!confirm('Xóa TOÀN BỘ dữ liệu trên máy này? Nếu đang bật tự động đồng bộ, file trên cloud cũng sẽ bị ghi đè. Hãy xuất JSON trước nếu cần.')) return;
     replaceState({});
     commit({ edit: true });
     ctx.afterStateReplaced();
+    toast('Đã xóa toàn bộ dữ liệu trên máy này', 'ok');
   };
 }
 

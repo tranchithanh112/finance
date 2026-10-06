@@ -244,6 +244,7 @@ export function renderOverview(root, ctx) {
     editingGoal = false;
     commit({ edit: true });
     ctx.rerender();
+    toast('Đã xóa mục tiêu', 'ok');
   });
   const goalForm = root.querySelector('#goal-form');
   if (goalForm) goalForm.onsubmit = (e) => {
@@ -255,6 +256,7 @@ export function renderOverview(root, ctx) {
     editingGoal = false;
     commit({ edit: true });
     ctx.rerender();
+    toast('Đã lưu mục tiêu', 'ok');
   };
   root.querySelectorAll('[data-recap]').forEach((btn) => { btn.onclick = () => { recapWhich = btn.dataset.recap; ctx.rerender(); }; });
   root.querySelectorAll('.nudge[data-buy]').forEach((a) => {
@@ -265,32 +267,49 @@ export function renderOverview(root, ctx) {
   root.querySelector('#cash-form').onsubmit = (e) => {
     e.preventDefault();
     const f = new FormData(e.target);
-    const c = { id: uid(), name: f.get('name'), currency: f.get('currency') };
+    const name = String(f.get('name') || '').trim();
+    if (!name) return toast('Nhập tên', 'error');
+    const c = { id: uid(), name, currency: f.get('currency') };
     const n = c.currency === 'VND' ? parseAmount(f.get('amount')) : Number(f.get('amount'));
     if (!Number.isFinite(n)) return toast('Số tiền không hợp lệ', 'error');
     setAnchor(c, n);
     state.cash.push(c);
     commit({ edit: true });
     ctx.rerender();
+    toast(`Đã thêm ${name}`, 'ok');
   };
   root.querySelectorAll('[data-edit-cash]').forEach((btn) => {
     btn.onclick = () => {
       const c = state.cash.find((x) => x.id === btn.dataset.editCash);
       const cur = Math.round(cashBalance(c).balance * 100) / 100;
       const v = prompt(`Số dư thực tế hiện tại của "${c.name}" (${c.currency}${c.currency === 'VND' ? ', vd 52tr hoặc 52.000.000' : ''})`, cur);
-      if (v == null) return;
+      if (v == null || !String(v).trim()) return; // Hủy hoặc để trống → không đổi
       const n = c.currency === 'VND' ? parseAmount(v) : Number(String(v).replace(',', '.'));
       if (!Number.isFinite(n)) return toast('Số không hợp lệ', 'error');
       setAnchor(c, n);
       commit({ edit: true });
       ctx.rerender();
+      toast(`Đã cập nhật số dư ${c.name}`, 'ok');
     };
   });
   root.querySelectorAll('[data-del-cash]').forEach((btn) => {
     btn.onclick = () => {
-      state.cash = state.cash.filter((c) => c.id !== btn.dataset.delCash);
+      const i = state.cash.findIndex((c) => c.id === btn.dataset.delCash);
+      if (i < 0) return;
+      const [c] = state.cash.splice(i, 1);
       commit({ edit: true });
       ctx.rerender();
+      toast(`Đã xóa ${c.name}`, 'ok', {
+        action: {
+          label: 'Hoàn tác',
+          run: () => {
+            state.cash.splice(Math.min(i, state.cash.length), 0, c);
+            commit({ edit: true });
+            ctx.rerender();
+            toast(`Đã khôi phục ${c.name}`, 'ok');
+          },
+        },
+      });
     };
   });
 
@@ -299,27 +318,34 @@ export function renderOverview(root, ctx) {
   root.querySelector('#debt-form').onsubmit = (e) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.target));
+    const name = String(f.name || '').trim();
+    if (!name) return toast('Nhập tên', 'error');
     b.debts.push({
-      id: uid(), name: f.name.trim(), balance: Number(f.balance) || 0, monthly: Number(f.monthly) || 0,
+      id: uid(), name, balance: Number(f.balance) || 0, monthly: Number(f.monthly) || 0,
       rate: Number(f.rate) || 0, currency: f.currency,
     });
     saveDebts();
+    toast(`Đã thêm khoản nợ ${name}`, 'ok');
   };
   root.querySelectorAll('[data-edit-debt]').forEach((btn) => {
     btn.onclick = () => {
       const d = b.debts.find((x) => x.id === btn.dataset.editDebt);
       const v = prompt(`Dư nợ mới của "${d.name}"`, d.balance);
-      if (v == null) return;
-      if (!Number.isFinite(Number(v))) return toast('Số không hợp lệ', 'error');
-      d.balance = Number(v);
+      if (v == null || !String(v).trim()) return; // Hủy hoặc để trống → không đổi
+      const n = d.currency === 'VND' ? parseAmount(v) : Number(String(v).replace(',', '.'));
+      if (!Number.isFinite(n)) return toast('Số không hợp lệ', 'error');
+      d.balance = n;
       saveDebts();
+      toast(`Đã cập nhật dư nợ ${d.name}`, 'ok');
     };
   });
   root.querySelectorAll('[data-del-debt]').forEach((btn) => {
     btn.onclick = () => {
       if (!confirm('Xóa khoản nợ này?')) return;
+      const d = b.debts.find((x) => x.id === btn.dataset.delDebt);
       b.debts = b.debts.filter((x) => x.id !== btn.dataset.delDebt);
       saveDebts();
+      if (d) toast(`Đã xóa khoản nợ ${d.name}`, 'ok');
     };
   });
 }

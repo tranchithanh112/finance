@@ -216,6 +216,23 @@ const EXACT = {
   'Tính từ các giao dịch bạn nhập và giá đóng cửa từng ngày (Yahoo Finance; mã nhập tay dùng giá giao dịch gần nhất). Khoảng cách giữa hai đường là lãi/lỗ chưa chốt.':
     'Computed from your transactions and daily closing prices (Yahoo Finance; manual symbols use the latest transaction price). The gap between the two lines is unrealized P&L.',
 
+  // thông báo thao tác
+  'Hoàn tác': 'Undo', 'Đã hoàn tác': 'Undone', 'Nhập tên': 'Enter a name',
+  'Không lưu được vào máy (bộ nhớ trình duyệt đầy). Hãy Xuất JSON để sao lưu.': "Couldn't save on this device (browser storage is full). Export JSON to back up.",
+  'Đã xóa dữ liệu trên thiết bị này': 'Data on this device deleted',
+  'Không tìm thấy điều chỉnh này — có thể đã được hoàn tác': 'Adjustment not found — it may already be undone',
+  'Không đọc được Futures: API key chưa bật quyền đọc Futures': "Can't read Futures: the API key doesn't have Futures read permission",
+  'Chưa tải được giá lịch sử — lãi/lỗ COIN-M có thể chưa đúng, thử lại sau': "Couldn't load price history — COIN-M P&L may be off, try again later",
+  'Đã xóa lịch sử futures': 'Futures history deleted',
+  'Dữ liệu trên cloud sẽ bị thay bằng dữ liệu trên máy này. Tiếp tục?': 'Cloud data will be replaced with the data on this device. Continue?',
+  'Dữ liệu trên máy này sẽ bị thay bằng dữ liệu trong file. Tiếp tục?': "This device's data will be replaced with the file's data. Continue?",
+  'Đã bật tự động đồng bộ': 'Auto sync on', 'Đã tắt tự động đồng bộ': 'Auto sync off', 'Đã đăng xuất': 'Signed out',
+  'File không phải JSON hợp lệ': 'The file is not valid JSON',
+  'Đã xóa lịch sử Binance': 'Binance history deleted', 'Đã xóa toàn bộ dữ liệu trên máy này': 'All data on this device deleted',
+  'Đã xóa mục tiêu': 'Goal deleted', 'Đã lưu mục tiêu': 'Goal saved',
+  'Số lượng phải lớn hơn 0': 'Quantity must be greater than 0', 'Giá phải lớn hơn 0': 'Price must be greater than 0',
+  'Đã khôi phục giao dịch': 'Transaction restored',
+
 };
 
 // Danh mục & hũ mặc định (xuất hiện chen trong chuỗi, vd "🍜 Ăn uống", "Hũ Thiết yếu")
@@ -366,6 +383,25 @@ const RULES = [
   [/^Xuất \/ nhập toàn bộ dữ liệu (.|\n)*$/, 'Export / import all data (portfolio, Binance history, stock transactions, settings) as JSON. Passwords and tokens are not included.'],
   // lỗi
   [/^Không nhận ra cột thời gian \/ số tiền trong file CSV$/, 'Could not find time / amount columns in the CSV file'],
+  // thông báo thao tác (cụ thể trước, chung sau)
+  [/^Server lỗi \(HTTP (\d+)\)$/, 'Server error (HTTP $1)'],
+  [/^Đã bỏ (\S+) (\S+) khỏi lịch sử$/, 'Removed $1 $2 from history'],
+  [/^Futures: (\d+) bản ghi mới · bỏ qua (.+) \(chưa mở tài khoản hoặc key thiếu quyền\)$/, 'Futures: $1 new records · skipped $2 (account not opened or key lacks permission)'],
+  [/^Đã cập nhật số dư Binance — chưa lấy được: (.+)$/, "Binance balances updated — couldn't load: $1"],
+  [/^Đã xuất file (.+)$/, 'Exported $1'],
+  [/^Đã cập nhật số dư (.+)$/, 'Updated balance of $1'],
+  [/^Đã cập nhật dư nợ (.+)$/, 'Updated debt balance of $1'],
+  [/^Đã thêm khoản nợ (.+)$/, 'Added debt $1'],
+  [/^Đã xóa khoản nợ (.+)$/, 'Deleted debt $1'],
+  [/^Đã thêm mã (.+)$/, 'Added $1'],
+  [/^Đã lưu mã (.+)$/, 'Saved $1'],
+  [/^Chưa kiểm tra được giá của (.+) — sẽ thử lại khi làm mới giá$/, "Couldn't check the price of $1 — will retry on the next price refresh"],
+  [/^Chỉ đang giữ (.+)$/, 'You only hold $1'],
+  [/^Đã thêm giao dịch (mua|bán) (.+)$/, (m, s, t) => `Added ${s === 'mua' ? 'buy' : 'sell'} transaction for ${t}`],
+  [/^Đã xóa giao dịch (.+)$/, 'Deleted $1 transaction'],
+  [/^Đã khôi phục (.+)$/, 'Restored $1'],
+  [/^Đã thêm (.+)$/, 'Added $1'],
+  [/^Đã xóa (.+)$/, 'Deleted $1'],
 ];
 
 const TERMS_RE = TERMS.map(([vi, en]) => [new RegExp(vi.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&'), 'g'), en]);

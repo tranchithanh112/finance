@@ -24,10 +24,22 @@ export function openSheet({ title, body, onMount }) {
     </div>
     <div class="sheet-toasts" aria-live="polite"></div>`;
   document.body.appendChild(dlg);
+  // iOS: bàn phím ảo không thu nhỏ layout viewport → bảng neo đáy bị đẩy khuất phần trên (ô số tiền).
+  // Bám theo visualViewport: chiều cao bảng = vùng còn thấy, đáy bảng = mép trên bàn phím.
+  const vv = window.visualViewport;
+  const fit = () => {
+    dlg.style.setProperty('--vvh', `${vv.height}px`);
+    dlg.style.setProperty('--kb', `${Math.max(0, window.innerHeight - vv.offsetTop - vv.height)}px`);
+    if (dlg.contains(document.activeElement)) document.activeElement.scrollIntoView({ block: 'nearest' });
+  };
+  vv?.addEventListener('resize', fit);
+  vv?.addEventListener('scroll', fit);
   let gone = false;
   const cleanup = () => {
     if (gone) return;
     gone = true;
+    vv?.removeEventListener('resize', fit);
+    vv?.removeEventListener('scroll', fit);
     dlg.remove(); // gỡ ngay — sự kiện 'close' đến sau (bất đồng bộ), form cũ không được nằm lại trong trang
     if (current?.el === dlg) current = null;
     back?.focus?.({ preventScroll: true });

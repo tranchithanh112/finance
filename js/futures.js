@@ -120,7 +120,7 @@ async function syncOne(bn, store, src, path, startT, log, skipped) {
     if (batch.length < 1000) break;
     log(`${src.toUpperCase()}: ${total} bản ghi mới…`);
   }
-  store.cursors[src] = Math.max(start, Date.now() - DAY); // lần sau chồng lấn 1 ngày
+  store.cursors[src] = Math.min(start, Date.now() - DAY); // lần sau chồng lấn 1 ngày (bản ghi về muộn); mergeIncome bỏ trùng
   return total;
 }
 

@@ -265,13 +265,12 @@ const ctx = {
         if (q) Object.assign(f, { lastPrice: q.price, prevClose: q.prevClose, lastPriceAt: Date.now(), priceTime: q.time || null, name: f.name || q.name });
       }
       if (moved.length) {
-        state.editedAt = Date.now(); // đổi nguồn giá là thay đổi của người dùng → đồng bộ sang máy khác
         toast(`${moved.join(', ')}: Yahoo không có, đã chuyển sang lấy NAV từ Fmarket`, 'ok', 7000);
       }
       if (data.quotes['VND=X']) state.fx = { USDVND: data.quotes['VND=X'].price, updatedAt: Date.now() };
       const errs = Object.keys(data.errors || {}).filter((s) => s !== 'VND=X' && !probe.some((f) => fmSym(f) === s)).map((s) => s.replace(/^FMARKET:/, ''));
       snapshot();
-      commit();
+      commit({ edit: moved.length > 0 }); // đổi nguồn giá là thay đổi của người dùng → đồng bộ sang máy khác
       ctx.refreshStockHistory();
       if (errs.length) toast(`Không lấy được giá: ${errs.join(', ')}`, 'error', 7000);
       else if (showToast) toast('Đã cập nhật giá', 'ok');

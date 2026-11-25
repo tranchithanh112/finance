@@ -25,6 +25,13 @@ test('fmarketQuote: NAV, giá phiên trước suy từ % thay đổi, mã không
   }
 });
 
+test('prevCloseOf: giá phiên trước là nến áp chót, không phải giá trước cả dải 5 ngày', async () => {
+  const { prevCloseOf } = await import('../api/quote.js');
+  const meta = { chartPreviousClose: 90, previousClose: 99 };
+  assert.equal(prevCloseOf({ meta, indicators: { quote: [{ close: [95, 97, null, 100, 101] }] } }), 100);
+  assert.equal(prevCloseOf({ meta, indicators: { quote: [{ close: [101] }] } }), 99);
+});
+
 test('parseHistory: navDate → ms UTC, bỏ dòng hỏng, sắp xếp tăng dần', () => {
   const h = parseHistory([{ navDate: '2026-10-02', nav: 2 }, { navDate: '2026-10-01', nav: 1 }, { navDate: 'x', nav: 3 }, { navDate: '2026-09-30', nav: 0 }]);
   assert.deepEqual(h, [[Date.UTC(2026, 9, 1), 1], [Date.UTC(2026, 9, 2), 2]]);

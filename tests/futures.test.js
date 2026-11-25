@@ -136,3 +136,13 @@ test('syncFuturesIncome: trả về nguồn bị bỏ qua thay vì im lặng bá
   assert.equal(r.added, 0);
   assert.deepEqual(r.skipped, [{ src: 'cm', status: 401, message: 'Unauthorized' }]);
 });
+
+test('syncFuturesIncome: lần sau tải lại 1 ngày gần nhất để không sót bản ghi về muộn', async () => {
+  const store = emptyFutures();
+  const t = Date.now() - 3600e3;
+  const bn = async (path) => (path === '/fapi/v1/income'
+    ? [{ tranId: 1, time: t, incomeType: 'REALIZED_PNL', income: '5', asset: 'USDT', symbol: 'BTCUSDT' }]
+    : []);
+  await syncFuturesIncome(bn, store, t - 1000);
+  assert.ok(store.cursors.um <= Date.now() - 24 * 3600e3);
+});

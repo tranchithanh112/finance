@@ -84,6 +84,21 @@ test('parseAmount hiểu cách gõ tiền kiểu Việt', () => {
   assert.equal(parseAmount('150,000đ'), 150000);
   assert.equal(parseAmount('2 triệu'), 2000000);
   assert.ok(Number.isNaN(parseAmount('abc')));
+  assert.equal(parseAmount('1.5'), 1.5);
+  assert.equal(parseAmount('2,25'), 2.25);
+  assert.equal(parseAmount('1,500'), 1500);
+  assert.equal(parseAmount('1.234.567'), 1234567);
+  assert.ok(Number.isNaN(parseAmount('1.2.3')));
+});
+
+test('khoản định kỳ do máy khác tự sinh không đè số tiền người dùng đã sửa', () => {
+  const rec = () => { const b = defaultBudget(); b.recurring.push({ id: 'r1', type: 'expense', amount: 5e6, cat: 'housing', day: 5, startMonth: '2026-09', active: true }); return b; };
+  const edited = rec();
+  generateRecurring(edited, '2026-09-10');
+  Object.assign(edited.txs[0], { amount: 5.5e6, u: 1000 });
+  const stale = rec();
+  generateRecurring(stale, '2026-09-10');
+  for (const m of [mergeBudget(edited, stale), mergeBudget(stale, edited)]) assert.equal(m.txs[0].amount, 5.5e6);
 });
 
 test('shiftMonth qua năm', () => {

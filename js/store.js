@@ -88,6 +88,16 @@ function replaceInPlace(obj) {
   cleanupState(obj);
   for (const k of Object.keys(state)) delete state[k];
   Object.assign(state, obj);
+  rememberPrints();
+}
+
+// Phần dữ liệu nhập tay được đồng bộ theo từng phần: sửa chứng khoán ở máy này không bị
+// một lần ghi thu chi ở máy kia đè mất (merge.js so `edits[phần]` thay vì một `editedAt` chung).
+export const EDIT_SECTIONS = ['settings', 'stocks', 'cash'];
+let prints = {};
+const print = (k) => JSON.stringify(state[k] ?? null);
+function rememberPrints() {
+  prints = Object.fromEntries(EDIT_SECTIONS.map((k) => [k, print(k)]));
 }
 
 let persistTimer;
@@ -107,8 +117,14 @@ function persist() {
 
 /** Gọi sau mỗi thay đổi dữ liệu người dùng. */
 export function commit({ edit = false } = {}) {
-  state.updatedAt = Date.now();
-  if (edit) state.editedAt = state.updatedAt; // người dùng tự sửa (cài đặt, chứng khoán, tiền mặt)
+  const now = Date.now();
+  state.updatedAt = now;
+  if (edit) {
+    state.edits ||= Object.fromEntries(EDIT_SECTIONS.map((k) => [k, state.editedAt || 0]));
+    for (const k of EDIT_SECTIONS) if (print(k) !== prints[k]) state.edits[k] = now;
+    state.editedAt = now;
+  }
+  rememberPrints();
   persist();
   listeners.forEach((fn) => fn());
 }

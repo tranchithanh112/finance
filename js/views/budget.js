@@ -74,7 +74,7 @@ function renderTx(body, b, ym, today) {
   const S = monthSummary(b, ym);
   const cats = catMap(b);
   const byDay = new Map();
-  for (const t of [...S.txs].sort((x, y) => y.date.localeCompare(x.date) || (y.u || 0) - (x.u || 0))) {
+  for (const t of [...S.txs].sort((x, y) => y.date.localeCompare(x.date) || recordedAt(y) - recordedAt(x))) {
     if (!byDay.has(t.date)) byDay.set(t.date, []);
     byDay.get(t.date).push(t);
   }
@@ -135,9 +135,20 @@ function jarsList(S) {
   }).join('')}</ul>`;
 }
 
+const recordedAt = (t) => t.at ?? t.u ?? 0;
+
+/** Giờ ghi khoản — chỉ khi ghi đúng ngày của khoản đó (khoản ghi bù cho ngày cũ thì giờ ghi không phải giờ chi). */
+function txTime(t) {
+  const at = recordedAt(t);
+  if (!at || t.id.startsWith('rec:')) return '';
+  const d = new Date(at);
+  const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return day === t.date ? d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) : '';
+}
+
 function txRow(t, cats) {
   const c = cats[t.cat];
-  const sub = [t.note, t.id.startsWith('rec:') ? 'Tự động hằng tháng' : '', t.acc ? accName(t.acc) : ''].filter(Boolean);
+  const sub = [txTime(t), t.note, t.id.startsWith('rec:') ? 'Tự động hằng tháng' : '', t.acc ? accName(t.acc) : ''].filter(Boolean);
   return `<button type="button" class="bd-tx" data-tx="${esc(t.id)}">
     <span class="bd-ic">${esc(c?.icon || '•')}</span>
     <span class="bd-tx-main"><b>${esc(c?.name || t.cat)}</b>${sub.length ? `<small>${sub.map(esc).join(' · ')}</small>` : ''}</span>

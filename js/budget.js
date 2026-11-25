@@ -59,7 +59,9 @@ export function parseAmount(input) {
     const mult = { k: 1e3, n: 1e3, nghìn: 1e3, ngàn: 1e3, tr: 1e6, triệu: 1e6, m: 1e6, tỷ: 1e9, ty: 1e9, b: 1e9 }[unit];
     return Math.round(v * mult);
   }
-  return Number(num.replace(/[.,]/g, ''));
+  if (/^\d{1,3}([.,]\d{3})+$/.test(num)) return Number(num.replace(/[.,]/g, '')); // 150.000 / 1,500
+  if (/^\d+([.,]\d+)?$/.test(num)) return Number(num.replace(',', '.')); // 1.5 / 2,25 là số thập phân
+  return NaN;
 }
 
 export const monthKey = (d) => String(d).slice(0, 7);
@@ -86,7 +88,7 @@ export function generateRecurring(b, today = localToday()) {
       if (date > today) break;
       const id = `rec:${r.id}:${ym}`;
       if (have.has(id) || b.deleted[id]) continue;
-      b.txs.push({ id, date, type: r.type, amount: Number(r.amount), cat: r.cat, note: r.note || '', acc: r.acc || null, u: Date.now() });
+      b.txs.push({ id, date, type: r.type, amount: Number(r.amount), cat: r.cat, note: r.note || '', acc: r.acc || null, at: Date.now(), u: 0 }); // u = 0: khoản người dùng đã sửa ở máy khác luôn thắng khi gộp
       have.add(id);
       n++;
     }

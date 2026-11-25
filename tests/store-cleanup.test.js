@@ -3,7 +3,18 @@ import assert from 'node:assert/strict';
 
 // store.js dùng IndexedDB/localStorage; chỉ cần stub tối thiểu để import được.
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-const { state, replaceState } = await import('../js/store.js');
+const { state, replaceState, commit } = await import('../js/store.js');
+
+test('ghi thu chi không đánh dấu chứng khoán/tiền mặt là vừa sửa', () => {
+  replaceState({ editedAt: 50, stocks: { funds: [], txs: [{ id: 't1' }] }, cash: [{ id: 'c1' }] });
+  state.budget.txs.push({ id: 'b1', amount: 30000 });
+  commit({ edit: true });
+  assert.deepEqual([state.edits.stocks, state.edits.cash], [50, 50]);
+  state.stocks.txs.push({ id: 't2' });
+  commit({ edit: true });
+  assert.ok(state.edits.stocks > 50);
+  assert.equal(state.edits.cash, 50);
+});
 
 test('gỡ bản ghi Binance Pay và airdrop còn sót trong dữ liệu đã lưu', () => {
   replaceState({

@@ -5,6 +5,13 @@ import { fmarketQuote, fmarketHistory } from './_fmarket.js';
 // GET /api/quote?symbols=VOO,E1VFVN30.VN,VND=X
 // GET /api/quote?symbols=E1VFVN30.VN&history=5y → thêm giá đóng cửa ngày: history[sym] = [[ms, close], ...]
 // Mã dạng FMARKET:DCDS → NAV quỹ mở từ Fmarket (Yahoo không có quỹ mở Việt Nam).
+
+/** Giá đóng cửa phiên trước = nến ngày áp chót. `chartPreviousClose` là giá trước cả dải (5 ngày / nhiều năm). */
+export function prevCloseOf(result) {
+  const closes = (result.indicators?.quote?.[0]?.close || []).filter((c) => c != null);
+  return closes.length >= 2 ? closes.at(-2) : (result.meta.previousClose ?? result.meta.chartPreviousClose ?? null);
+}
+
 export default async function handler(req, res) {
   if (!checkAuth(req, res)) return;
   const symbols = String(req.query.symbols || '')
@@ -40,7 +47,7 @@ export default async function handler(req, res) {
       }
       quotes[sym] = {
         price: meta.regularMarketPrice,
-        prevClose: meta.chartPreviousClose ?? meta.previousClose ?? null,
+        prevClose: prevCloseOf(data.chart.result[0]),
         currency: meta.currency,
         name: meta.longName || meta.shortName || sym,
         time: (meta.regularMarketTime || 0) * 1000,

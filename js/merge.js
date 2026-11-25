@@ -2,7 +2,7 @@ import { mergeBudget } from './budget.js';
 
 // Gộp dữ liệu của 2 thiết bị (máy này + file trên Dropbox/Drive).
 //  - Lịch sử Binance / futures: chỉ thêm, không sửa → HỢP NHẤT, không bao giờ mất bản ghi.
-//  - Dữ liệu người dùng tự nhập (cài đặt, chứng khoán, tiền mặt): lấy bên có `editedAt` mới hơn.
+//  - Dữ liệu người dùng tự nhập (cài đặt, chứng khoán, tiền mặt): mỗi phần lấy bên sửa phần đó sau cùng.
 //  - Số dư, tỷ giá: lấy bên được cập nhật gần hơn.
 
 const byKey = (lists, key) => {
@@ -70,18 +70,23 @@ function mergeFutures(a = {}, b = {}) {
   };
 }
 
+const SECTIONS = ['settings', 'stocks', 'cash'];
+const editTime = (s, k) => s.edits?.[k] ?? s.editedAt ?? 0; // file cũ chỉ có `editedAt` chung
+
 export function mergeStates(local, remote) {
   // Hòa (vd máy mới chưa sửa gì, hoặc dữ liệu cũ chưa có editedAt) → ưu tiên bản trên cloud
-  const edited = (local.editedAt || 0) > (remote.editedAt || 0) ? local : remote;
+  const edited = (k) => (editTime(local, k) > editTime(remote, k) ? local : remote);
   const newer = (k) => ((local[k]?.updatedAt || 0) >= (remote[k]?.updatedAt || 0) ? local[k] : remote[k]);
+  const stocks = edited('stocks').stocks;
   const snaps = new Map();
   for (const s of [...(remote.snapshots || []), ...(local.snapshots || [])]) snaps.set(s.date, s);
   return {
     ...remote,
     ...local,
-    settings: edited.settings,
-    stocks: { ...edited.stocks, funds: mergeFundPrices(edited.stocks?.funds, local, remote) },
-    cash: edited.cash,
+    settings: edited('settings').settings,
+    stocks: { ...stocks, funds: mergeFundPrices(stocks?.funds, local, remote) },
+    cash: edited('cash').cash,
+    edits: Object.fromEntries(SECTIONS.map((k) => [k, Math.max(editTime(local, k), editTime(remote, k))])),
     editedAt: Math.max(local.editedAt || 0, remote.editedAt || 0),
     updatedAt: Math.max(local.updatedAt || 0, remote.updatedAt || 0),
     crypto: newer('crypto'),

@@ -48,6 +48,18 @@ test('dữ liệu nhập tay: bên sửa sau cùng thắng', () => {
   assert.equal(mergeStates(b, a).cash[0].name, 'mới');
 });
 
+test('sửa chứng khoán ở máy tính không bị lần ghi thu chi trên điện thoại đè mất', () => {
+  const desktop = base({ editedAt: 200, edits: { settings: 10, stocks: 200, cash: 10 }, stocks: { funds: [], txs: [{ id: 'dca' }] } });
+  const phone = base({ editedAt: 300, edits: { settings: 10, stocks: 10, cash: 300 }, cash: [{ id: 'c', name: 'VCB mới' }] });
+  for (const m of [mergeStates(desktop, phone), mergeStates(phone, desktop)]) {
+    assert.equal(m.stocks.txs[0].id, 'dca');
+    assert.equal(m.cash[0].name, 'VCB mới');
+    assert.deepEqual(m.edits, { settings: 10, stocks: 200, cash: 300 });
+  }
+  // file cũ trên cloud chưa có `edits` → dùng `editedAt` chung
+  assert.equal(mergeStates(desktop, base({ editedAt: 250, stocks: { funds: [], txs: [] } })).stocks.txs.length, 0);
+});
+
 test('xóa dữ liệu futures không bị đồng bộ kéo về lại', () => {
   const rec = ['csv:1', 1, 'REALIZED_PNL', -5, 'USDT', 'BTCUSDT', 'csv'];
   const cloud = { futures: { income: [rec], cursors: {}, account: null, updatedAt: 1 } };

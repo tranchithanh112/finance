@@ -2,7 +2,7 @@ import { state, commit } from '../store.js';
 import { totals, stockPositions, cryptoHoldings, toUSD, fxRate, cashBalance } from '../calc.js';
 import { donut, bars, PALETTE } from '../charts.js';
 import { snapshotSeries } from '../series.js';
-import { goalProgress, snapshotTrend, monthRecap, dcaDue } from '../insights.js';
+import { goalProgress, snapshotTrend, monthRecap, dcaDue, netWorthChange, staleAccounts } from '../insights.js';
 import { historyCard, bindHistory, histMode } from './history-card.js';
 import { openSheet } from '../sheet.js';
 import { amountField, amountText, bindAmount } from './budget-entry.js';
@@ -13,6 +13,15 @@ import { esc, fmtMoney, fmtPct, pnlClass, uid, fmtNative, timeAgo, toast, fmtDat
 
 const vnd = (v, o) => fmtMoney(toUSD(v, 'VND'), o);
 const mmyy = (ym) => `${ym.slice(5)}/${ym.slice(0, 4)}`;
+
+// Bấm vào 1 tiêu chí điểm sức khỏe → tới chỗ sửa được nó: [tab | scroll, đích, gợi ý]
+const PART_FIX = {
+  savings: ['tab', 'budget', 'Xem thu chi tháng này'],
+  jars: ['tab', 'budget', 'Xem 4 hũ ở tab Thu chi'],
+  emergency: ['scroll', 'ov-cash', 'Tới mục Tiền mặt'],
+  debt: ['scroll', 'ov-debt', 'Tới mục Nợ'],
+  risk: ['tab', 'crypto', 'Xem danh mục crypto'],
+};
 
 let editingGoal = false;
 let recapWhich = 'prev'; // 'prev' = tháng trước (đã trọn tháng), 'cur' = tháng này đến hôm nay
@@ -81,12 +90,15 @@ export function renderOverview(root, ctx) {
     holdings: cryptoHoldings().filter((h) => !isStableAsset(h.asset)), priceAt: ctx.priceAt,
   });
   const due = dcaDue(state.stocks.txs, localToday());
+  const nw = netWorthChange(state.snapshots);
+  const stale = staleAccounts(state.cash);
 
   const alloc = (() => { try { return localStorage.getItem('fin.alloc') || 'class'; } catch { return 'class'; } })();
 
   root.innerHTML = `
     <div class="kpis">
       <div class="kpi hero"><span>Tài sản ròng</span><b>${fmtMoney(t.total)}</b>
+        ${nw ? `<span class="nw-change ${pnlClass(nw.change)}">${nw.change >= 0 ? '▲' : '▼'} ${fmtMoney(Math.abs(nw.change), { compact: true })}${nw.pct != null ? ` (${fmtPct(Math.abs(nw.pct), { sign: false })})` : ''} · ${nw.days} ngày</span>` : ''}
         <small>Tài sản ${fmtMoney(t.assets, { compact: true })}${t.debt ? ' − nợ ' + fmtMoney(t.debt, { compact: true }) : ''} · cập nhật ${timeAgo(state.crypto.updatedAt)}</small></div>
       <div class="kpi"><span>Dòng tiền tháng này</span><b class="${pnlClass(cur.income - cur.spend)}">${hasBudget ? vnd(cur.income - cur.spend, { sign: true }) : '—'}</b>
         <small>${hasBudget ? `Thu ${vnd(cur.income, { compact: true })} · tiêu ${vnd(cur.spend, { compact: true })}` : 'Nhập thu chi ở tab Thu chi'}</small></div>
@@ -100,6 +112,7 @@ export function renderOverview(root, ctx) {
     </div>
 
     ${due.map((tk) => `<a class="nudge" href="#stocks" data-buy="${esc(tk)}">Tháng này chưa mua <b>${esc(tk.replace(/\.VN$/, ''))}</b><span>Mua thêm →</span></a>`).join('')}
+    ${stale.map((s) => `<button type="button" class="nudge" data-edit-cash="${esc(s.id)}">Đối chiếu số dư <b>${esc(s.name)}</b> · ${s.days} ngày chưa cập nhật<span>Cập nhật →</span></button>`).join('')}
 
     ${historyCard(hist)}
 
@@ -153,10 +166,14 @@ export function renderOverview(root, ctx) {
           <p class="muted small">Tổng hợp từ tỷ lệ tiết kiệm, quỹ dự phòng, nợ, mức rủi ro danh mục và việc giữ đúng ngân sách hũ.</p></div>
       </div>
       <div class="health-parts">
-        ${health.parts.map((p) => `
-          <div class="bar-row wide"><span class="bar-label">${p.label}</span>
+        ${health.parts.map((p) => {
+          const [kind, target, hint] = PART_FIX[p.key];
+          const attr = kind === 'tab' ? `href="#${target}"` : `href="#" data-scroll="${target}"`;
+          return `
+          <a class="bar-row wide health-part" ${attr} title="${hint}"><span class="bar-label">${p.label}</span>
             <div class="bar"><i style="width:${Math.round(p.score * 100)}%;background:${p.score >= 0.8 ? 'var(--pos)' : p.score >= 0.5 ? 'var(--warn)' : 'var(--neg)'}"></i></div>
-            <span class="bar-val">${Math.round(p.score * p.weight)}/${p.weight}</span></div>`).join('') || '<p class="empty">Nhập thu chi và làm mới số dư để tính điểm.</p>'}
+            <span class="bar-val">${Math.round(p.score * p.weight)}/${p.weight}</span><span class="chev" aria-hidden="true">›</span></a>`;
+        }).join('') || '<p class="empty">Nhập thu chi và làm mới số dư để tính điểm.</p>'}
       </div>
       ${health.tips.length ? `<ul class="tips">${health.tips.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
       ${!hasBudget ? '<p class="muted small">Chưa có dữ liệu thu chi — vào tab <b>Thu chi</b> để thêm lương (định kỳ) và các khoản chi.</p>' : ''}
@@ -165,7 +182,7 @@ export function renderOverview(root, ctx) {
 
 
     <div class="grid2">
-      <div class="card">
+      <div class="card" id="ov-cash">
         <div class="card-head"><h3>Tiền mặt & tài sản khác</h3><small class="muted">Tự cộng/trừ theo thu chi · tính vào quỹ dự phòng</small></div>
         <table class="tbl">
           <tbody>
@@ -189,7 +206,7 @@ export function renderOverview(root, ctx) {
         </form>
       </div>
 
-      <div class="card">
+      <div class="card" id="ov-debt">
         <div class="card-head"><h3>Nợ</h3><small class="muted">${b.debts.length ? 'Trả hằng tháng ' + vnd(H.debtMonthly) : 'Không có nợ'}</small></div>
         <table class="tbl">
           <tbody>
@@ -260,6 +277,9 @@ export function renderOverview(root, ctx) {
     ctx.rerender();
     toast('Đã lưu mục tiêu', 'ok');
   };
+  root.querySelectorAll('[data-scroll]').forEach((a) => {
+    a.onclick = (e) => { e.preventDefault(); root.querySelector('#' + a.dataset.scroll)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  });
   root.querySelectorAll('[data-recap]').forEach((btn) => { btn.onclick = () => { recapWhich = btn.dataset.recap; ctx.rerender(); }; });
   root.querySelectorAll('.nudge[data-buy]').forEach((a) => {
     a.onclick = () => { try { sessionStorage.setItem('fin.buy', a.dataset.buy); } catch { /* bỏ qua */ } };

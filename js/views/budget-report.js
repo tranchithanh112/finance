@@ -6,6 +6,8 @@ import { esc, fmtVnd } from '../util.js';
 
 export function renderReport(body, b, ym) {
   const S = monthSummary(b, ym);
+  const prevByCat = monthSummary(b, shiftMonth(ym, -1)).byCat;
+  const prev = Object.keys(prevByCat).length ? prevByCat : null; // tháng trước chưa ghi gì thì không so
   const cats = catMap(b);
   const rows = Object.entries(S.byCat)
     .map(([id, v]) => ({ id, v, c: cats[id] }))
@@ -20,7 +22,7 @@ export function renderReport(body, b, ym) {
     ${summaryLine(S)}
     <div class="card">
       <h3>Tiêu vào đâu</h3>
-      ${spendRows.length ? barList(spendRows, S.spend) : '<p class="empty">Chưa có khoản tiêu nào trong tháng.</p>'}
+      ${spendRows.length ? barList(spendRows, S.spend, prev) : '<p class="empty">Chưa có khoản tiêu nào trong tháng.</p>'}
     </div>
     <div class="card">
       <h3>Để dành & đầu tư</h3>
@@ -45,11 +47,19 @@ function summaryLine(S) {
   return `<p class="bd-insight">Tháng này bạn giữ lại được ${Math.round(S.savingsRate * 100)}% thu nhập.</p>`;
 }
 
-function barList(rows, total) {
+/** So với tháng trước: tiêu nhiều hơn = đỏ. Tháng trước không có khoản này thì ghi "mới". */
+function deltaTag(v, before) {
+  if (!before) return '<small class="bd-delta">mới</small>';
+  const d = (v - before) / before;
+  if (Math.abs(d) < 0.05) return '';
+  return `<small class="bd-delta ${d > 0 ? 'neg' : 'pos'}" title="So với tháng trước">${d > 0 ? '▲' : '▼'} ${Math.round(Math.abs(d) * 100)}%</small>`;
+}
+
+function barList(rows, total, prev = null) {
   return `<ul class="bd-bars">${rows.map(({ id, v, c }) => {
     const pct = total > 0 ? (v / total) * 100 : 0;
     return `<li>
-      <span class="bd-bars-name">${esc(c?.icon || '•')} ${esc(c?.name || id)}</span>
+      <span class="bd-bars-name">${esc(c?.icon || '•')} ${esc(c?.name || id)}${prev ? ` ${deltaTag(v, prev[id])}` : ''}</span>
       <span class="bd-bars-val">${fmtVnd(v)} <small class="muted">${Math.round(pct)}%</small></span>
       <span class="bar"><i style="width:${pct.toFixed(1)}%"></i></span>
     </li>`;

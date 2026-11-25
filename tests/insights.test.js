@@ -1,7 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { goalProgress, snapshotTrend, monthRecap, dcaDue } from '../js/insights.js';
+import { goalProgress, snapshotTrend, monthRecap, dcaDue, netWorthChange, staleAccounts } from '../js/insights.js';
 import { defaultBudget } from '../js/budget.js';
+
+test('netWorthChange: so với 30 ngày trước, chưa đủ 30 ngày thì so với ảnh chụp đầu tiên, dưới 7 ngày thì không', () => {
+  const now = new Date(2026, 10, 25, 12);
+  const snaps = [{ date: '2026-10-01', total: 800 }, { date: '2026-10-20', total: 1000 }, { date: '2026-11-25', total: 1100 }];
+  assert.deepEqual(netWorthChange(snaps, now), { change: 100, pct: 0.1, days: 36 });
+  assert.deepEqual(netWorthChange(snaps.slice(1), now, 90), { change: 100, pct: 0.1, days: 36 });
+  assert.equal(netWorthChange([{ date: '2026-11-20', total: 1 }, { date: '2026-11-25', total: 2 }], now), null);
+});
+
+test('staleAccounts: tài khoản quá 30 ngày chưa đối chiếu', () => {
+  const now = Date.UTC(2026, 10, 25);
+  const r = staleAccounts([{ id: 'a', name: 'VCB', anchorAt: now - 34 * 864e5 }, { id: 'b', name: 'TCB', anchorAt: now - 5 * 864e5 }, { id: 'c', name: 'Vàng' }], now);
+  assert.deepEqual(r, [{ id: 'a', name: 'VCB', days: 34 }]);
+});
 
 test('goalProgress: % và tháng dự kiến đạt', () => {
   const g = goalProgress({ totalUsd: 25000, goalUsd: 40000, monthlyUsd: 1000, now: new Date(2026, 9, 2) });

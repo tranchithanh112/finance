@@ -150,6 +150,59 @@ export function spendingBudget(S, ym, today = localToday()) {
   return { budget, spent, left, status, daysLeft, perDay: daysLeft && left > 0 ? left / daysLeft : null };
 }
 
+const addDays = (date, n) => { const d = new Date(date + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+
+/** Dự báo cuối tháng theo tốc độ tiêu hiện tại (chỉ tháng đang chạy, từ ngày thứ 3 trở đi cho đỡ nhiễu). */
+export function spendForecast(sb, ym, today = localToday()) {
+  if (sb.status === 'noIncome' || ym !== monthKey(today)) return null;
+  const day = Number(today.slice(8, 10));
+  if (day < 3 || !(sb.spent > 0)) return null;
+  const [y, m] = ym.split('-').map(Number);
+  const projected = (sb.spent / day) * new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return { projected, over: projected - sb.budget };
+}
+
+/** Khoản chi định kỳ sẽ tới hạn trong `days` ngày tới (chưa được sinh ra). */
+export function upcomingBills(b, today = localToday(), days = 7) {
+  const until = addDays(today, days);
+  const out = [];
+  for (const r of b.recurring) {
+    if (r.active === false || r.type !== 'expense' || !r.startMonth) continue;
+    const every = Math.max(1, Number(r.every) || 1);
+    const day = String(Math.min(Math.max(Number(r.day) || 1, 1), 28)).padStart(2, '0');
+    for (let ym = r.startMonth; ym <= monthKey(until); ym = shiftMonth(ym, every)) {
+      const date = `${ym}-${day}`;
+      if (date > today && date <= until) { out.push({ ...r, date }); break; }
+    }
+  }
+  return out.sort((x, y) => x.date.localeCompare(y.date));
+}
+
+/** Các cặp (danh mục, số tiền) ghi nhiều nhất `days` ngày qua — để chạm 1 lần là điền sẵn. */
+export function quickPicks(b, today = localToday(), n = 4, days = 60) {
+  const from = addDays(today, -days);
+  const m = new Map();
+  for (const t of b.txs) {
+    if (t.type !== 'expense' || t.date < from || t.date > today || t.id.startsWith('rec:')) continue;
+    const k = `${t.cat}|${t.amount}`;
+    const cur = m.get(k) || { cat: t.cat, amount: Number(t.amount), count: 0, last: '' };
+    cur.count++;
+    if (t.date > cur.last) cur.last = t.date;
+    m.set(k, cur);
+  }
+  return [...m.values()].filter((p) => p.count >= 2)
+    .sort((x, y) => y.count - x.count || y.last.localeCompare(x.last)).slice(0, n);
+}
+
+/** Tìm giao dịch ở mọi tháng theo ghi chú, tên danh mục hoặc tên tài khoản (không phân biệt dấu). */
+export function searchTxs(b, query, accName = () => '') {
+  const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+  const q = fold(query).trim();
+  if (!q) return [];
+  const cats = catMap(b);
+  return b.txs.filter((t) => fold(`${t.note} ${cats[t.cat]?.name || t.cat} ${accName(t.acc)}`).includes(q));
+}
+
 /** Nhãn nhóm ngày trong danh sách: "Hôm nay", "Hôm qua", hoặc thứ + ngày/tháng. */
 export function dayLabel(date, today = localToday(), loc = 'vi-VN') {
   if (date === today) return 'Hôm nay';

@@ -3,7 +3,47 @@ import assert from 'node:assert/strict';
 import {
   parseAmount, defaultBudget, generateRecurring, monthSummary, recentAverage, healthScore, mergeBudget, shiftMonth,
   spendingBudget, dayLabel, formatAmountInput, applyAmountKey, restoreTx,
+  spendForecast, upcomingBills, quickPicks, searchTxs,
 } from '../js/budget.js';
+
+test('spendForecast: theo tốc độ tiêu tới ngày 10 của tháng 30 ngày', () => {
+  const sb = { status: 'ok', spent: 3e6, budget: 8e6 };
+  assert.deepEqual(spendForecast(sb, '2026-11', '2026-11-10'), { projected: 9e6, over: 1e6 });
+  assert.equal(spendForecast(sb, '2026-11', '2026-11-02'), null); // quá sớm
+  assert.equal(spendForecast(sb, '2026-10', '2026-11-10'), null); // tháng cũ
+});
+
+test('upcomingBills: khoản chi định kỳ trong 7 ngày tới, kể cả sang tháng sau', () => {
+  const b = defaultBudget();
+  b.recurring.push(
+    { id: 'rent', type: 'expense', amount: 5e6, cat: 'bills', day: 2, startMonth: '2026-01', active: true },
+    { id: 'net', type: 'expense', amount: 2e5, cat: 'bills', day: 15, startMonth: '2026-01', active: true },
+    { id: 'sal', type: 'income', amount: 2e7, cat: 'salary', day: 28, startMonth: '2026-01', active: true },
+    { id: 'q', type: 'expense', amount: 1e6, cat: 'bills', day: 1, every: 3, startMonth: '2026-01', active: true },
+  );
+  assert.deepEqual(upcomingBills(b, '2026-11-28').map((r) => [r.id, r.date]), [['rent', '2026-12-02']]);
+  assert.deepEqual(upcomingBills(b, '2026-09-28').map((r) => r.id), ['q', 'rent']); // quý: 01, 04, 07, 10
+});
+
+test('quickPicks: cặp danh mục + số tiền ghi ≥ 2 lần, nhiều nhất trước', () => {
+  const b = defaultBudget();
+  const tx = (id, date, cat, amount) => ({ id, date, type: 'expense', cat, amount });
+  b.txs.push(tx('1', '2026-11-20', 'cafe', 35000), tx('2', '2026-11-21', 'cafe', 35000), tx('3', '2026-11-22', 'cafe', 35000),
+    tx('4', '2026-11-20', 'food', 60000), tx('5', '2026-11-24', 'food', 60000), tx('6', '2026-11-24', 'shopping', 1e6),
+    tx('7', '2026-08-01', 'fun', 1), tx('8', '2026-08-02', 'fun', 1));
+  assert.deepEqual(quickPicks(b, '2026-11-25').map((p) => [p.cat, p.amount, p.count]), [['cafe', 35000, 3], ['food', 60000, 2]]);
+});
+
+test('searchTxs: tìm không dấu theo ghi chú, danh mục, tài khoản ở mọi tháng', () => {
+  const b = defaultBudget();
+  b.txs.push({ id: 'a', date: '2026-01-05', type: 'expense', cat: 'food', note: 'Phở bò', acc: 'v' },
+    { id: 'b', date: '2026-11-05', type: 'expense', cat: 'cafe', note: '', acc: null });
+  const acc = (id) => (id === 'v' ? 'Vietcombank' : '');
+  assert.deepEqual(searchTxs(b, 'pho', acc).map((t) => t.id), ['a']);
+  assert.deepEqual(searchTxs(b, 'cafe', acc).map((t) => t.id), ['b']);
+  assert.deepEqual(searchTxs(b, 'vietcom', acc).map((t) => t.id), ['a']);
+  assert.deepEqual(searchTxs(b, '  ', acc), []);
+});
 
 test('spendingBudget: còn tiêu được, mỗi ngày, vượt, tháng cũ, chưa có thu nhập', () => {
   const b = defaultBudget(); // Thiết yếu 30% + Hưởng thụ 15% = 45% thu nhập

@@ -1,6 +1,6 @@
 import { state, commit } from '../store.js';
 import { openSheet } from '../sheet.js';
-import { parseAmount, formatAmountInput, applyAmountKey, localToday, dayLabel, restoreTx, catMap } from '../budget.js';
+import { parseAmount, formatAmountInput, applyAmountKey, localToday, dayLabel, restoreTx, catMap, quickPicks } from '../budget.js';
 import { esc, uid, toast, fmtVnd } from '../util.js';
 import { tr, translateDom, locale, getLang } from '../i18n.js';
 
@@ -133,10 +133,15 @@ export function openEntry({ tx = null, type = 'expense', date = null, onDone = (
   const editing = Boolean(tx);
   const ui = { type: tx?.type || type, cat: tx?.cat || null };
   const title = () => (editing ? `Sửa khoản ${KIND[ui.type]}` : 'Ghi khoản mới');
+  const cats = catMap(state.budget);
+  const picks = editing ? [] : quickPicks(state.budget);
   openSheet({
     title: title(),
     body: `<form class="entry" novalidate>
       ${typeSwitch()}
+      ${picks.length ? `<div class="quick-picks" aria-label="Hay ghi">${picks.map((p) => `
+        <button type="button" class="chip" data-pick="${esc(p.cat)}|${p.amount}">${esc(cats[p.cat]?.icon || '•')} ${esc(cats[p.cat]?.name || p.cat)} · ${fmtVnd(p.amount, { compact: true })}</button>`).join('')}
+      </div>` : ''}
       ${amountField(tx ? amountText(tx.amount) : '', !editing)}
       <div class="entry-cats"></div>
       <label class="field"><span>Ghi chú</span>
@@ -153,7 +158,7 @@ export function openEntry({ tx = null, type = 'expense', date = null, onDone = (
       const form = el.querySelector('form');
       const amount = bindAmount(el);
       const save = el.querySelector('.entry-save');
-      const cats = bindTypeAndCats(el, state.budget, ui, () => {
+      const catBox = bindTypeAndCats(el, state.budget, ui, () => {
         save.textContent = tr(editing ? 'Lưu thay đổi' : `Lưu khoản ${KIND[ui.type]}`);
         el.querySelector('#sheet-title').textContent = tr(title());
       });
@@ -166,6 +171,17 @@ export function openEntry({ tx = null, type = 'expense', date = null, onDone = (
       dateInput.addEventListener('input', showHint);
       showHint();
 
+      el.querySelectorAll('[data-pick]').forEach((chip) => {
+        chip.onclick = () => {
+          const [cat, value] = chip.dataset.pick.split('|');
+          if (ui.type !== 'expense') el.querySelector('[data-type="expense"]').click();
+          amount.value = amountText(Number(value));
+          amount.dispatchEvent(new Event('input'));
+          catBox.querySelector(`[data-cat="${CSS.escape(cat)}"]`)?.click();
+          save.focus();
+        };
+      });
+
       form.onsubmit = (e) => {
         e.preventDefault();
         const f = new FormData(form);
@@ -176,7 +192,7 @@ export function openEntry({ tx = null, type = 'expense', date = null, onDone = (
           return toast('Nhập số tiền lớn hơn 0', 'error');
         }
         if (!ui.cat) {
-          cats.classList.add('invalid');
+          catBox.classList.add('invalid');
           return toast('Chọn danh mục', 'error');
         }
         const d = f.get('date');
@@ -195,14 +211,27 @@ export function openEntry({ tx = null, type = 'expense', date = null, onDone = (
           if (!cur) return toast('Không tìm thấy khoản này — có thể vừa bị xóa trên máy khác', 'error');
           cur.at ??= cur.u; // lúc ghi gốc (khoản cũ chưa có at) — giữ nguyên để số dư tài khoản không trừ lại
           Object.assign(cur, data);
-        } else {
-          b.txs.push({ id: uid(), ...data, at: now });
         }
+        const id = editing ? tx.id : uid();
+        if (!editing) b.txs.push({ id, ...data, at: now });
         commit({ edit: true });
         close();
         onDone({ date: d });
         const name = catMap(b)[ui.cat]?.name || '';
-        toast(editing ? `Đã cập nhật khoản ${KIND[ui.type]}` : `Đã lưu khoản ${KIND[ui.type]} ${fmtVnd(value)} · ${name}`, 'ok');
+        if (editing) return toast(`Đã cập nhật khoản ${KIND[ui.type]}`, 'ok');
+        toast(`Đã lưu khoản ${KIND[ui.type]} ${fmtVnd(value)} · ${name}`, 'ok', {
+          action: {
+            label: 'Hoàn tác',
+            run: () => {
+              const bb = state.budget;
+              bb.txs = bb.txs.filter((t) => t.id !== id);
+              bb.deleted[id] = Date.now();
+              commit({ edit: true });
+              onDone({ date: d });
+              toast('Đã bỏ khoản vừa ghi', 'ok');
+            },
+          },
+        });
       };
 
       el.querySelector('.entry-del')?.addEventListener('click', () => {

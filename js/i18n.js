@@ -257,6 +257,11 @@ const EXACT = {
 
   // thông báo thao tác
   'Hoàn tác': 'Undo', 'Đã hoàn tác': 'Undone', 'Nhập tên': 'Enter a name',
+  'Đã bỏ khoản vừa ghi': 'Entry removed', 'Hay ghi': 'Frequent', 'Sắp đến hạn:': 'Coming up:', 'mới': 'new',
+  'Tìm khoản: ghi chú, danh mục, tài khoản…': 'Search: note, category, account…', 'Tìm giao dịch': 'Search transactions',
+  'Cập nhật →': 'Update →', 'So với tháng trước': 'Vs last month',
+  'Xem thu chi tháng này': "See this month's budget", 'Xem 4 hũ ở tab Thu chi': 'See the 4 jars in Budget',
+  'Tới mục Tiền mặt': 'Go to Cash', 'Tới mục Nợ': 'Go to Debts', 'Xem danh mục crypto': 'See crypto portfolio',
   'Không lưu được vào máy (bộ nhớ trình duyệt đầy). Hãy Xuất JSON để sao lưu.': "Couldn't save on this device (browser storage is full). Export JSON to back up.",
   'Đã xóa dữ liệu trên thiết bị này': 'Data on this device deleted',
   'Không tìm thấy điều chỉnh này — có thể đã được hoàn tác': 'Adjustment not found — it may already be undone',
@@ -449,7 +454,14 @@ const RULES = [
   // thu chi (giao diện mới) — các câu "Đã … khoản / danh mục" phải đứng trước 3 câu chung bên dưới
   [/^Chưa có khoản nào trong tháng (\d+)\/(\d{4})$/, (m, a, y) => `No entries in ${MONTHS[a - 1]} ${y}`],
   [/^Đã tiêu (\d+)% ngân sách$/, 'Spent $1% of budget'], [/^Đã tiêu (.+) \/ (.+)$/, 'Spent $1 / $2'],
-  [/^≈ (.+) mỗi ngày$/, '≈ $1 a day'], [/^đã để (.+) \/ mục tiêu (.+)$/, 'saved $1 / target $2'],
+  [/^≈ (.+) mỗi ngày$/, '≈ $1 a day'],
+  [/^Theo tốc độ này: vượt (.+) cuối tháng$/, 'At this pace: $1 over by month end'],
+  [/^Theo tốc độ này: cuối tháng còn dư (.+)$/, 'At this pace: $1 left at month end'],
+  [/^([▲▼] .+) · (\d+) ngày$/, '$1 · $2 days'],
+  [/^Đối chiếu số dư$/, 'Reconcile balance'], [/^· (\d+) ngày chưa cập nhật$/, '· not updated for $1 days'],
+  [/^(\d+) khoản · (.+)$/, '$1 entries · $2'],
+  [/^Không tìm thấy khoản nào khớp “(.+)”$/, 'No entries match “$1”'],
+  [/^(.+) · ngày (\d+)$/, '$1 · on the $2'], [/^đã để (.+) \/ mục tiêu (.+)$/, 'saved $1 / target $2'],
   [/Tự động hằng tháng/g, 'Recurring'],
   [/^Tháng này bạn giữ lại được (\d+)% thu nhập\.$/, 'This month you kept $1% of your income.'],
   [/^Tháng này bạn tiêu nhiều hơn thu nhập (.+)\.$/, 'This month you spent $1 more than you earned.'],

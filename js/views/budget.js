@@ -1,5 +1,7 @@
 import { state } from '../store.js';
-import { monthSummary, shiftMonth, monthKey, localToday, catMap, spendingBudget, dayLabel, SPEND_JARS } from '../budget.js';
+import {
+  monthSummary, shiftMonth, monthKey, localToday, catMap, spendingBudget, dayLabel, SPEND_JARS, spendForecast, upcomingBills, searchTxs,
+} from '../budget.js';
 import { esc, fmtVnd } from '../util.js';
 import { locale } from '../i18n.js';
 import { openEntry } from './budget-entry.js';
@@ -8,7 +10,7 @@ import { renderBudgetSettings } from './budget-settings.js';
 
 // Tab Thu chi: tháng đang xem + 3 màn (Giao dịch · Báo cáo · Thiết lập). Thu chi luôn tính bằng VND.
 
-const ui = { month: null, view: 'tx', showJars: false };
+const ui = { month: null, view: 'tx', showJars: false, q: '' };
 const VIEWS = [['tx', 'Giao dịch'], ['report', 'Báo cáo'], ['setup', 'Thiết lập']];
 
 const monthLabel = (ym) => { const [y, m] = ym.split('-'); return `Tháng ${Number(m)}/${y}`; };
@@ -43,12 +45,21 @@ export function renderBudget(root, ctx) {
       <div class="seg full bd-views">${VIEWS.map(([id, label]) =>
         `<button type="button" data-view="${id}" class="${ui.view === id ? 'on' : ''}" aria-pressed="${ui.view === id}">${label}</button>`).join('')}</div>
       <button type="button" class="btn primary bd-add" data-new="expense">+ Ghi khoản mới</button>
+      ${ui.view === 'tx' ? `<input type="search" class="bd-search" placeholder="Tìm khoản: ghi chú, danh mục, tài khoản…"
+        aria-label="Tìm giao dịch" value="${esc(ui.q)}" autocomplete="off">` : ''}
     </div>
     <div class="bd-body"></div>`;
   const body = root.querySelector('.bd-body');
+  const paintTx = () => {
+    if (ui.q.trim()) renderSearch(body, state.budget, ui.q, today);
+    else renderTx(body, state.budget, ui.month, today);
+    bindRows(body, ctx);
+  };
   if (ui.view === 'report') renderReport(body, state.budget, ui.month);
   else if (setup) renderBudgetSettings(body, ctx);
-  else renderTx(body, state.budget, ui.month, today);
+  else paintTx();
+  // chỉ vẽ lại danh sách khi gõ (vẽ lại cả tab sẽ làm mất con trỏ trong ô tìm)
+  root.querySelector('.bd-search')?.addEventListener('input', (e) => { ui.q = e.target.value; paintTx(); });
 
   root.querySelectorAll('[data-month]').forEach((btn) => {
     btn.onclick = () => { ui.month = shiftMonth(ui.month, Number(btn.dataset.month)); ctx.rerender(); };
@@ -56,47 +67,66 @@ export function renderBudget(root, ctx) {
   root.querySelectorAll('[data-view]').forEach((btn) => {
     btn.onclick = () => { ui.view = btn.dataset.view; ctx.rerender(); };
   });
-  root.querySelectorAll('[data-new]').forEach((btn) => {
+  root.querySelector('.bd-head [data-new]').onclick = () => openEntry({ type: 'expense', date: defaultDate(), onDone: afterEntry(ctx) });
+}
+
+/** Nút trong phần danh sách (vẽ lại riêng khi tìm kiếm). */
+function bindRows(body, ctx) {
+  body.querySelectorAll('[data-new]').forEach((btn) => {
     btn.onclick = () => openEntry({ type: btn.dataset.new, date: defaultDate(), onDone: afterEntry(ctx) });
   });
-  root.querySelectorAll('[data-tx]').forEach((btn) => {
+  body.querySelectorAll('[data-tx]').forEach((btn) => {
     btn.onclick = () => {
       const tx = state.budget.txs.find((t) => t.id === btn.dataset.tx);
       if (tx) openEntry({ tx, onDone: afterEntry(ctx) });
     };
   });
-  root.querySelector('[data-jars]')?.addEventListener('click', () => { ui.showJars = !ui.showJars; ctx.rerender(); });
+  body.querySelector('[data-jars]')?.addEventListener('click', () => { ui.showJars = !ui.showJars; ctx.rerender(); });
+}
+
+/** Kết quả tìm ở mọi tháng, nhóm theo ngày, mới nhất trước. */
+function renderSearch(body, b, q, today) {
+  const hits = searchTxs(b, q, accName);
+  const total = hits.reduce((a, t) => a + (t.type === 'income' ? 1 : -1) * Number(t.amount), 0);
+  body.innerHTML = hits.length
+    ? `<p class="bd-search-sum">${hits.length} khoản · ${total >= 0 ? '+' : '−'}${fmtVnd(Math.abs(total))}</p>${dayGroups(hits, b, today, true)}`
+    : `<div class="card bd-empty"><p>Không tìm thấy khoản nào khớp “${esc(q.trim())}”</p></div>`;
+}
+
+function dayGroups(txs, b, today, withYear = false) {
+  const cats = catMap(b);
+  const byDay = new Map();
+  for (const t of [...txs].sort((x, y) => y.date.localeCompare(x.date) || recordedAt(y) - recordedAt(x))) {
+    if (!byDay.has(t.date)) byDay.set(t.date, []);
+    byDay.get(t.date).push(t);
+  }
+  return [...byDay].map(([d, list]) => `
+    <section class="bd-day">
+      <h4>${esc(dayLabel(d, today, locale()))}${withYear && d.slice(0, 4) !== today.slice(0, 4) ? ` ${d.slice(0, 4)}` : ''}</h4>
+      ${list.map((t) => txRow(t, cats)).join('')}
+    </section>`).join('');
 }
 
 // ---------- Màn Giao dịch ----------
 
 function renderTx(body, b, ym, today) {
   const S = monthSummary(b, ym);
-  const cats = catMap(b);
-  const byDay = new Map();
-  for (const t of [...S.txs].sort((x, y) => y.date.localeCompare(x.date) || recordedAt(y) - recordedAt(x))) {
-    if (!byDay.has(t.date)) byDay.set(t.date, []);
-    byDay.get(t.date).push(t);
-  }
+  const sb = spendingBudget(S, ym, today);
   body.innerHTML = `
-    ${budgetCard(S, spendingBudget(S, ym, today))}
+    ${budgetCard(S, sb, spendForecast(sb, ym, today), ym === monthKey(today) ? upcomingBills(b, today) : [])}
     <div class="bd-sum">
       <span><small>Thu vào</small><b class="pos">${fmtVnd(S.income, { compact: true })}</b></span>
       <span><small>Tiêu</small><b>${fmtVnd(S.spend, { compact: true })}</b></span>
       <span><small>Để dành</small><b>${fmtVnd(S.saved, { compact: true })}</b></span>
     </div>
-    ${byDay.size ? [...byDay].map(([d, list]) => `
-      <section class="bd-day">
-        <h4>${esc(dayLabel(d, today, locale()))}</h4>
-        ${list.map((t) => txRow(t, cats)).join('')}
-      </section>`).join('') : `
+    ${S.txs.length ? dayGroups(S.txs, b, today) : `
       <div class="card bd-empty">
         <p>Chưa có khoản nào trong ${monthLabel(ym).toLowerCase()}</p>
         <button type="button" class="btn primary" data-new="expense">Ghi khoản đầu tiên</button>
       </div>`}`;
 }
 
-function budgetCard(S, sb) {
+function budgetCard(S, sb, fc, bills) {
   if (sb.status === 'noIncome') {
     return `<div class="card bd-budget">
       <p class="bd-budget-label">Còn tiêu được</p>
@@ -115,6 +145,11 @@ function budgetCard(S, sb) {
       <span>Đã tiêu ${fmtVnd(sb.spent, { compact: true })} / ${fmtVnd(sb.budget, { compact: true })}</span>
       ${sb.perDay ? `<span>≈ ${fmtVnd(Math.round(sb.perDay / 1000) * 1000, { compact: true })} mỗi ngày</span>` : ''}
     </div>
+    ${fc && !over ? `<p class="bd-forecast ${fc.over > 0 ? 'warn' : ''}">${fc.over > 0
+      ? `Theo tốc độ này: vượt ${fmtVnd(fc.over, { compact: true })} cuối tháng`
+      : `Theo tốc độ này: cuối tháng còn dư ${fmtVnd(-fc.over, { compact: true })}`}</p>` : ''}
+    ${bills.length ? `<p class="bd-bills"><span>Sắp đến hạn:</span> ${bills.map((r) =>
+      `${esc(r.note || catMap(state.budget)[r.cat]?.name || '')} ${fmtVnd(Number(r.amount), { compact: true })} · ngày ${Number(r.date.slice(8))}`).join(', ')}</p>` : ''}
     <button type="button" class="link bd-jars-btn" data-jars aria-expanded="${ui.showJars}">${ui.showJars ? 'Ẩn 4 hũ' : 'Xem 4 hũ'}</button>
     ${ui.showJars ? jarsList(S) : ''}
   </div>`;

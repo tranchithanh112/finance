@@ -47,6 +47,27 @@ const snapAt = (snapshots, date) => {
 };
 
 /**
+ * Tài sản ròng thay đổi bao nhiêu trong `days` ngày qua (so với ảnh chụp cũ nhất trong khoảng đó nếu chưa đủ ngày).
+ * Cần ít nhất 7 ngày dữ liệu. → { change, pct, days } | null
+ */
+export function netWorthChange(snapshots, now = new Date(), days = 30) {
+  const last = snapshots?.at(-1);
+  if (!last) return null;
+  const base = snapAt(snapshots, dayKey(new Date(now.getTime() - days * DAY))) || snapshots[0];
+  const span = Math.round((Date.parse(last.date) - Date.parse(base.date)) / DAY);
+  if (span < 7) return null;
+  const change = last.total - base.total;
+  return { change, pct: base.total ? change / Math.abs(base.total) : null, days: span };
+}
+
+/** Tài khoản tiền mặt lâu chưa đối chiếu với ngân hàng (số dư tự cộng/trừ dễ lệch dần). */
+export function staleAccounts(cash = [], now = Date.now(), days = 30) {
+  return cash
+    .filter((c) => c.anchorAt && now - c.anchorAt > days * DAY)
+    .map((c) => ({ id: c.id, name: c.name, days: Math.floor((now - c.anchorAt) / DAY) }));
+}
+
+/**
  * Tóm tắt 1 tháng: thu chi (so với tháng trước), tài sản ròng đầu → cuối tháng,
  * coin kéo lên / kéo xuống nhiều nhất (số coin đang giữ × biến động giá trong tháng).
  * priceAt(asset, ms) → giá USD đóng cửa ngày đó (null nếu không có).

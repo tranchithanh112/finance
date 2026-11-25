@@ -690,6 +690,25 @@ body.app-enter #bottom-nav, body.app-enter #fab { animation: nav-in .55s cubic-b
   text-decoration: none; cursor: pointer; }
 .nudge span { margin-left: auto; color: var(--accent); font-weight: 600; white-space: nowrap; }
 
+/* ---- Tính năng: thay đổi tài sản ròng, dự báo, hóa đơn sắp tới, gợi ý nhập nhanh, tìm kiếm ---- */
+.nw-change { display: inline-block; margin: 2px 0 4px; font-size: 13.5px; font-weight: 600; font-feature-settings: 'tnum'; }
+.bd-forecast, .bd-bills { margin: 10px 0 0 !important; font-size: 13.5px; color: var(--muted); }
+.bd-forecast.warn { color: var(--warn); font-weight: 600; }
+.bd-bills span { font-weight: 600; color: var(--text); }
+.quick-picks { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 40px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.chip:active { transform: scale(.97); }
+.bd-search { width: 100%; min-height: 44px; font-size: 16px; }
+.bd-search-sum { margin: 0 0 12px; color: var(--muted); font-size: 13.5px; font-weight: 600; }
+.bd-delta { margin-left: 4px; font-size: 12px; font-weight: 650; color: var(--muted); }
+.bd-delta.neg { color: var(--neg); }
+.bd-delta.pos { color: var(--pos); }
+.health-part { grid-template-columns: 170px 1fr 56px 12px; min-height: 40px; color: inherit; text-decoration: none; border-radius: 8px; }
+.health-part:hover { background: var(--surface-2); }
+.health-part .chev { color: var(--muted); }
+@media (max-width: 640px) { .health-part { grid-template-columns: 116px 1fr 44px 10px; } }
+
 /* ---- Mục tiêu & tóm tắt tháng ---- */
 .goal-top { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
 .goal-top b { font-size: 28px; font-weight: 650; letter-spacing: -0.02em; font-feature-settings: 'tnum'; }

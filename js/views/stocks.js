@@ -3,7 +3,8 @@ import { stockPositions, fxRate, quoteSymbol } from '../calc.js';
 import { donut, PALETTE } from '../charts.js';
 import { historyCard, bindHistory } from './history-card.js';
 import { dcaDue } from '../insights.js';
-import { esc, fmtMoney, fmtNative, fmtQty, fmtPct, fmtDate, pnlClass, uid, timeAgo, todayKey, toast, locale } from '../util.js';
+import { esc, fmtMoney, fmtNative, fmtQty, fmtPct, fmtDate, pnlClass, uid, timeAgo, toast, locale } from '../util.js';
+import { localToday } from '../budget.js';
 
 let editing = null; // ticker đang sửa
 
@@ -17,7 +18,7 @@ export function renderStocks(root, ctx) {
   const lastQuote = Math.max(0, ...state.stocks.funds.map((f) => f.lastPriceAt || 0));
   const txs = [...state.stocks.txs].sort((a, b) => b.date.localeCompare(a.date));
   const ed = editing && state.stocks.funds.find((f) => f.ticker === editing);
-  const due = dcaDue(state.stocks.txs, todayKey());
+  const due = dcaDue(state.stocks.txs, localToday());
 
   const hist = {
     id: 'stocks', title: 'Danh mục chứng khoán theo thời gian', rows: ctx.stockSeries(), key: 'value', pnl: true,
@@ -93,7 +94,7 @@ export function renderStocks(root, ctx) {
       <form id="tx-form" class="inline-form">
         <select name="ticker" required>${state.stocks.funds.map((f) => `<option>${esc(f.ticker)}</option>`).join('')}</select>
         <select name="side"><option value="buy">Mua</option><option value="sell">Bán</option></select>
-        <input name="date" type="date" value="${todayKey()}" required>
+        <input name="date" type="date" value="${localToday()}" required>
         <input name="units" type="number" step="any" min="0" placeholder="Số lượng" required>
         <input name="price" type="number" step="any" min="0" placeholder="Giá / đơn vị" required>
         <input name="fee" type="number" step="any" min="0" placeholder="Phí">
@@ -198,7 +199,7 @@ export function renderStocks(root, ctx) {
     const p = pos.find((x) => x.ticker === ticker);
     form.ticker.value = ticker;
     form.side.value = 'buy';
-    form.date.value = todayKey();
+    form.date.value = localToday();
     if (p?.price) form.price.value = p.price;
     form.scrollIntoView({ behavior: 'smooth', block: 'center' });
     form.units.focus({ preventScroll: true });

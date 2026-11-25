@@ -153,13 +153,17 @@ export async function googleLogin(interactive = true) {
 async function gToken() {
   const s = gSession();
   if (s && s.exp > Date.now()) return s.token;
+  // Popup đăng nhập chỉ mở được khi người dùng vừa bấm; đồng bộ nền thì bỏ qua, chờ lần bấm ☁
+  if (globalThis.navigator?.userActivation && !navigator.userActivation.isActive) {
+    throw Object.assign(new Error('Google Drive cần đăng nhập lại — bấm ☁ để đồng bộ'), { needsLogin: true });
+  }
   await googleLogin(false); // có thể mở popup ngắn nếu hết hạn
   return gSession().token;
 }
 
 async function gFetch(url, opts = {}) {
   const r = await fetch(url, { ...opts, headers: { ...opts.headers, Authorization: `Bearer ${await gToken()}` } });
-  if (!r.ok) throw new Error(`Google Drive lỗi ${r.status}`);
+  if (!r.ok) throw Object.assign(new Error(`Google Drive lỗi ${r.status}`), { status: r.status });
   return r;
 }
 
@@ -189,9 +193,18 @@ const google = {
     saveLocal();
   },
   async download() {
-    const id = await gFindId();
+    let id = await gFindId();
     if (!id) return null;
-    return (await gFetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).text();
+    try {
+      return await (await gFetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).text();
+    } catch (e) {
+      if (e.status !== 404) throw e;
+      // file đã bị xóa trên Drive → bỏ id cũ, tìm lại theo tên (không có thì lần đồng bộ này tạo file mới)
+      local.googleFileId = null;
+      saveLocal();
+      id = await gFindId();
+      return id ? (await gFetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).text() : null;
+    }
   },
 };
 

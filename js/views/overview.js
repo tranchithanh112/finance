@@ -112,7 +112,7 @@ export function renderOverview(root, ctx) {
     </div>
 
     ${due.map((tk) => `<a class="nudge" href="#stocks" data-buy="${esc(tk)}">Tháng này chưa mua <b>${esc(tk.replace(/\.VN$/, ''))}</b><span>Mua thêm →</span></a>`).join('')}
-    ${stale.map((s) => `<button type="button" class="nudge" data-edit-cash="${esc(s.id)}">Đối chiếu số dư <b>${esc(s.name)}</b> · ${s.days} ngày chưa cập nhật<span>Cập nhật →</span></button>`).join('')}
+    ${stale.map((s) => `<button type="button" class="nudge" data-edit-cash="${esc(s.id)}">Đối chiếu số dư <b data-raw>${esc(s.name)}</b> · ${s.days} ngày chưa cập nhật<span>Cập nhật →</span></button>`).join('')}
 
     ${historyCard(hist)}
 
@@ -135,6 +135,7 @@ export function renderOverview(root, ctx) {
       </div>
       <div class="card recap">
         <div class="card-head"><h3>Tháng ${mmyy(recap.ym)}</h3>
+          ${recap.hasBudget ? '<button type="button" class="link" id="recap-open">Xem tổng kết</button>' : ''}
           <div class="seg">${[['prev', 'Tháng trước'], ['cur', 'Tháng này']].map(([k, l]) => `<button data-recap="${k}" class="${recapWhich === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
         <div class="recap-grid">
           <div><span>Chi tiêu</span><b>${recap.hasBudget ? vnd(recap.spend) : '—'}</b>
@@ -189,7 +190,7 @@ export function renderOverview(root, ctx) {
             ${state.cash.map((c) => {
               const B = cashBalance(c);
               return `
-              <tr><td>${esc(c.name)}<div class="sub">${c.anchorAt ? `Chốt ${fmtNative(Number(c.amount), c.currency)} lúc ${fmtDate(c.anchorAt, true)}` : ''}
+              <tr><td><span data-raw>${esc(c.name)}</span><div class="sub">${c.anchorAt ? `Chốt ${fmtNative(Number(c.amount), c.currency)} lúc ${fmtDate(c.anchorAt, true)}` : ''}
                 ${B.count ? ` · ${B.delta >= 0 ? '+' : '−'}${fmtNative(Math.abs(B.delta), c.currency)} từ ${B.count} khoản thu chi` : ''}</div></td>
               <td class="r"><b>${fmtNative(B.balance, c.currency)}</b></td>
               <td class="r nowrap"><button class="link" data-edit-cash="${esc(c.id)}">Sửa số dư</button>
@@ -211,7 +212,7 @@ export function renderOverview(root, ctx) {
         <table class="tbl">
           <tbody>
             ${b.debts.map((d) => `
-              <tr><td>${esc(d.name)}${d.rate ? ` <span class="muted small">${d.rate}%/năm</span>` : ''}</td>
+              <tr><td><span data-raw>${esc(d.name)}</span>${d.rate ? ` <span class="muted small">${d.rate}%/năm</span>` : ''}</td>
               <td class="r neg">${fmtNative(Number(d.balance), d.currency)}</td>
               <td class="r muted small">${d.monthly ? fmtNative(Number(d.monthly), d.currency) + '/th' : ''}</td>
               <td class="r nowrap"><button class="link" data-edit-debt="${esc(d.id)}">Sửa dư nợ</button>
@@ -221,8 +222,8 @@ export function renderOverview(root, ctx) {
         </table>
         <form class="inline-form" id="debt-form">
           <input name="name" placeholder="Tên khoản nợ" required>
-          <input name="balance" type="number" step="any" placeholder="Dư nợ" required>
-          <input name="monthly" type="number" step="any" placeholder="Trả / tháng">
+          <input name="balance" inputmode="decimal" placeholder="Dư nợ (vd 52tr)" required>
+          <input name="monthly" inputmode="decimal" placeholder="Trả / tháng (vd 3tr)">
           <input name="rate" type="number" step="any" placeholder="Lãi %/năm" style="max-width:110px">
           <select name="currency"><option>VND</option><option>USD</option></select>
           <button class="btn">Thêm</button>
@@ -258,12 +259,14 @@ export function renderOverview(root, ctx) {
   root.querySelector('#goal-edit')?.addEventListener('click', () => { editingGoal = true; ctx.rerender(); });
   root.querySelector('#goal-cancel')?.addEventListener('click', () => { editingGoal = false; ctx.rerender(); });
   root.querySelector('#goal-del')?.addEventListener('click', () => {
-    if (!confirm('Xóa mục tiêu tài sản?')) return;
+    const old = state.settings.goal;
     state.settings.goal = null;
     editingGoal = false;
     commit({ edit: true });
     ctx.rerender();
-    toast('Đã xóa mục tiêu', 'ok');
+    toast('Đã xóa mục tiêu', 'ok', {
+      action: { label: 'Hoàn tác', run: () => { state.settings.goal = old; commit({ edit: true }); ctx.rerender(); toast('Đã khôi phục mục tiêu', 'ok'); } },
+    });
   });
   const goalForm = root.querySelector('#goal-form');
   if (goalForm) goalForm.onsubmit = (e) => {
@@ -281,6 +284,19 @@ export function renderOverview(root, ctx) {
     a.onclick = (e) => { e.preventDefault(); root.querySelector('#' + a.dataset.scroll)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   });
   root.querySelectorAll('[data-recap]').forEach((btn) => { btn.onclick = () => { recapWhich = btn.dataset.recap; ctx.rerender(); }; });
+  root.querySelector('#recap-open')?.addEventListener('click', () => openMonthReport(recap));
+
+  // Đầu tháng (ngày 1–10): tự mở tổng kết tháng trước 1 lần trên mỗi máy
+  const prevYm = shiftMonth(thisYm, -1);
+  let shown = null;
+  try { shown = localStorage.getItem('fin.report'); } catch { /* bỏ qua */ }
+  if (Number(localToday().slice(8)) <= 10 && shown !== prevYm && monthSummary(b, prevYm).txs.length && !document.querySelector('dialog[open]')) {
+    try { localStorage.setItem('fin.report', prevYm); } catch { /* bỏ qua */ }
+    openMonthReport(recapWhich === 'prev' ? recap : monthRecap({
+      budget: b, ym: prevYm, snapshots: state.snapshots,
+      holdings: cryptoHoldings().filter((h) => !isStableAsset(h.asset)), priceAt: ctx.priceAt,
+    }));
+  }
   root.querySelectorAll('.nudge[data-buy]').forEach((a) => {
     a.onclick = () => { try { sessionStorage.setItem('fin.buy', a.dataset.buy); } catch { /* bỏ qua */ } };
   });
@@ -348,9 +364,13 @@ export function renderOverview(root, ctx) {
     const f = Object.fromEntries(new FormData(e.target));
     const name = String(f.name || '').trim();
     if (!name) return toast('Nhập tên', 'error');
+    // VND hiểu cách gõ "52tr", "3,5tr"; USD gõ số thường
+    const num = (v) => (f.currency === 'VND' ? parseAmount(v) : Number(String(v || '').replace(',', '.')));
+    const balance = num(f.balance);
+    if (!(balance >= 0)) return toast('Số tiền không hợp lệ', 'error');
     b.debts.push({
-      id: uid(), name, balance: Number(f.balance) || 0, monthly: Number(f.monthly) || 0,
-      rate: Number(f.rate) || 0, currency: f.currency,
+      id: uid(), name, balance, monthly: (f.monthly && num(f.monthly)) || 0,
+      rate: Number(String(f.rate || '').replace(',', '.')) || 0, currency: f.currency,
     });
     saveDebts();
     toast(`Đã thêm khoản nợ ${name}`, 'ok');
@@ -378,12 +398,57 @@ export function renderOverview(root, ctx) {
   });
   root.querySelectorAll('[data-del-debt]').forEach((btn) => {
     btn.onclick = () => {
-      if (!confirm('Xóa khoản nợ này?')) return;
-      const d = b.debts.find((x) => x.id === btn.dataset.delDebt);
-      b.debts = b.debts.filter((x) => x.id !== btn.dataset.delDebt);
+      const i = b.debts.findIndex((x) => x.id === btn.dataset.delDebt);
+      if (i < 0) return;
+      const [d] = b.debts.splice(i, 1);
       saveDebts();
-      if (d) toast(`Đã xóa khoản nợ ${d.name}`, 'ok');
+      toast(`Đã xóa khoản nợ ${d.name}`, 'ok', {
+        action: {
+          label: 'Hoàn tác',
+          run: () => {
+            const list = state.budget.debts; // đọc lại: đồng bộ nền có thể đã thay state
+            list.splice(Math.min(i, list.length), 0, d);
+            state.budget.configAt = Date.now();
+            commit({ edit: true });
+            ctx.rerender();
+            toast(`Đã khôi phục khoản nợ ${d.name}`, 'ok');
+          },
+        },
+      });
     };
+  });
+}
+
+/** Tổng kết 1 tháng: thu, tiêu, giữ lại %, 3 danh mục tiêu nhiều nhất (so với tháng trước), tài sản ròng. */
+function openMonthReport(recap) {
+  const b = state.budget;
+  const S = monthSummary(b, recap.ym);
+  const prev = monthSummary(b, shiftMonth(recap.ym, -1)).byCat;
+  const cats = Object.fromEntries(b.categories.map((c) => [c.id, c]));
+  const top = Object.entries(S.byCat).filter(([id]) => SPEND_JARS.has(cats[id]?.jar || 'nec')).sort((x, y) => y[1] - x[1]).slice(0, 3);
+  const kept = S.income > 0 ? Math.round(((S.income - S.spend) / S.income) * 100) : null;
+  const fv = (v) => fmtNative(v, 'VND');
+  openSheet({
+    title: `Tổng kết tháng ${mmyy(recap.ym)}`,
+    body: `<div class="report">
+      <p class="report-lead ${kept != null && kept < 0 ? 'neg' : ''}">${kept == null ? 'Tháng này chưa ghi thu nhập.'
+        : kept >= 0 ? `Bạn giữ lại được ${kept}% thu nhập.` : `Bạn tiêu nhiều hơn thu nhập ${fv(S.spend - S.income)}.`}</p>
+      <div class="recap-grid">
+        <div><span>Thu nhập</span><b>${fv(S.income)}</b></div>
+        <div><span>Chi tiêu</span><b>${fv(S.spend)}</b>
+          <small class="${recap.spendDelta > 0 ? 'neg' : recap.spendDelta < 0 ? 'pos' : ''}">${recap.spendDelta != null ? `${fmtPct(recap.spendDelta)} so với tháng trước` : ''}</small></div>
+        <div><span>Để dành & đầu tư</span><b>${fv(S.saved)}</b></div>
+        <div><span>Tài sản ròng</span><b class="${pnlClass(recap.net?.change)}">${recap.net ? fmtMoney(recap.net.change, { sign: true }) : '—'}</b></div>
+      </div>
+      ${top.length ? `<h4>Tiêu nhiều nhất</h4><ul class="report-top">${top.map(([id, v]) => {
+        const d = prev[id] ? (v - prev[id]) / prev[id] : null;
+        return `<li><span>${esc(cats[id]?.icon || '•')} ${esc(cats[id]?.name || id)}</span><b>${fv(v)}</b>
+          ${d != null && Math.abs(d) >= 0.05 ? `<small class="${d > 0 ? 'neg' : 'pos'}">${d > 0 ? '▲' : '▼'} ${Math.round(Math.abs(d) * 100)}%</small>` : '<small></small>'}</li>`;
+      }).join('')}</ul>` : ''}
+      ${recap.up ? `<p class="muted small">Crypto kéo lên nhiều nhất: <b>${esc(recap.up.asset)}</b> ${fmtMoney(recap.up.change, { sign: true, compact: true })}</p>` : ''}
+      <a class="btn primary big" href="#budget" data-report-close>Xem chi tiết ở Thu chi</a>
+    </div>`,
+    onMount: (el, close) => { el.querySelector('[data-report-close]').onclick = () => close(); },
   });
 }
 

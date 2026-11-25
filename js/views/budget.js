@@ -183,10 +183,11 @@ function txTime(t) {
 
 function txRow(t, cats) {
   const c = cats[t.cat];
-  const sub = [txTime(t), t.note, t.id.startsWith('rec:') ? 'Tự động hằng tháng' : '', t.acc ? accName(t.acc) : ''].filter(Boolean);
+  const raw = (s) => (s ? `<span data-raw>${esc(s)}</span>` : ''); // ghi chú, tên tài khoản: không dịch
+  const sub = [esc(txTime(t)), raw(t.note), t.id.startsWith('rec:') ? 'Tự động hằng tháng' : '', raw(t.acc ? accName(t.acc) : '')].filter(Boolean);
   return `<button type="button" class="bd-tx" data-tx="${esc(t.id)}">
     <span class="bd-ic">${esc(c?.icon || '•')}</span>
-    <span class="bd-tx-main"><b>${esc(c?.name || t.cat)}</b>${sub.length ? `<small>${sub.map(esc).join(' · ')}</small>` : ''}</span>
+    <span class="bd-tx-main"><b>${esc(c?.name || t.cat)}</b>${sub.length ? `<small>${sub.join(' · ')}</small>` : ''}</span>
     <span class="bd-amt ${t.type === 'income' ? 'pos' : ''}">${t.type === 'income' ? '+' : '−'}${fmtVnd(Number(t.amount))}</span>
   </button>`;
 }

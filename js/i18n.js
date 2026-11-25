@@ -257,7 +257,12 @@ const EXACT = {
 
   // thông báo thao tác
   'Hoàn tác': 'Undo', 'Đã hoàn tác': 'Undone', 'Nhập tên': 'Enter a name',
-  'Đã bỏ khoản vừa ghi': 'Entry removed', 'Hay ghi': 'Frequent', 'Sắp đến hạn:': 'Coming up:', 'mới': 'new',
+  'Đã bỏ khoản vừa ghi': 'Entry removed', 'Xem tổng kết': 'See summary', 'Tiêu nhiều nhất': 'Top spending',
+  'Tháng này chưa ghi thu nhập.': 'No income recorded this month.', 'Xem chi tiết ở Thu chi': 'See details in Budget',
+  'Crypto kéo lên nhiều nhất:': 'Top crypto gainer:', 'Để dành & đầu tư': 'Saved & invested',
+  'Gõ nhanh: cà phê 35k, lương 25tr…': 'Quick add: coffee 35k, salary 25tr…', 'Gõ nhanh số tiền và danh mục': 'Quick add amount and category', 'Đã khôi phục mục tiêu': 'Goal restored',
+  'Dư nợ (vd 52tr)': 'Balance (e.g. 52tr)', 'Trả / tháng (vd 3tr)': 'Monthly payment (e.g. 3tr)',
+  'Google Drive cần đăng nhập lại — bấm ☁ để đồng bộ': 'Google Drive needs you to sign in again — tap ☁ to sync', 'Hay ghi': 'Frequent', 'Sắp đến hạn:': 'Coming up:', 'mới': 'new',
   'Tìm khoản: ghi chú, danh mục, tài khoản…': 'Search: note, category, account…', 'Tìm giao dịch': 'Search transactions',
   'Cập nhật →': 'Update →', 'So với tháng trước': 'Vs last month',
   'Xem thu chi tháng này': "See this month's budget", 'Xem 4 hũ ở tab Thu chi': 'See the 4 jars in Budget',
@@ -445,6 +450,11 @@ const RULES = [
   [/^Đã cập nhật dư nợ (.+)$/, 'Updated debt balance of $1'],
   [/^Đã thêm khoản nợ (.+)$/, 'Added debt $1'],
   [/^Đã xóa khoản nợ (.+)$/, 'Deleted debt $1'],
+  [/^Đã khôi phục khoản nợ (.+)$/, 'Restored debt $1'],
+  [/^Tổng kết tháng (.+)$/, 'Month in review $1'],
+  [/^Bạn giữ lại được (\d+)% thu nhập\.$/, 'You kept $1% of your income.'],
+  [/^Bạn tiêu nhiều hơn thu nhập (.+)\.$/, 'You spent $1 more than you earned.'],
+  [/^(.+) cao gấp (\d+) lần mức thường \(~(.+)\)\. Đúng thì bấm Lưu lần nữa\.$/, '$1 is $2× your usual (~$3). Tap Save again if correct.'],
   [/^Đã thêm mã (.+)$/, 'Added $1'],
   [/^Đã lưu mã (.+)$/, 'Saved $1'],
   [/^Chưa kiểm tra được giá của (.+) — sẽ thử lại khi làm mới giá$/, "Couldn't check the price of $1 — will retry on the next price refresh"],
@@ -519,7 +529,7 @@ export function translateDom(root) {
   const nodes = [];
   while (walker.nextNode()) nodes.push(walker.currentNode);
   for (const n of nodes) {
-    if (n.parentElement?.closest('script,style,code')) continue;
+    if (n.parentElement?.closest('script,style,code,[data-raw]')) continue; // data-raw: chữ người dùng tự nhập (ghi chú, tên tài khoản)
     const v = tr(n.nodeValue, scopeOf(n.parentElement));
     if (v !== n.nodeValue) n.nodeValue = v;
   }

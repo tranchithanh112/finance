@@ -1,6 +1,5 @@
 import { idbGet, idbSet } from './idb.js';
-import { todayKey } from './util.js';
-import { defaultBudget } from './budget.js';
+import { defaultBudget, localToday } from './budget.js';
 
 // `state` là dữ liệu được đồng bộ (Dropbox / Google Drive / export JSON).
 // `local` là cấu hình riêng của thiết bị (mật khẩu, token OAuth) — KHÔNG bao giờ sync.
@@ -100,19 +99,28 @@ function rememberPrints() {
   prints = Object.fromEntries(EDIT_SECTIONS.map((k) => [k, print(k)]));
 }
 
-let persistTimer;
+let persistTimer = null;
+function writeNow() {
+  clearTimeout(persistTimer);
+  persistTimer = null;
+  idbSet('state', state).catch(() => {
+    try {
+      localStorage.setItem('fin.state', JSON.stringify(state));
+    } catch {
+      // cả IndexedDB lẫn localStorage đều không ghi được (thường do đầy bộ nhớ) → app hiện lỗi
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('fin:save-failed'));
+    }
+  });
+}
 function persist() {
   clearTimeout(persistTimer);
-  persistTimer = setTimeout(() => {
-    idbSet('state', state).catch(() => {
-      try {
-        localStorage.setItem('fin.state', JSON.stringify(state));
-      } catch {
-        // cả IndexedDB lẫn localStorage đều không ghi được (thường do đầy bộ nhớ) → app hiện lỗi
-        if (typeof window !== 'undefined') window.dispatchEvent(new Event('fin:save-failed'));
-      }
-    });
-  }, 300);
+  persistTimer = setTimeout(writeNow, 300);
+}
+// Vuốt tắt app ngay sau khi ghi: lưu luôn, không chờ hết 300ms
+if (typeof document !== 'undefined') {
+  const flush = () => { if (persistTimer) writeNow(); };
+  addEventListener('pagehide', flush);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
 }
 
 /** Gọi sau mỗi thay đổi dữ liệu người dùng. */
@@ -138,7 +146,7 @@ export function replaceState(obj) {
 export const onCommit = (fn) => listeners.add(fn);
 
 export function takeSnapshot(t) {
-  const date = todayKey();
+  const date = localToday(); // ngày theo giờ máy: 0h–7h sáng ở VN không bị tính sang hôm trước
   const snap = { date, crypto: t.crypto, stable: t.stable || 0, stocks: t.stocks, cash: t.cash, debt: t.debt || 0, total: t.total };
   const i = state.snapshots.findIndex((s) => s.date === date);
   if (i >= 0) state.snapshots[i] = snap;

@@ -194,9 +194,68 @@ export function quickPicks(b, today = localToday(), n = 4, days = 60) {
     .sort((x, y) => y.count - x.count || y.last.localeCompare(x.last)).slice(0, n);
 }
 
+const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+
+// Từ khóa (không dấu) → danh mục mặc định, cho ô gõ nhanh. Tên danh mục cũng được so khớp.
+const QUICK_WORDS = {
+  food: ['an', 'com', 'pho', 'bun', 'banh mi', 'an sang', 'an trua', 'an toi', 'nhau', 'lau', 'di cho', 'sieu thi'],
+  cafe: ['cafe', 'ca phe', 'cf', 'tra sua', 'tra', 'di choi'],
+  transport: ['xang', 'grab', 'be', 'taxi', 'xe', 'gui xe', 'xe om', 'bus'],
+  bills: ['dien', 'nuoc', 'internet', 'wifi', 'mang', 'dien thoai', 'hoa don', 'tien nha', 'thue nha'],
+  health: ['thuoc', 'kham', 'benh vien', 'nha khoa', 'gym'],
+  family: ['gia dinh', 'bo me', 'gui nha', 'bieu'],
+  debtpay: ['tra no', 'the tin dung', 'tra gop'],
+  shopping: ['mua', 'shopee', 'lazada', 'tiki', 'quan ao', 'giay', 'mua sam'],
+  travel: ['du lich', 've may bay', 'khach san', 'homestay'],
+  fun: ['game', 'phim', 'netflix', 'spotify', 'youtube', 'giai tri'],
+  gift: ['qua', 'sinh nhat', 'mung', 'dam cuoi', 'li xi'],
+  saving: ['tiet kiem', 'gui tiet kiem'],
+  crypto: ['crypto', 'coin', 'binance', 'nap crypto'],
+  stock: ['chung khoan', 'quy', 'dca', 'co phieu'],
+  salary: ['luong'],
+  bonus: ['thuong'],
+  side: ['thu nhap phu', 'freelance', 'job'],
+  invincome: ['lai', 'co tuc'],
+};
+
+/**
+ * Ô gõ nhanh: "cà phê 35k", "lương 25tr", "35k grab về nhà" → { amount, cat, type, note }.
+ * Danh mục khớp từ khóa dài nhất; phần chữ còn lại (giữ dấu) làm ghi chú.
+ */
+export function parseQuickEntry(text, b) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+  let amount = NaN;
+  const rest = [];
+  for (const w of words) {
+    const v = Number.isNaN(amount) && /\d/.test(w) ? parseAmount(w) : NaN;
+    if (v > 0) amount = v; else rest.push(w);
+  }
+  const phrase = ` ${fold(rest.join(' '))} `;
+  let best = null;
+  for (const c of b.categories) {
+    for (const k of [fold(c.name), ...(QUICK_WORDS[c.id] || [])]) {
+      if (k && phrase.includes(` ${k} `) && (!best || k.length > best.k.length)) best = { c, k };
+    }
+  }
+  return {
+    amount: amount > 0 ? amount : null,
+    cat: best?.c.id || null,
+    type: best?.c.type || 'expense',
+    note: rest.join(' '),
+  };
+}
+
+/** Mức thường của 1 danh mục (trung vị 90 ngày, cần ≥ 5 khoản). Khoản mới > 3× mức này → hỏi lại cho chắc. */
+export function unusualAmount(b, cat, amount, today = localToday()) {
+  const from = addDays(today, -90);
+  const list = b.txs.filter((t) => t.cat === cat && t.type === 'expense' && t.date >= from).map((t) => Number(t.amount)).sort((x, y) => x - y);
+  if (list.length < 5) return null;
+  const typical = list[Math.floor(list.length / 2)];
+  return amount > typical * 3 && amount - typical >= 100000 ? { typical, times: amount / typical } : null;
+}
+
 /** Tìm giao dịch ở mọi tháng theo ghi chú, tên danh mục hoặc tên tài khoản (không phân biệt dấu). */
 export function searchTxs(b, query, accName = () => '') {
-  const fold = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
   const q = fold(query).trim();
   if (!q) return [];
   const cats = catMap(b);

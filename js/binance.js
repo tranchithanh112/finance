@@ -147,6 +147,7 @@ export async function ensurePriceHistory(asset, fromT, tick) {
   const days = entry?.days || {};
   let start = entry && entry.from <= fromDay ? (entry.to + 1) * DAY : fromDay * DAY;
   let got = 0;
+  let failed = false;
   try {
     while (start < Date.now()) {
       const k = await pub('/api/v3/klines', { symbol, interval: '1d', startTime: start, limit: 1000 });
@@ -159,9 +160,12 @@ export async function ensurePriceHistory(asset, fromT, tick) {
       start = k[k.length - 1][0] + DAY;
       if (k.length < 1000) break;
     }
-  } catch {
-    /* symbol không tồn tại */
+  } catch (e) {
+    // 400 = cặp không tồn tại → ghi "không có giá". Lỗi mạng / rate limit → không ghi, lần sau thử lại
+    // (ghi "không có giá" 7 ngày sẽ làm coin nạp vào có giá vốn 0, lãi bị thổi phồng)
+    failed = !(e instanceof ApiError && e.status === 400);
   }
+  if (failed && !got) return;
   if (!got && !entry) {
     cache[asset] = { missing: true, checked: Date.now(), days: {} };
   } else {

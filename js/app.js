@@ -622,12 +622,15 @@ function updateSyncPill() {
 
 // ================= Auto sync =================
 
+// Đồng bộ nền lỗi: báo lỗi, trừ khi chỉ là Google cần đăng nhập lại (nút ☁ vẫn đồng bộ được)
+const autoSyncError = (e) => { if (!e.needsLogin) toast(`Sync: ${e.message}`, 'error'); updateSyncPill(); };
+
 let pushTimer;
 onCommit(() => {
   if (local.autoSync === false || !sync.syncEnabled() || isLocked()) return; // đang khóa → không đồng bộ
   clearTimeout(pushTimer);
   pushTimer = setTimeout(() => {
-    ctx.smartSync().catch((e) => toast(`Sync: ${e.message}`, 'error'));
+    ctx.smartSync().catch(autoSyncError);
   }, 4000);
 });
 
@@ -727,7 +730,7 @@ async function startSession() {
   }
 
   if (sync.syncEnabled() && local.autoSync !== false) {
-    await ctx.smartSync().catch((e) => toast(`Sync: ${e.message}`, 'error'));
+    await ctx.smartSync().catch(autoSyncError);
   }
   syncGate.resolve();
 

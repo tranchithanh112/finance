@@ -1,6 +1,8 @@
 import { state, commit } from '../store.js';
 import { openSheet } from '../sheet.js';
-import { parseAmount, formatAmountInput, applyAmountKey, localToday, dayLabel, restoreTx, catMap, quickPicks } from '../budget.js';
+import {
+  parseAmount, formatAmountInput, applyAmountKey, localToday, dayLabel, restoreTx, catMap, quickPicks, parseQuickEntry, unusualAmount,
+} from '../budget.js';
 import { esc, uid, toast, fmtVnd } from '../util.js';
 import { tr, translateDom, locale, getLang } from '../i18n.js';
 
@@ -138,6 +140,8 @@ export function openEntry({ tx = null, type = 'expense', date = null, onDone = (
   openSheet({
     title: title(),
     body: `<form class="entry" novalidate>
+      ${editing ? '' : `<input class="quick-in" name="quick" autocomplete="off" enterkeyhint="done"
+        placeholder="Gõ nhanh: cà phê 35k, lương 25tr…" aria-label="Gõ nhanh số tiền và danh mục">`}
       ${typeSwitch()}
       ${picks.length ? `<div class="quick-picks" aria-label="Hay ghi">${picks.map((p) => `
         <button type="button" class="chip" data-pick="${esc(p.cat)}|${p.amount}">${esc(cats[p.cat]?.icon || '•')} ${esc(cats[p.cat]?.name || p.cat)} · ${fmtVnd(p.amount, { compact: true })}</button>`).join('')}
@@ -171,6 +175,17 @@ export function openEntry({ tx = null, type = 'expense', date = null, onDone = (
       dateInput.addEventListener('input', showHint);
       showHint();
 
+      // Gõ nhanh (gõ tay hoặc đọc bằng micro của bàn phím): tự điền số tiền, danh mục, ghi chú
+      const quick = el.querySelector('.quick-in');
+      quick?.addEventListener('input', () => {
+        const q = parseQuickEntry(quick.value, state.budget);
+        if (q.cat && ui.type !== q.type) el.querySelector(`[data-type="${q.type}"]`).click();
+        if (q.amount) { amount.value = amountText(q.amount); amount.dispatchEvent(new Event('input')); }
+        if (q.cat && ui.cat !== q.cat) catBox.querySelector(`[data-cat="${CSS.escape(q.cat)}"]`)?.click();
+        form.elements.note.value = q.note;
+      });
+      quick?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save.click(); } });
+
       el.querySelectorAll('[data-pick]').forEach((chip) => {
         chip.onclick = () => {
           const [cat, value] = chip.dataset.pick.split('|');
@@ -197,6 +212,15 @@ export function openEntry({ tx = null, type = 'expense', date = null, onDone = (
         }
         const d = f.get('date');
         if (!d) return toast('Chọn ngày', 'error');
+        // Khoản cao bất thường so với mức thường của danh mục (hay gặp: gõ thừa số 0) → hỏi lại 1 lần
+        const odd = ui.type === 'expense' && (!editing || Number(tx.amount) !== value) && unusualAmount(state.budget, ui.cat, value);
+        const oddKey = `${ui.cat}|${value}`;
+        if (odd && form.dataset.confirmed !== oddKey) {
+          form.dataset.confirmed = oddKey;
+          amount.classList.add('invalid');
+          amount.focus();
+          return toast(`${fmtVnd(value)} cao gấp ${Math.round(odd.times)} lần mức thường (~${fmtVnd(odd.typical)}). Đúng thì bấm Lưu lần nữa.`, 'error', 8000);
+        }
         const acc = f.get('acc') || 'none';
         // nhớ tài khoản cho lần ghi sau — chỉ khi ghi mới, sửa khoản cũ không đổi mặc định
         if (!editing) try { localStorage.setItem('fin.acc', acc); } catch { /* bỏ qua */ }

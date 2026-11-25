@@ -3,8 +3,27 @@ import assert from 'node:assert/strict';
 import {
   parseAmount, defaultBudget, generateRecurring, monthSummary, recentAverage, healthScore, mergeBudget, shiftMonth,
   spendingBudget, dayLabel, formatAmountInput, applyAmountKey, restoreTx,
-  spendForecast, upcomingBills, quickPicks, searchTxs,
+  spendForecast, upcomingBills, quickPicks, searchTxs, parseQuickEntry, unusualAmount,
 } from '../js/budget.js';
+
+test('parseQuickEntry: gõ nhanh tách số tiền, danh mục, ghi chú', () => {
+  const b = defaultBudget();
+  const p = (s) => { const r = parseQuickEntry(s, b); return [r.amount, r.cat, r.type, r.note]; };
+  assert.deepEqual(p('cà phê 35k'), [35000, 'cafe', 'expense', 'cà phê']);
+  assert.deepEqual(p('Lương 25tr'), [25e6, 'salary', 'income', 'Lương']);
+  assert.deepEqual(p('60k ăn trưa với team'), [60000, 'food', 'expense', 'ăn trưa với team']);
+  assert.deepEqual(p('grab về nhà 45.000'), [45000, 'transport', 'expense', 'grab về nhà']);
+  assert.deepEqual(p('tiền điện 1,2tr'), [1.2e6, 'bills', 'expense', 'tiền điện']);
+  assert.deepEqual(p('linh tinh'), [null, null, 'expense', 'linh tinh']);
+});
+
+test('unusualAmount: cao gấp > 3 lần trung vị 90 ngày thì cảnh báo', () => {
+  const b = defaultBudget();
+  for (let i = 1; i <= 6; i++) b.txs.push({ id: `c${i}`, date: `2026-11-${String(i).padStart(2, '0')}`, type: 'expense', cat: 'cafe', amount: 35000 + i * 1000 });
+  assert.equal(unusualAmount(b, 'cafe', 350000, '2026-11-25').typical, 39000);
+  assert.equal(unusualAmount(b, 'cafe', 90000, '2026-11-25'), null);
+  assert.equal(unusualAmount(b, 'food', 5e6, '2026-11-25'), null); // chưa đủ dữ liệu
+});
 
 test('spendForecast: theo tốc độ tiêu tới ngày 10 của tháng 30 ngày', () => {
   const sb = { status: 'ok', spent: 3e6, budget: 8e6 };

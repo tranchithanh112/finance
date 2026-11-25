@@ -11,8 +11,8 @@
         var d = document.documentElement;
         var t = localStorage.getItem('fin.theme');
         if (t === 'light' || t === 'dark') d.setAttribute('data-theme', t);
-        var p = localStorage.getItem('fin.palette');
-        if (p && p !== 'bronze') d.setAttribute('data-palette', p);
+        var p = localStorage.getItem('fin.palette') || 'ios';
+        if (p !== 'bronze') d.setAttribute('data-palette', p);
         if (localStorage.getItem('fin.lang') === 'en') d.lang = 'en';
       } catch (e) {}
     })();

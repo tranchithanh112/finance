@@ -12,7 +12,7 @@ export function renderSettings(root, ctx) {
   const prov = sync.providerName();
 
   const order = tabOrder();
-  const PALETTES = [['bronze', 'Đồng'], ['solana', 'Solana'], ['okx', 'OKX'], ['glass', 'Trong suốt']];
+  const PALETTES = [['ios', 'iOS'], ['neobank', 'Thân thiện'], ['bento', 'Bento'], ['bronze', 'Đồng'], ['solana', 'Solana'], ['okx', 'OKX'], ['glass', 'Trong suốt']];
   const MODES = [['auto', 'Tự động'], ['light', 'Sáng'], ['dark', 'Tối']];
   root.innerHTML = `
     <div class="card">

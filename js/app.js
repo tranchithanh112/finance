@@ -580,9 +580,9 @@ function applyPrivacyIcon() {
   btn.title = tr(isPrivate() ? 'Hiện số dư' : 'Ẩn số dư');
 }
 
-// ---- Bảng màu (theme màu): bronze | solana | okx | glass
+// ---- Bảng màu (theme màu): ios (mặc định) | neobank | bento | bronze | solana | okx | glass
 function palette() {
-  try { return localStorage.getItem('fin.palette') || 'bronze'; } catch { return 'bronze'; }
+  try { return localStorage.getItem('fin.palette') || 'ios'; } catch { return 'ios'; }
 }
 function setPalette(p) {
   try { localStorage.setItem('fin.palette', p); } catch { /* ignore */ }

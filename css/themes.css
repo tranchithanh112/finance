@@ -175,6 +175,186 @@
 :root[data-palette="glass"] .kpi.hero::before { opacity: .25; }
 :root[data-palette="glass"] .bd-ic { background: var(--surface-2); }
 
+/* =====================================================================
+   3 theme mới: iOS × Copilot (mặc định) · Thân thiện (neobank) · Bento (Copilot × Linear).
+   Ngoài màu còn chỉnh bố cục: Tổng quan dạng lưới Bento, thẻ bo lớn, chữ 15px, nút chính màu nhấn.
+   Màu chữ đã chọn đạt tương phản WCAG AA; màu tươi chỉ dùng cho thanh / biểu đồ.
+   ===================================================================== */
+
+/* ---------- iOS × Copilot ---------- */
+:root[data-palette="ios"] {
+  --bg: #f2f2f7; --surface: #ffffff; --surface-2: #f2f2f7; --surface-3: #e5e5ea; --border: rgb(60 60 67 / .16);
+  --text: #000000; --muted: #636366; --grid: #e5e5ea; --fill: rgb(118 118 128 / .12);
+  --accent: #a65a22; --accent-2: #c8773a; --gold: #c8773a; --accent-soft: rgb(200 119 58 / .13); --on-accent: #ffffff;
+  --pos: #248a3d; --neg: #d70015; --warn: #c93400;
+  --shadow: none; --shadow-lg: 0 12px 32px rgb(0 0 0 / .18); --radius: 14px; --radius-sm: 10px; --radius-lg: 18px;
+  --fab-bg: #c8773a; --fab-border: #c8773a; --fab-icon: #ffffff;
+  --chart: #c8773a, #34c759, #0a84ff, #ff3b30, #8e8e93, #af52de, #ff9500, #30b0c7, #5856d6, #c7c7cc;
+  --logo-a: #c8773a; --logo-b: #b0652c; --logo-c: #8a4c1e; --logo-fg1: #ffffff; --logo-fg2: #ffe7d3; --logo-i: #ffffff;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="ios"]:not([data-theme="light"]) {
+    --bg: #000000; --surface: #1c1c1e; --surface-2: #2c2c2e; --surface-3: #3a3a3c; --border: rgb(84 84 88 / .6);
+    --text: #ffffff; --muted: #aeaeb2; --grid: #2c2c2e; --fill: rgb(118 118 128 / .24);
+    --accent: #de8f52; --accent-soft: rgb(222 143 82 / .18); --on-accent: #000000;
+    --pos: #30d158; --neg: #ff6961; --warn: #ffb340; --shadow-lg: 0 14px 36px rgb(0 0 0 / .7);
+    color-scheme: dark;
+  }
+}
+:root[data-palette="ios"][data-theme="dark"] {
+  --bg: #000000; --surface: #1c1c1e; --surface-2: #2c2c2e; --surface-3: #3a3a3c; --border: rgb(84 84 88 / .6);
+  --text: #ffffff; --muted: #aeaeb2; --grid: #2c2c2e; --fill: rgb(118 118 128 / .24);
+  --accent: #de8f52; --accent-soft: rgb(222 143 82 / .18); --on-accent: #000000;
+  --pos: #30d158; --neg: #ff6961; --warn: #ffb340; --shadow-lg: 0 14px 36px rgb(0 0 0 / .7);
+  color-scheme: dark;
+}
+
+/* ---------- Thân thiện (neobank) ---------- */
+:root[data-palette="neobank"] {
+  --bg: #faf7f2; --surface: #ffffff; --surface-2: #f3eee6; --surface-3: #e9e2d6; --border: #ece5da;
+  --text: #1b1a2e; --muted: #5f5b6e; --grid: #efe9df; --fill: #f3eee6;
+  --accent: #0f5f5c; --accent-2: #17c3a5; --gold: #0f5f5c; --accent-soft: rgb(15 95 92 / .1); --on-accent: #ffffff;
+  --pos: #027a48; --neg: #b42318; --warn: #b54708;
+  --shadow: 0 10px 28px rgb(79 124 255 / .07); --shadow-lg: 0 16px 40px rgb(27 26 46 / .18);
+  --radius: 22px; --radius-sm: 14px; --radius-lg: 24px;
+  --fab-bg: #0f5f5c; --fab-border: #0f5f5c; --fab-icon: #ffffff;
+  --chart: #4f7cff, #17c3a5, #a162f7, #f5a524, #f04438, #12b76a, #0f5f5c, #ec4899, #64748b, #cbd5e1;
+  --logo-a: #0f5f5c; --logo-b: #12807b; --logo-c: #17c3a5; --logo-fg1: #ffffff; --logo-fg2: #d6fff6; --logo-i: #ffffff;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="neobank"]:not([data-theme="light"]) {
+    --bg: #12131a; --surface: #1b1d27; --surface-2: #242734; --surface-3: #2f3342; --border: #2a2d3a;
+    --text: #f4f2ee; --muted: #a9a6b8; --grid: #262938; --fill: #242734;
+    --accent: #3fd1c0; --accent-soft: rgb(63 209 192 / .14); --on-accent: #06201e;
+    --pos: #32d583; --neg: #f97066; --warn: #fdb022;
+    --shadow: none; --shadow-lg: 0 16px 40px rgb(0 0 0 / .6); --fab-bg: #3fd1c0; --fab-border: #3fd1c0; --fab-icon: #06201e;
+    color-scheme: dark;
+  }
+}
+:root[data-palette="neobank"][data-theme="dark"] {
+  --bg: #12131a; --surface: #1b1d27; --surface-2: #242734; --surface-3: #2f3342; --border: #2a2d3a;
+  --text: #f4f2ee; --muted: #a9a6b8; --grid: #262938; --fill: #242734;
+  --accent: #3fd1c0; --accent-soft: rgb(63 209 192 / .14); --on-accent: #06201e;
+  --pos: #32d583; --neg: #f97066; --warn: #fdb022;
+  --shadow: none; --shadow-lg: 0 16px 40px rgb(0 0 0 / .6); --fab-bg: #3fd1c0; --fab-border: #3fd1c0; --fab-icon: #06201e;
+  color-scheme: dark;
+}
+
+/* ---------- Bento (Copilot × Linear) — tối là chính ---------- */
+:root[data-palette="bento"] {
+  --bg: #f6f6f8; --surface: #ffffff; --surface-2: #f1f1f5; --surface-3: #e6e6ee; --border: rgb(14 14 20 / .08);
+  --text: #0e0e14; --muted: #5b5b6b; --grid: #ececf2; --fill: #f1f1f5;
+  --accent: #5b5bf0; --accent-2: #7c7cff; --gold: #5b5bf0; --accent-soft: rgb(91 91 240 / .1); --on-accent: #ffffff;
+  --pos: #0e9f6e; --neg: #e5484d; --warn: #9a5b00;
+  --shadow: none; --shadow-lg: 0 16px 40px rgb(14 14 20 / .16); --radius: 16px; --radius-sm: 12px; --radius-lg: 20px;
+  --hero-glow-bg: radial-gradient(60% 80% at 20% 0%, rgb(91 91 240 / .1), transparent 70%);
+  --fab-bg: #5b5bf0; --fab-border: #5b5bf0; --fab-icon: #ffffff;
+  --chart: #7c7cff, #3dd68c, #f5b44a, #ff7a6b, #5cc8ff, #f472b6, #a1a1b0, #22d3ee, #c084fc, #6e6e7c;
+  --logo-a: #2b2b6b; --logo-b: #4b4bd6; --logo-c: #7c7cff; --logo-fg1: #ffffff; --logo-fg2: #c9c9ff; --logo-i: #ffffff;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-palette="bento"]:not([data-theme="light"]) {
+    --bg: #0b0b0f; --surface: #131318; --surface-2: #1a1a21; --surface-3: #23232c; --border: rgb(255 255 255 / .07);
+    --text: #ededf2; --muted: #a1a1b0; --grid: #1f1f27; --fill: #1a1a21;
+    --accent: #7c7cff; --accent-soft: rgb(124 124 255 / .14); --on-accent: #0b0b0f;
+    --pos: #3dd68c; --neg: #ff7a6b; --warn: #f5b44a; --shadow-lg: 0 16px 40px rgb(0 0 0 / .7);
+    --hero-glow-bg: radial-gradient(60% 80% at 20% 0%, rgb(124 124 255 / .16), transparent 70%);
+    --fab-bg: #7c7cff; --fab-border: #7c7cff; --fab-icon: #0b0b0f;
+    color-scheme: dark;
+  }
+}
+:root[data-palette="bento"][data-theme="dark"] {
+  --bg: #0b0b0f; --surface: #131318; --surface-2: #1a1a21; --surface-3: #23232c; --border: rgb(255 255 255 / .07);
+  --text: #ededf2; --muted: #a1a1b0; --grid: #1f1f27; --fill: #1a1a21;
+  --accent: #7c7cff; --accent-soft: rgb(124 124 255 / .14); --on-accent: #0b0b0f;
+  --pos: #3dd68c; --neg: #ff7a6b; --warn: #f5b44a; --shadow-lg: 0 16px 40px rgb(0 0 0 / .7);
+  --hero-glow-bg: radial-gradient(60% 80% at 20% 0%, rgb(124 124 255 / .16), transparent 70%);
+  --fab-bg: #7c7cff; --fab-border: #7c7cff; --fab-icon: #0b0b0f;
+  color-scheme: dark;
+}
+
+/* ---------- Phần chung của 3 theme mới ---------- */
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) body { font-size: 15px; }
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .card,
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi { border-radius: var(--radius); box-shadow: var(--shadow); }
+/* Tổng quan dạng Bento: ô Tài sản ròng lớn (2×2), 4 ô chỉ số nhỏ */
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi.hero {
+  background: var(--hero-glow-bg, none), var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; justify-content: center;
+}
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi.hero b { font-size: 38px; font-weight: 700; }
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi b { font-weight: 650; }
+@media (min-width: 900px) {
+  :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi.hero { grid-column: span 2; grid-row: span 2; }
+  :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi.hero b { font-size: 46px; }
+}
+@media (max-width: 720px) {
+  :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi.hero b { font-size: 34px; }
+}
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .nw-change {
+  align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: color-mix(in srgb, currentColor 12%, transparent);
+}
+/* Nút chính, nút + nổi: màu nhấn */
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .btn.primary {
+  background: var(--accent); border-color: var(--accent); color: var(--on-accent); min-height: 44px; font-weight: 650;
+}
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .btn.primary:hover:not(:disabled) { border-color: var(--accent); }
+@media (max-width: 720px) {
+  :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .fab { background: var(--fab-bg); }
+  :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .fab svg.i { color: var(--fab-icon); }
+}
+/* Nút chọn kiểu iOS: rãnh xám, nút trắng nổi */
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .seg { background: var(--fill); }
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .seg button { min-height: 36px; }
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .seg button.on {
+  background: var(--surface); color: var(--text); box-shadow: 0 2px 6px rgb(0 0 0 / .12);
+}
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .tabs button.on { color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .bd-search { background: var(--fill); border-color: transparent; border-radius: var(--radius-sm); }
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .bd-ic { background: var(--accent-soft); border-radius: 12px; }
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .bd-budget-num { font-size: 38px; font-weight: 700; }
+
+/* ---------- Riêng iOS: danh sách nhóm kiểu Cài đặt iPhone ---------- */
+:root[data-palette="ios"] .card, :root[data-palette="ios"] .kpi, :root[data-palette="ios"] .kpi.hero,
+:root[data-palette="ios"] .bd-day, :root[data-palette="ios"] .bd-sum span { border-color: transparent; }
+:root[data-palette="ios"] .bd-day { border-radius: 12px; padding: 0 0 0 14px; }
+:root[data-palette="ios"] .bd-day h4 {
+  margin: 0 0 0 -14px; padding: 18px 2px 6px 16px; background: var(--bg); text-transform: uppercase;
+  font-size: 12.5px; font-weight: 500; letter-spacing: .02em;
+}
+:root[data-palette="ios"] .bd-tx { border-top-color: transparent; position: relative; padding: 11px 14px 11px 0; min-height: 60px; }
+:root[data-palette="ios"] .bd-tx + .bd-tx::before { content: ''; position: absolute; left: 52px; right: 0; top: 0; border-top: .5px solid var(--border); }
+:root[data-palette="ios"] .bd-day { overflow: hidden; }
+:root[data-palette="ios"] .bd-amt { font-weight: 600; }
+:root[data-palette="ios"] .page-title { font-weight: 700; }
+:root[data-palette="ios"] .bottom-nav { background: color-mix(in srgb, var(--surface) 78%, transparent); border-top: .5px solid var(--border); }
+
+/* ---------- Riêng Thân thiện: thẻ "Còn tiêu được" màu đậm, chip tròn ---------- */
+:root[data-palette="neobank"] body { font-family: ui-rounded, 'SF Pro Rounded', 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+:root[data-palette="neobank"] .kpi b, :root[data-palette="neobank"] .bd-budget-num { font-weight: 800; }
+:root[data-palette="neobank"] .bd-budget { background: #0f5f5c; border-color: #0f5f5c; color: #fff; }
+:root[data-palette="neobank"] .bd-budget.over { background: #b42318; border-color: #b42318; }
+:root[data-palette="neobank"] .bd-budget :is(.bd-budget-label, .bd-budget-num, .bd-budget-foot, .bd-forecast, .bd-bills, .bd-bills span, .bd-jar-note, .bd-jars-btn, .bd-budget-hint) { color: #fff; }
+:root[data-palette="neobank"] .bd-budget :is(.bd-budget-label, .bd-budget-foot, .bd-bills, .bd-jar-note) { opacity: .85; }
+:root[data-palette="neobank"] .bd-budget .bar { background: rgb(255 255 255 / .22); }
+:root[data-palette="neobank"] .bd-budget .bar i { background: #fff; }
+:root[data-palette="neobank"] .bd-budget .bd-forecast.warn { color: #ffd59e; }
+:root[data-palette="neobank"] .bd-budget .btn { background: #fff; color: #0f5f5c; border-color: #fff; }
+:root[data-palette="neobank"] .bd-ic { border-radius: 50%; }
+:root[data-palette="neobank"] .seg, :root[data-palette="neobank"] .seg button { border-radius: 99px; }
+:root[data-palette="neobank"] .chip { background: var(--accent-soft); border-color: transparent; }
+
+/* ---------- Riêng Bento: nhãn chữ in hoa nhỏ, viền mảnh, quầng sáng sau ô chính ---------- */
+:root[data-palette="bento"] .kpi > span, :root[data-palette="bento"] .kpi.hero > span, :root[data-palette="bento"] .bd-budget-label {
+  text-transform: uppercase; letter-spacing: .06em; font-size: 11px; font-weight: 600;
+}
+:root[data-palette="bento"] .card, :root[data-palette="bento"] .kpi { box-shadow: inset 0 1px 0 rgb(255 255 255 / .04); }
+:root[data-palette="bento"] .kpi b, :root[data-palette="bento"] .bd-budget-num { letter-spacing: -.02em; }
+
 /* ================= Chọn theme trong Cài đặt ================= */
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
 .theme-opt {
@@ -193,4 +373,7 @@
     radial-gradient(60% 60% at 60% 100%, #f9a8d4, transparent 70%), #e9edfb;
 }
 .sw-glass i { background: rgb(255 255 255 / .7); box-shadow: 0 0 0 1px rgb(255 255 255 / .9); }
+.sw-ios { background: #f2f2f7; border: 1px solid #e5e5ea; } .sw-ios i { background: #c8773a; }
+.sw-neobank { background: #faf7f2; border: 1px solid #ece5da; } .sw-neobank i { background: #0f5f5c; }
+.sw-bento { background: radial-gradient(60% 80% at 20% 0%, rgb(124 124 255 / .35), transparent 70%), #0b0b0f; } .sw-bento i { background: #7c7cff; }
 .opt-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

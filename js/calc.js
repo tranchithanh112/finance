@@ -1,12 +1,13 @@
 import { state } from './store.js';
 import { isStable } from './util.js';
 import { debtTotalVnd, accountBalance } from './budget.js';
+import { buy, sell, sortTxs } from './lots.js';
 
 export const fxRate = () => Number(state.settings.fxManual) || state.fx.USDVND || 25500;
 
-export function toUSD(amount, cur) {
+export function toUSD(amount, cur, fx = fxRate()) {
   if (!amount) return 0;
-  return cur === 'VND' ? amount / fxRate() : amount;
+  return cur === 'VND' ? amount / fx : amount;
 }
 
 export function cryptoHoldings() {
@@ -25,53 +26,52 @@ export function fundPrice(f) {
   return f.source === 'manual' ? Number(f.manualPrice) || 0 : Number(f.lastPrice) || Number(f.manualPrice) || 0;
 }
 
-/** Vị thế từng quỹ/cổ phiếu từ danh sách giao dịch (giá vốn bình quân). */
-export function stockPositions() {
+/**
+ * Vị thế từng quỹ/cổ phiếu từ danh sách giao dịch (giá vốn bình quân).
+ * `short` = số đơn vị bán vượt số đã mua (thiếu dữ liệu) — phần vượt không tạo lãi/lỗ.
+ */
+export function stockPositions(txs = state.stocks.txs, funds = state.stocks.funds, fx = fxRate()) {
   const byT = {};
-  const txs = [...state.stocks.txs].sort((a, b) => a.date.localeCompare(b.date));
-  for (const tx of txs) {
-    const p = (byT[tx.ticker] ||= { units: 0, cost: 0, realized: 0, invested: 0, fees: 0, txCount: 0, first: tx.date });
+  for (const tx of sortTxs(txs)) {
+    const p = (byT[tx.ticker] ||= { qty: 0, cost: 0, realized: 0, invested: 0, fees: 0, txCount: 0, short: 0, first: tx.date });
     const units = Number(tx.units);
     const price = Number(tx.price);
     const fee = Number(tx.fee) || 0;
     p.txCount++;
     p.fees += fee;
     if (units > 0) {
-      p.units += units;
-      p.cost += units * price + fee;
+      buy(p, units, units * price + fee);
       p.invested += units * price + fee;
     } else if (units < 0) {
-      const q = Math.min(-units, p.units);
-      const avg = p.units ? p.cost / p.units : 0;
-      p.realized += q * price - fee - avg * q;
-      p.cost -= avg * q;
-      p.units -= q;
+      const r = sell(p, -units, -units * price - fee);
+      p.realized += r.realized;
+      p.short += r.short;
     }
   }
-  const manual = state.stocks.funds.map((f) => {
-    const p = byT[f.ticker] || { units: 0, cost: 0, realized: 0, invested: 0, fees: 0, txCount: 0 };
+  return funds.map((f) => {
+    const { qty: units, ...p } = byT[f.ticker] || { qty: 0, cost: 0, realized: 0, invested: 0, fees: 0, txCount: 0, short: 0 };
     const price = fundPrice(f);
-    const value = p.units * price;
+    const value = units * price;
     const unrealized = value - p.cost;
-    const dayChange = f.prevClose && f.source !== 'manual' ? (price - f.prevClose) * p.units : null;
+    const dayChange = f.prevClose && f.source !== 'manual' ? (price - f.prevClose) * units : null;
+    const usd = (v) => toUSD(v, f.currency, fx);
     return {
-      ...f, ...p, price,
-      avg: p.units ? p.cost / p.units : 0,
+      ...f, ...p, units, price,
+      avg: units ? p.cost / units : 0,
       value, unrealized, total: unrealized + p.realized,
-      valueUSD: toUSD(value, f.currency),
-      costUSD: toUSD(p.cost, f.currency),
-      unrealizedUSD: toUSD(unrealized, f.currency),
-      realizedUSD: toUSD(p.realized, f.currency),
-      totalUSD: toUSD(unrealized + p.realized, f.currency),
-      investedUSD: toUSD(p.invested, f.currency),
-      dayChangeUSD: dayChange == null ? null : toUSD(dayChange, f.currency),
+      valueUSD: usd(value),
+      costUSD: usd(p.cost),
+      unrealizedUSD: usd(unrealized),
+      realizedUSD: usd(p.realized),
+      totalUSD: usd(unrealized + p.realized),
+      investedUSD: usd(p.invested),
+      dayChangeUSD: dayChange == null ? null : usd(dayChange),
     };
   });
-  return manual;
 }
 
-export function stocksTotal() {
-  return stockPositions().reduce((a, p) => a + p.valueUSD, 0);
+export function stocksTotal(txs, funds, fx) {
+  return stockPositions(txs, funds, fx).reduce((a, p) => a + p.valueUSD, 0);
 }
 
 /** Số dư hiện tại của 1 tài khoản tiền mặt (đã tự cộng/trừ thu chi sau lần chốt). */

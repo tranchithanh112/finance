@@ -1,4 +1,5 @@
 import { isStable, DAY } from './util.js';
+import { buy, sell } from './lots.js';
 
 // Tiền pháp định khi mua crypto bằng thẻ / P2P: không theo dõi lãi/lỗ
 const FIAT = new Set(['VND', 'EUR', 'GBP', 'AUD', 'TRY', 'BRL', 'RUB', 'UAH', 'NGN', 'INR', 'JPY', 'KRW', 'IDR', 'PHP', 'THB', 'ARS', 'PLN', 'CZK', 'ZAR', 'MXN', 'CAD', 'CHF', 'NZD', 'SGD', 'HKD']);
@@ -116,26 +117,16 @@ export function computePnl(history, priceHist, holdings, { dustUsd = 1 } = {}) {
     if (e.ref?.symbol || (e.ref?.count && e.qty > 0)) s.trades++;
     let realized = 0;
     if (e.qty > 0) {
-      s.qty += e.qty;
-      s.cost += e.value;
+      buy(s, e.qty, e.value);
       if (e.kind !== 'deposit') { s.invested += e.value; s.buyQty += e.qty; }
     } else {
       const q = -e.qty;
-      const avg = s.qty > EPS ? s.cost / s.qty : 0;
-      const matched = Math.min(q, Math.max(s.qty, 0));
-      const costOut = avg * matched;
-      if (e.kind === 'withdraw') {
-        // chuyển ra ngoài: giảm vị thế theo giá vốn, không phát sinh lãi/lỗ
-      } else {
-        const proceeds = q > 0 ? e.value * (matched / q) : 0;
-        realized = proceeds - costOut;
-        if (e.kind === 'fee') s.fees += costOut;
-        else { s.proceeds += e.value; s.sellQty += q; }
-      }
-      s.untrackedQty += q - matched;
-      s.cost -= costOut;
-      s.qty -= matched;
-      if (s.qty < EPS) { s.qty = 0; s.cost = 0; }
+      // chuyển ra ngoài (withdraw): giảm vị thế theo giá vốn, không phát sinh lãi/lỗ
+      const r = sell(s, q, e.kind === 'withdraw' ? null : e.value);
+      realized = r.realized;
+      if (e.kind === 'fee') s.fees += r.costOut;
+      else if (e.kind !== 'withdraw') { s.proceeds += e.value; s.sellQty += q; }
+      s.untrackedQty += r.short;
     }
     s.realized += realized;
     if (realized) {

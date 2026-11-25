@@ -1,5 +1,6 @@
 import { DAY, todayKey } from './util.js';
 import { buildEvents, makePriceLookup } from './pnl.js';
+import { buy, sell, sortTxs } from './lots.js';
 
 // Chuỗi dữ liệu theo ngày cho các biểu đồ "tài sản theo thời gian".
 
@@ -68,18 +69,8 @@ export function cryptoSeries(history, priceHist, { now = Date.now() } = {}) {
     while (i < events.length && events[i].t < until) {
       const e = events[i++];
       const s = pos.get(e.asset) || { qty: 0, cost: 0 };
-      if (e.qty > 0) {
-        s.qty += e.qty;
-        s.cost += e.value || 0;
-      } else {
-        const q = -e.qty;
-        const matched = Math.min(q, Math.max(s.qty, 0));
-        const avg = s.qty > EPS ? s.cost / s.qty : 0;
-        if (e.kind !== 'withdraw') realized += (e.value || 0) * (matched / q) - avg * matched;
-        s.cost -= avg * matched;
-        s.qty -= matched;
-        if (s.qty < EPS) { s.qty = 0; s.cost = 0; }
-      }
+      if (e.qty > 0) buy(s, e.qty, e.value || 0);
+      else realized += sell(s, -e.qty, e.kind === 'withdraw' ? null : e.value || 0).realized;
       pos.set(e.asset, s);
     }
     let value = 0;
@@ -106,14 +97,14 @@ export function reconcileWithWallet(events, held) {
   const extra = [];
   for (const [asset, idx] of byAsset) {
     const qtyAfter = [];
-    let q = 0;
+    const lot = { qty: 0, cost: 0 };
     for (const i of idx) {
       const e = events[i];
-      q = e.qty > 0 ? q + e.qty : Math.max(0, q - Math.min(-e.qty, Math.max(q, 0)));
-      if (q < EPS) q = 0;
-      qtyAfter.push(q);
+      if (e.qty > 0) buy(lot, e.qty, 0);
+      else sell(lot, -e.qty, null);
+      qtyAfter.push(lot.qty);
     }
-    const gap = q - (held.get(asset) || 0);
+    const gap = lot.qty - (held.get(asset) || 0);
     if (gap < -1e-8) {
       // Ví nhiều hơn lịch sử (lãi Earn, airdrop…): giá vốn 0, rải đều theo tháng — chỉ SAU lần bán/rút cuối
       // của coin, để không làm đổi giá vốn các lệnh bán (lãi/lỗ đã chốt giữ nguyên như tab Lãi/lỗ).
@@ -143,9 +134,9 @@ export function reconcileWithWallet(events, held) {
  */
 export function stockSeries(funds, txs, hist, { toUSD, priceOf, now = Date.now() }) {
   if (!txs.length) return [];
-  const sorted = [...txs].sort((a, b) => a.date.localeCompare(b.date));
+  const sorted = sortTxs(txs);
   const byFund = new Map(funds.map((f) => [f.ticker, f]));
-  const pos = new Map(); // ticker -> { units, cost, px, hi }
+  const pos = new Map(); // ticker -> { qty, cost, px, hi }
   const closes = new Map(
     Object.entries(hist || {}).map(([t, rows]) => [t, [...rows].sort((a, b) => a[0] - b[0])]),
   );
@@ -158,20 +149,15 @@ export function stockSeries(funds, txs, hist, { toUSD, priceOf, now = Date.now()
     const key = dayKey(d);
     while (i < sorted.length && sorted[i].date <= key) {
       const tx = sorted[i++];
-      const s = pos.get(tx.ticker) || { units: 0, cost: 0, px: 0, hi: 0 };
+      const s = pos.get(tx.ticker) || { qty: 0, cost: 0, px: 0, hi: 0 };
       const units = Number(tx.units);
       const price = Number(tx.price);
       const fee = Number(tx.fee) || 0;
-      if (units > 0) {
-        s.units += units;
-        s.cost += units * price + fee;
-      } else if (units < 0) {
-        const q = Math.min(-units, s.units);
-        const avg = s.units ? s.cost / s.units : 0;
+      if (units > 0) buy(s, units, units * price + fee);
+      else if (units < 0) {
+        const { realized } = sell(s, -units, -units * price - fee);
         const f = byFund.get(tx.ticker);
-        if (f) realizedUSD += toUSD(q * price - fee - avg * q, f.currency);
-        s.cost -= avg * q;
-        s.units -= q;
+        if (f) realizedUSD += toUSD(realized, f.currency);
       }
       s.px = price;
       pos.set(tx.ticker, s);
@@ -180,13 +166,13 @@ export function stockSeries(funds, txs, hist, { toUSD, priceOf, now = Date.now()
     let cost = 0;
     const until = (d + 1) * DAY;
     for (const [ticker, s] of pos) {
-      if (s.units <= EPS) continue;
+      if (s.qty <= EPS) continue;
       const f = byFund.get(ticker);
       if (!f) continue;
       const rows = closes.get(ticker) || [];
       while (s.hi < rows.length && rows[s.hi][0] < until) s.px = rows[s.hi++][1];
       const px = d === end ? priceOf(f) || s.px : s.px;
-      value += toUSD(s.units * px, f.currency);
+      value += toUSD(s.qty * px, f.currency);
       cost += toUSD(s.cost, f.currency);
     }
     out.push({ date: key, value, cost, pnl: value - cost + realizedUSD });

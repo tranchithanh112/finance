@@ -1,6 +1,6 @@
 import { state, commit } from '../store.js';
 import { totals, stockPositions, cryptoHoldings, toUSD, fxRate, cashBalance } from '../calc.js';
-import { donut, bars, PALETTE } from '../charts.js';
+import { donut, PALETTE } from '../charts.js';
 import { snapshotSeries } from '../series.js';
 import { goalProgress, snapshotTrend, monthRecap, dcaDue, netWorthChange, staleAccounts } from '../insights.js';
 import { historyCard, bindHistory, histMode } from './history-card.js';
@@ -56,8 +56,6 @@ export function renderOverview(root, ctx) {
   const stockPnl = stocks.reduce((a, p) => a + p.totalUSD, 0);
   const investPnl = (pnl?.totals.total || 0) + (fut ? fut.net + fut.unrealized : 0) + stockPnl;
   const scoreColor = health.score == null ? 'var(--muted)' : health.score >= 80 ? 'var(--pos)' : health.score >= 60 ? '#17c3a5' : health.score >= 40 ? 'var(--warn)' : 'var(--neg)';
-  const months = Array.from({ length: 6 }, (_, i) => shiftMonth(monthKey(localToday()), i - 5));
-  const trend = months.map((m) => monthSummary(b, m));
   const hasBudget = b.txs.length > 0;
 
   const histRows = snapshotSeries(state.snapshots);
@@ -152,13 +150,10 @@ export function renderOverview(root, ctx) {
       </div>
     </div>
 
-    <div class="grid2">
-      <div class="card">
-        <div class="card-head"><h3>Phân bổ tài sản</h3>
-          <div class="seg">${[['class', 'Theo loại'], ['asset', 'Theo tài sản']].map(([k, l]) => `<button data-alloc="${k}" class="${alloc === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
-        <div class="chart"><canvas id="ov-class"></canvas></div></div>
-      <div class="card"><h3>Thu chi 6 tháng</h3>${hasBudget ? '<div class="chart"><canvas id="ov-flow"></canvas></div>' : '<p class="empty">Chưa có dữ liệu thu chi.</p>'}</div>
-    </div>
+    <div class="card">
+      <div class="card-head"><h3>Phân bổ tài sản</h3>
+        <div class="seg">${[['class', 'Theo loại'], ['asset', 'Theo tài sản']].map(([k, l]) => `<button data-alloc="${k}" class="${alloc === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+      <div class="chart"><canvas id="ov-class"></canvas></div></div>
 
     <div class="card health">
       <div class="score" style="--p:${health.score ?? 0};--c:${scoreColor}">
@@ -246,13 +241,6 @@ export function renderOverview(root, ctx) {
   root.querySelectorAll('[data-alloc]').forEach((b) => {
     b.onclick = () => { try { localStorage.setItem('fin.alloc', b.dataset.alloc); } catch { /* bỏ qua */ } ctx.rerender(); };
   });
-  if (hasBudget) {
-    bars(root.querySelector('#ov-flow'), months.map((m) => m.slice(5) + '/' + m.slice(2, 4)), [
-      { label: 'Thu', data: trend.map((m) => toUSD(m.income, 'VND')), color: PALETTE[2] },
-      { label: 'Tiêu dùng', data: trend.map((m) => toUSD(m.spend, 'VND')), color: PALETTE[3] },
-      { label: 'Để dành & đầu tư', data: trend.map((m) => toUSD(m.saved, 'VND')), color: PALETTE[1] },
-    ]);
-  }
   bindHistory(root, hist, ctx);
 
   // ---- mục tiêu & tóm tắt tháng

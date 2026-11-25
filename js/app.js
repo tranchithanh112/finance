@@ -1,24 +1,26 @@
-import { state, local, loadState, commit, onCommit, takeSnapshot, authHeaders, hasAuth, migrateAuth, login, wipeDevice } from './store.js';
-import { fetchHoldings, syncHistory, getPriceHistory, bn, ensurePriceHistory, fetchTickerPrices, ensureAllPriceHistory } from './binance.js';
-import { computeFutures, syncFuturesIncome, csvToIncome, mergeIncome, emptyFutures, detectOffsetHours, shiftRecords, fileNameOffsetHours } from './futures.js';
-import { makePriceLookup } from './pnl.js';
-import { computePnl, buildEvents } from './pnl.js';
-import { cryptoSeries, stockSeries, reconcileWithWallet } from './series.js';
-import { totals, fxRate, toUSD, fundPrice, quoteSymbol } from './calc.js';
+import { state, local, loadState, commit, onCommit, authHeaders, hasAuth, migrateAuth, login, wipeDevice } from './store.js';
+import { fxRate } from './calc.js';
 import * as sync from './sync.js';
-import { captureDrafts, restoreDrafts, isTyping, $, $$, toast, flashAfterReload, showFlash, setDisplayCurrency, isStable, esc, isPrivate, setPrivate } from './util.js';
+import { captureDrafts, restoreDrafts, isTyping, $, $$, toast, flashAfterReload, showFlash, setDisplayCurrency, esc, isPrivate, setPrivate } from './util.js';
 import { icon } from './icons.js';
 import { tr, translateDom, setLang, getLang } from './i18n.js';
 import { loadPalette, setChartAnimation } from './charts.js';
 import { tabOrder, groupOf, lastSub, rememberSub, visibleSubs, BOTTOM_MAX } from './nav.js';
 import { renderOverview } from './views/overview.js';
 import { renderCrypto } from './views/crypto.js';
-import { renderPnl, updateProgress } from './views/pnl.js';
+import { renderPnl } from './views/pnl.js';
 import { renderStocks } from './views/stocks.js';
 import { renderSettings } from './views/settings.js';
 import { renderFutures } from './views/futures.js';
 import { renderBudget, openNewEntry } from './views/budget.js';
 import { generateRecurring, setAnchor } from './budget.js';
+import { ui } from './services/ui.js';
+import { cryptoService, invalidate, reloadPriceHist, refreshPriceHistory } from './services/crypto.js';
+import { futuresService } from './services/futures.js';
+import { stocksService } from './services/stocks.js';
+
+// Khung app: vẽ tab, màn hình khóa, điều hướng, theme, khởi động & đồng bộ nền.
+// Nghiệp vụ nằm trong js/services/* (crypto, futures, stocks); `ctx` gom chúng lại cho các view.
 
 const VIEWS = {
   overview: renderOverview,
@@ -32,142 +34,17 @@ const VIEWS = {
 
 let current = 'overview';
 let serverCfg = { offline: true };
-let priceHist = {};
-let pnlCache = null;
-let futCache = null;
-let futBusy = '';
-let syncing = { running: false, pct: 0, msg: '' };
-let abort = null;
-// Giá đóng cửa lịch sử của mã CK (Yahoo) — chỉ lưu trên máy, không sync: { ticker: { at, rows: [[ms, close]] } }
-let histTriedAt = 0;
-let stockHist = (() => { try { return JSON.parse(localStorage.getItem('fin.stockHist') || '{}'); } catch { return {}; } })();
+
+Object.assign(ui, { render: () => render(), go: (t) => go(t), current: () => current });
 
 // ================= Actions =================
 
 const ctx = {
+  ...cryptoService,
+  ...futuresService,
+  ...stocksService,
   rerender: () => render(true), // thao tác của người dùng → vẽ ngay
   serverConfig: () => serverCfg,
-  syncState: () => syncing,
-
-  pnl() {
-    const hasHistory = Object.keys(state.history.trades).length || state.history.deposits.length;
-    if (!hasHistory) return null;
-    pnlCache ||= computePnl(state.history, priceHist, state.crypto.holdings, { dustUsd: Number(state.settings.dustUsd) || 1 });
-    return pnlCache;
-  },
-  invalidatePnl() { pnlCache = null; futCache = null; },
-
-  /** Bỏ phần coin mà lịch sử có nhưng ví không có (coi như đã rời ví, không lãi/lỗ). */
-  dropGap(asset) {
-    const h = state.crypto.holdings.find((x) => x.asset === asset);
-    const held = h ? h.total - (h.futures || 0) : 0;
-    const { events } = buildEvents(state.history, makePriceLookup(priceHist));
-    const fix = reconcileWithWallet(events.filter((e) => e.asset === asset), new Map([[asset, held]]))
-      .find((e) => e.ref?.reconcile && e.qty < 0);
-    if (!fix) return toast('Không còn phần dư để bỏ', 'info');
-    const qty = -fix.qty;
-    if (!confirm(`Bỏ ${qty.toPrecision(6)} ${asset} khỏi lịch sử (coi như đã rời ví từ ${new Date(fix.t).toISOString().slice(0, 10)}, không tính lãi/lỗ)?`)) return;
-    (state.history.adjust ||= []).push([`adj:${asset}:${Date.now()}`, fix.t, asset, qty]);
-    pnlCache = null;
-    commit({ edit: true });
-    render();
-    toast(`Đã bỏ ${qty.toPrecision(6)} ${asset} khỏi lịch sử`, 'ok');
-  },
-
-  undoAdjust(id) {
-    const r = (state.history.adjust || []).find((x) => x[0] === id);
-    if (!r) return toast('Không tìm thấy điều chỉnh này — có thể đã được hoàn tác', 'info');
-    r[4] = 'x';
-    pnlCache = null;
-    commit({ edit: true });
-    render();
-    toast('Đã hoàn tác', 'ok');
-  },
-  /** Giá trị coin & vốn theo ngày, dựng lại từ lịch sử (cache cùng PnL). */
-  cryptoSeries() {
-    const p = ctx.pnl();
-    if (!p) return [];
-    // Chưa đối chiếu với ví: coin bị hủy niêm yết / sập khi đang giữ làm việc "bù" cho khớp ví bị sai.
-    p.series ||= cryptoSeries(state.history, priceHist);
-    return p.series;
-  },
-
-  /** Giá USD đóng cửa của coin vào ngày chứa thời điểm t (null nếu chưa có giá lịch sử). */
-  priceAt: (asset, t) => makePriceLookup(priceHist)(asset, t),
-
-  futuresBusy: () => futBusy,
-  futuresPnl() {
-    if (!state.futures.income.length && !state.futures.account?.positions?.length) return null;
-    if (!futCache) {
-      const prices = Object.fromEntries(state.crypto.holdings.map((h) => [h.asset, h.price]));
-      futCache = computeFutures(state.futures, makePriceLookup(priceHist), state.futures.account, (a) => prices[a] || 0);
-    }
-    return futCache;
-  },
-
-  async syncFutures() {
-    if (futBusy) return;
-    if (!hasAuth()) { toast('Nhập mật khẩu ứng dụng trong tab Cài đặt trước', 'error'); return; }
-    futBusy = 'Đang tải lịch sử futures…';
-    render();
-    try {
-      const startT = Date.parse(state.settings.historyStart) || Date.parse('2019-09-01');
-      const { added, skipped } = await syncFuturesIncome(bn, state.futures, startT, (m) => { futBusy = m; if (current === 'futures') render(); });
-      await ensureFuturesPrices();
-      const names = skipped.map((s) => (s.src === 'um' ? 'USDⓈ-M' : 'COIN-M')).join(', ');
-      if (skipped.length === 2 && skipped.every((s) => s.status === 401 || s.status === 403)) {
-        toast('Không đọc được Futures: API key chưa bật quyền đọc Futures', 'error', 8000);
-      } else if (skipped.length) {
-        toast(`Futures: ${added} bản ghi mới · bỏ qua ${names} (chưa mở tài khoản hoặc key thiếu quyền)`, 'info', 8000);
-      } else {
-        toast(`Futures: ${added} bản ghi mới`, 'ok');
-      }
-    } catch (e) {
-      toast(`Futures: ${e.message}`, 'error', 8000);
-    }
-    futBusy = '';
-    futCache = null;
-    commit();
-    render();
-  },
-
-  async importFuturesCsv(files) {
-    let added = 0;
-    let rows = 0;
-    let failed = 0;
-    for (const file of files) {
-      try {
-        const parsed = csvToIncome(await file.text()).records;
-        // Múi giờ: ưu tiên ghi trên tên file (Binance đặt kiểu "...UTC+7..."), không có thì tự dò
-        const tz = fileNameOffsetHours(file.name) || detectOffsetHours(state.futures, parsed);
-        if (tz) toast(`${file.name}: phát hiện giờ UTC${tz > 0 ? '+' : ''}${tz}, đã quy về UTC`, 'info', 6000);
-        const records = shiftRecords(parsed, tz);
-        rows += records.length;
-        added += mergeIncome(state.futures, records);
-      } catch (e) {
-        failed++;
-        toast(`${file.name}: ${e.message}`, 'error', 8000);
-      }
-    }
-    if (failed === files.length) return; // mọi file đều lỗi: đã báo từng file, không báo tổng kiểu thành công
-    futBusy = 'Tải giá lịch sử…';
-    render();
-    await ensureFuturesPrices().catch(() => toast('Chưa tải được giá lịch sử — lãi/lỗ COIN-M có thể chưa đúng, thử lại sau', 'info', 7000));
-    futBusy = '';
-    futCache = null;
-    commit();
-    toast(`Đã nhập ${added} bản ghi futures mới (${rows - added} trùng / đã có)`, added ? 'ok' : 'info', 6000);
-    render();
-  },
-
-  clearFutures() {
-    if (!confirm('Xóa toàn bộ lịch sử futures đã tải / nhập?')) return;
-    state.futures = { ...emptyFutures(), account: state.futures.account, resetAt: Date.now() };
-    futCache = null;
-    commit();
-    render();
-    toast('Đã xóa lịch sử futures', 'ok');
-  },
 
   async loadServerConfig() {
     try {
@@ -180,137 +57,6 @@ const ctx = {
     Object.assign(sync.publicConfig, { dropboxAppKey: serverCfg.dropboxAppKey || '', googleClientId: serverCfg.googleClientId || '' });
   },
 
-  async refreshCrypto({ quiet = false } = {}) {
-    if (!hasAuth()) {
-      if (!quiet) { toast('Nhập mật khẩu ứng dụng trong tab Cài đặt trước', 'error'); go('settings'); }
-      return;
-    }
-    document.body.classList.add('is-refreshing'); // khung mờ nhấp nháy trên các ô số trong lúc tải
-    try {
-      const { holdings, futures, missing } = await fetchHoldings();
-      state.crypto = { holdings, updatedAt: Date.now() };
-      if (futures?.ok) state.futures.account = futures;
-      pnlCache = null;
-      futCache = null;
-      snapshot();
-      commit();
-      if (!quiet && missing.length) toast(`Đã cập nhật số dư Binance — chưa lấy được: ${missing.join(', ')}`, 'info', 8000);
-      else if (!quiet) toast('Đã cập nhật số dư Binance', 'ok');
-    } catch (e) {
-      toast(`Binance: ${e.message}`, 'error', 8000);
-    }
-    document.body.classList.remove('is-refreshing');
-    render();
-  },
-
-  /** Giá trị & vốn danh mục CK theo ngày (giao dịch tự nhập + giá lịch sử Yahoo). */
-  stockSeries() {
-    const hist = Object.fromEntries(Object.entries(stockHist).map(([t, h]) => [t, h.rows]));
-    return stockSeries(state.stocks.funds, state.stocks.txs, hist, { toUSD, priceOf: fundPrice });
-  },
-
-  async refreshStockHistory() {
-    const stale = state.stocks.funds.filter((f) => f.source !== 'manual'
-      && state.stocks.txs.some((t) => t.ticker === f.ticker)
-      && Date.now() - (stockHist[f.ticker]?.at || 0) > 12 * 3600e3);
-    if (!stale.length || !hasAuth() || Date.now() - histTriedAt < 60e3) return;
-    histTriedAt = Date.now();
-    try {
-      const r = await fetch(`/api/quote?history=5y&symbols=${encodeURIComponent(stale.map(quoteSymbol).join(','))}`, {
-        headers: authHeaders(),
-      });
-      const data = await r.json();
-      if (!r.ok) return;
-      for (const f of stale) stockHist[f.ticker] = { at: Date.now(), rows: data.history?.[quoteSymbol(f)] || stockHist[f.ticker]?.rows || [] };
-      try { localStorage.setItem('fin.stockHist', JSON.stringify(stockHist)); } catch { /* đầy bộ nhớ thì thôi */ }
-      if (current === 'stocks') render();
-    } catch { /* bỏ qua, lần sau thử lại */ }
-  },
-
-  /** Hỏi Yahoo giá 1 mã. Trả về quote, null nếu Yahoo không có mã này, undefined nếu không hỏi được (mất mạng…). */
-  async checkQuote(symbol) {
-    if (!hasAuth()) return undefined;
-    try {
-      const r = await fetch(`/api/quote?symbols=${encodeURIComponent(symbol)}`, { headers: authHeaders() });
-      if (!r.ok) return undefined;
-      const data = await r.json();
-      if (data.quotes?.[symbol]) return data.quotes[symbol];
-      // chỉ coi là "không có mã" khi Yahoo nói rõ vậy; lỗi tạm thời (429, 5xx) thì không kết luận
-      return /not found|delisted|no data|HTTP 404/i.test(data.errors?.[symbol] || '') ? null : undefined;
-    } catch { return undefined; }
-  },
-
-  async refreshQuotes(showToast = false) {
-    const funds = state.stocks.funds.filter((f) => f.source !== 'manual');
-    if (!hasAuth()) { if (showToast) toast('Nhập mật khẩu ứng dụng trong tab Cài đặt trước', 'error'); render(); return; } // vẽ lại → mở khóa nút vừa bấm
-    // Mã .VN chưa từng có giá Yahoo: thử luôn Fmarket (quỹ mở) để tự chuyển nguồn
-    const probe = funds.filter((f) => f.source === 'yahoo' && /\.VN$/i.test(f.ticker) && !f.lastPrice);
-    const fmSym = (f) => quoteSymbol({ ...f, source: 'fmarket' });
-    const symbols = [...funds.map(quoteSymbol), ...probe.map(fmSym), 'VND=X'];
-    try {
-      const r = await fetch(`/api/quote?symbols=${encodeURIComponent(symbols.join(','))}`, {
-        headers: authHeaders(),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || r.status);
-      const moved = [];
-      for (const f of probe) {
-        if (data.quotes[f.ticker] || !data.quotes[fmSym(f)]) continue;
-        Object.assign(f, { source: 'fmarket', currency: 'VND' });
-        delete data.errors?.[f.ticker];
-        moved.push(f.ticker);
-      }
-      for (const f of funds) {
-        const q = data.quotes[quoteSymbol(f)];
-        if (q) Object.assign(f, { lastPrice: q.price, prevClose: q.prevClose, lastPriceAt: Date.now(), priceTime: q.time || null, name: f.name || q.name });
-      }
-      if (moved.length) {
-        toast(`${moved.join(', ')}: Yahoo không có, đã chuyển sang lấy NAV từ Fmarket`, 'ok', 7000);
-      }
-      if (data.quotes['VND=X']) state.fx = { USDVND: data.quotes['VND=X'].price, updatedAt: Date.now() };
-      const errs = Object.keys(data.errors || {}).filter((s) => s !== 'VND=X' && !probe.some((f) => fmSym(f) === s)).map((s) => s.replace(/^FMARKET:/, ''));
-      snapshot();
-      commit({ edit: moved.length > 0 }); // đổi nguồn giá là thay đổi của người dùng → đồng bộ sang máy khác
-      ctx.refreshStockHistory();
-      if (errs.length) toast(`Không lấy được giá: ${errs.join(', ')}`, 'error', 7000);
-      else if (showToast) toast('Đã cập nhật giá', 'ok');
-    } catch (e) {
-      if (showToast) toast(`Lỗi lấy giá: ${e.message}`, 'error');
-    }
-    render();
-  },
-
-  async syncHistory(fullScan) {
-    if (syncing.running) return;
-    if (!hasAuth()) { toast('Nhập mật khẩu ứng dụng trong tab Cài đặt trước', 'error'); return; }
-    abort = new AbortController();
-    syncing = { running: true, pct: 0, msg: 'Bắt đầu…' };
-    render();
-    try {
-      if (!state.crypto.holdings.length) await ctx.refreshCrypto({ quiet: true });
-      const { newTrades } = await syncHistory({
-        fullScan,
-        signal: abort.signal,
-        onProgress: (msg, pct) => {
-          syncing.msg = msg;
-          if (pct != null) syncing.pct = pct;
-          if (current === 'pnl') updateProgress($('#tab-pnl'), syncing);
-        },
-      });
-      priceHist = await getPriceHistory();
-      toast(`Đồng bộ xong — ${newTrades} lệnh mới`, 'ok');
-      syncing = { running: false, pct: 100, msg: 'Hoàn tất' };
-    } catch (e) {
-      const msg = e.name === 'AbortError' ? 'Đã hủy (dữ liệu đã tải vẫn được giữ)' : `Lỗi: ${e.message}`;
-      toast(msg, e.name === 'AbortError' ? 'info' : 'error', 8000);
-      syncing = { running: false, pct: 0, msg };
-      priceHist = await getPriceHistory();
-    }
-    pnlCache = null;
-    commit();
-    render();
-  },
-  cancelSync() { abort?.abort(); },
   rebuildNav() { buildNav(); render(); },
 
   // ---- giao diện: bảng màu, chế độ sáng/tối, ngôn ngữ (lưu riêng từng thiết bị)
@@ -333,40 +79,11 @@ const ctx = {
 
   afterStateReplaced() {
     runRecurring();
-    pnlCache = null;
-    futCache = null;
+    invalidate();
     applyCurrency();
     render();
   },
 };
-
-/** Giá lịch sử cho tài sản non-stable trong income futures (COIN-M, phí BNB…). */
-async function ensureFuturesPrices() {
-  const need = new Map();
-  for (const r of state.futures.income) {
-    const a = r[4];
-    if (!isStable(a) && a !== 'BNFCR') need.set(a, Math.min(need.get(a) ?? Infinity, r[1]));
-  }
-  if (!need.size) return;
-  const tick = await fetchTickerPrices();
-  for (const [a, t] of need) await ensurePriceHistory(a, t, tick);
-  priceHist = await getPriceHistory();
-}
-
-/** Tải giá lịch sử còn thiếu ở nền (vd máy mới vừa nhận lịch sử từ Dropbox), rồi tính lại PnL. */
-let priceJob = null;
-function refreshPriceHistory() {
-  priceJob ||= ensureAllPriceHistory()
-    .then(async (n) => {
-      if (!n) return;
-      priceHist = await getPriceHistory();
-      pnlCache = null;
-      futCache = null;
-      render();
-    })
-    .catch(() => {})
-    .finally(() => { priceJob = null; });
-}
 
 /** Thêm các khoản thu/chi định kỳ đến hạn (lương, hóa đơn…). */
 function runRecurring() {
@@ -375,11 +92,6 @@ function runRecurring() {
   for (const c of state.cash) if (!c.anchorAt) { setAnchor(c, Number(c.amount) || 0); changed = true; }
   if (state.budget && generateRecurring(state.budget)) changed = true;
   if (changed) commit();
-}
-
-function snapshot() {
-  const t = totals();
-  if (t.total > 0) takeSnapshot(t);
 }
 
 // ================= Render =================
@@ -645,7 +357,7 @@ async function init() {
   });
   await loadState();
   // Lịch sử giá khá nặng → đọc sau lần vẽ đầu, xong thì tính lại PnL và vẽ lại
-  startupGates.push(getPriceHistory().then((h) => { priceHist = h; pnlCache = null; futCache = null; render(); }).catch(() => {}));
+  startupGates.push(reloadPriceHist().then(() => render()).catch(() => {}));
   // Chart.js tải song song (async): tải xong thì vẽ lại để hiện biểu đồ
   if (!window.Chart) {
     startupGates.push(new Promise((resolve) => {

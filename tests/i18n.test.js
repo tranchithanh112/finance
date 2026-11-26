@@ -8,6 +8,8 @@ test('dịch câu cố định, câu có số và tên danh mục', () => {
   assert.equal(tr('Tổng quan'), 'Overview');
   assert.equal(tr('  Lưu  '), '  Save  ');
   assert.equal(tr('856.1 tháng'), '856.1 months');
+  assert.equal(tr('1,4 tháng'), '1.4 months');
+  assert.equal(tr('▲ 5,4 tr (7,33%) so với 30 ngày trước'), '▲ 5,4 tr (7,33%) vs 30 days ago');
   assert.equal(tr('Tháng 9/2026'), 'Sep 2026');
   assert.equal(tr('🍜 Ăn uống'), '🍜 Food');
   assert.equal(tr('Hũ Thiết yếu'), 'Jar Essentials');

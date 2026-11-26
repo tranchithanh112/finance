@@ -338,7 +338,7 @@ export function healthScore(x) {
     const target = x.emergencyTarget || 6;
     parts.push({
       key: 'emergency', label: 'Quỹ dự phòng', weight: 25, score: clamp(x.emergencyMonths / target),
-      tip: x.emergencyMonths < target ? `Quỹ dự phòng mới đủ ${x.emergencyMonths.toFixed(1)} tháng chi tiêu, mục tiêu ${target} tháng (tiền mặt + stablecoin).` : null,
+      tip: x.emergencyMonths < target ? `Quỹ dự phòng mới đủ ${x.emergencyMonths.toFixed(1).replace('.', ',')} tháng chi tiêu, mục tiêu ${target} tháng (tiền mặt + stablecoin).` : null,
     });
   }
   if (x.debtToIncome != null) {

@@ -96,15 +96,15 @@ export function renderOverview(root, ctx) {
   root.innerHTML = `
     <div class="kpis">
       <div class="kpi hero"><span>Tài sản ròng</span><b>${fmtMoney(t.total)}</b>
-        ${nw ? `<span class="nw-change ${pnlClass(nw.change)}">${nw.change >= 0 ? '▲' : '▼'} ${fmtMoney(Math.abs(nw.change), { compact: true })}${nw.pct != null ? ` (${fmtPct(Math.abs(nw.pct), { sign: false })})` : ''} · ${nw.days} ngày</span>` : ''}
-        <small>Tài sản ${fmtMoney(t.assets, { compact: true })}${t.debt ? ' − nợ ' + fmtMoney(t.debt, { compact: true }) : ''} · cập nhật ${timeAgo(state.crypto.updatedAt)}</small></div>
+        ${nw ? `<span class="nw-change ${pnlClass(nw.change)}">${nw.change >= 0 ? '▲' : '▼'} ${fmtMoney(Math.abs(nw.change), { compact: true })}${nw.pct != null ? ` (${fmtPct(Math.abs(nw.pct), { sign: false })})` : ''} so với ${nw.days} ngày trước</span>` : ''}
+        <small>Tài sản ${fmtMoney(t.assets, { compact: true })}${t.debt ? ' − nợ ' + fmtMoney(t.debt, { compact: true }) : ''}${state.crypto.updatedAt ? ` · cập nhật ${timeAgo(state.crypto.updatedAt)}` : ''}</small></div>
       <div class="kpi"><span>Dòng tiền tháng này</span><b class="${pnlClass(cur.income - cur.spend)}">${hasBudget ? vnd(cur.income - cur.spend, { sign: true }) : '—'}</b>
         <small>${hasBudget ? `Thu ${vnd(cur.income, { compact: true })} · tiêu ${vnd(cur.spend, { compact: true })}` : 'Nhập thu chi ở tab Thu chi'}</small></div>
       <div class="kpi"><span>Tỷ lệ tiết kiệm</span><b>${H.savingsRate == null ? '—' : fmtPct(H.savingsRate, { sign: false })}</b>
         <small>${H.avg ? `TB ${H.avg.months} tháng gần nhất` : 'Tháng này'}</small></div>
       <div class="kpi"><span>Quỹ dự phòng</span>${H.emergencyMonths == null
         ? `<b>${fmtMoney(H.liquidUsd)}</b><small>Tiền mặt + stablecoin · nhập chi tiêu ở tab Thu chi để tính số tháng</small>`
-        : `<b>${H.emergencyMonths.toFixed(1)} tháng</b><small>Tiền mặt + stablecoin ${fmtMoney(H.liquidUsd, { compact: true })}</small>`}</div>
+        : `<b>${H.emergencyMonths.toFixed(1).replace('.', ',')} tháng</b><small>Tiền mặt + stablecoin ${fmtMoney(H.liquidUsd, { compact: true })}</small>`}</div>
       <div class="kpi"><span>Lãi/lỗ đầu tư</span><b class="${pnlClass(investPnl)}">${pnl || fut || stocks.length ? fmtMoney(investPnl, { sign: true }) : '—'}</b>
         <small>Spot ${pnl ? fmtMoney(pnl.totals.total, { sign: true, compact: true }) : '—'}${fut ? ` · Futures ${fmtMoney(fut.net + fut.unrealized, { sign: true, compact: true })}` : ''} · CK ${stocks.length ? fmtMoney(stockPnl, { sign: true, compact: true }) : '—'}</small></div>
     </div>

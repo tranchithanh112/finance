@@ -343,9 +343,11 @@ const RULES = [
   [/^(.+): phát hiện giờ UTC([+-]\d+), đã quy về UTC$/, '$1: detected UTC$2 times, converted to UTC'],
   [/^Chưa có phí funding [\s\S]*$/, 'No funding fees yet (liquidation fees may also be missing). Trade History files don\'t include them — also import the Transaction History file for the same years; duplicates are skipped automatically.'],
   // thời gian tương đối & đơn vị
+  [/^([▲▼] .+) so với (\d+) ngày trước$/, '$1 vs $2 days ago'],
   [/(\d+) phút trước/g, '$1 min ago'], [/(\d+) giờ trước/g, '$1 h ago'], [/(\d+) ngày trước/g, '$1 d ago'],
   [/vừa xong/g, 'just now'], [/chưa bao giờ/g, 'never'],
   [/^Tháng (\d+)\/(\d+)$/, (m, a, y) => `${MONTHS[a - 1]} ${y}`],
+  [/^(\d+),(\d) tháng$/, '$1.$2 months'],
   [/^([\d.,]+) tháng$/, '$1 months'],
   [/^TB (\d+) tháng gần nhất$/, 'Avg of last $1 months'],
   [/^Thu (.+) · tiêu (.+)$/, 'In $1 · spent $2'],
@@ -359,7 +361,7 @@ const RULES = [
   // sức khỏe tài chính
   [/^Tỷ lệ tiết kiệm dưới 10% — thử giảm hũ Hưởng thụ hoặc tăng thu nhập\.$/, 'Savings rate below 10% — trim the Fun jar or grow income.'],
   [/^Nên nâng tỷ lệ tiết kiệm lên ≥ 30% khi còn sống cùng gia đình\.$/, 'Aim for a savings rate ≥ 30% while living with family.'],
-  [/^Quỹ dự phòng mới đủ ([\d.]+) tháng chi tiêu, mục tiêu (\d+) tháng \(tiền mặt \+ stablecoin\)\.$/, 'Emergency fund covers $1 months of spending; target is $2 months (cash + stablecoins).'],
+  [/^Quỹ dự phòng mới đủ (\d+),(\d) tháng chi tiêu, mục tiêu (\d+) tháng \(tiền mặt \+ stablecoin\)\.$/, 'Emergency fund covers $1.$2 months of spending; target is $3 months (cash + stablecoins).'],
   [/^Tiền trả nợ chiếm (\d+)% thu nhập — nên dưới 30%\.$/, 'Debt payments take $1% of income — keep it under 30%.'],
   [/^(\d+)% tài sản nằm ở crypto \(không tính stablecoin\) — cân nhắc đa dạng hóa sang quỹ chỉ số \/ tiết kiệm\.$/, '$1% of assets are in crypto (excl. stablecoins) — consider diversifying into index funds / savings.'],
   [/^(\d+) hũ tiêu dùng \(Thiết yếu \/ Hưởng thụ\) đang vượt hạn mức tháng này\.$/, '$1 spending jar(s) (Essentials / Fun) are over budget this month.'],
@@ -467,7 +469,6 @@ const RULES = [
   [/^≈ (.+) mỗi ngày$/, '≈ $1 a day'],
   [/^Theo tốc độ này: vượt (.+) cuối tháng$/, 'At this pace: $1 over by month end'],
   [/^Theo tốc độ này: cuối tháng còn dư (.+)$/, 'At this pace: $1 left at month end'],
-  [/^([▲▼] .+) · (\d+) ngày$/, '$1 · $2 days'],
   [/^Đối chiếu số dư$/, 'Reconcile balance'], [/^· (\d+) ngày chưa cập nhật$/, '· not updated for $1 days'],
   [/^(\d+) khoản · (.+)$/, '$1 entries · $2'],
   [/^Không tìm thấy khoản nào khớp “(.+)”$/, 'No entries match “$1”'],

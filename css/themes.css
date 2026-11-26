@@ -8,7 +8,7 @@
 
 :root {
   --chart: #b8905f, #e3c48d, #3aa99f, #e05a5a, #8c7b6b, #5b8def, #c46f3d, #4caf7a, #a06cb4, #a89b8c;
-  --logo-a: #1d1813; --logo-b: #4a3a2b; --logo-c: #8c6b4a; --logo-fg1: #f5e2bd; --logo-fg2: #c9a274; --logo-i: #fff8ee;
+  --logo-b: #4a3a2b; --logo-fg1: #f5e2bd;
 }
 
 /* ============================ SOLANA ============================ */
@@ -18,7 +18,7 @@
   --accent: #7c3aed; --gold: #0fb57a; --accent-soft: rgb(124 58 237 / .1);
   --pos: #0f9d6a; --neg: #e0395b; --warn: #d98a0b; --shadow-lg: 0 12px 32px rgb(22 18 43 / .18);
   --chart: #9945ff, #14f195, #19a2f5, #f0506e, #7a73a3, #d946ef, #f59e0b, #22c55e, #6366f1, #a5a1c4;
-  --logo-a: #1c0f3a; --logo-b: #5b21b6; --logo-c: #0e7a5c; --logo-fg1: #14f195; --logo-fg2: #9945ff; --logo-i: #ffffff;
+  --logo-b: #5b21b6; --logo-fg1: #14f195;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -46,7 +46,7 @@
   --pos: #1aa35c; --neg: #e8364f; --warn: #d97706; --shadow-lg: 0 12px 32px rgb(0 0 0 / .16);
   --radius: 14px; --radius-sm: 10px;
   --chart: #0a0a0a, #bcff2f, #7a7a7a, #e8364f, #b5b5b5, #1aa35c, #4d4d4d, #3b82f6, #d4d4d4, #9ca3af;
-  --logo-a: #000000; --logo-b: #111111; --logo-c: #1f1f1f; --logo-fg1: #bcff2f; --logo-fg2: #ffffff; --logo-i: #ffffff;
+  --logo-b: #111111; --logo-fg1: #bcff2f;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -72,27 +72,27 @@
 :root[data-palette="glass"] {
   --bg: #e9edfb;
   --bg-image:
-    radial-gradient(40% 35% at 15% 10%, rgb(167 139 250 / .75), transparent 70%),
-    radial-gradient(40% 35% at 90% 15%, rgb(125 211 252 / .75), transparent 70%),
-    radial-gradient(45% 40% at 70% 95%, rgb(249 168 212 / .7), transparent 70%),
-    radial-gradient(35% 30% at 5% 85%, rgb(134 239 172 / .55), transparent 70%);
+    radial-gradient(40% 35% at 15% 10%, rgb(167 139 250 / .35), transparent 70%),
+    radial-gradient(40% 35% at 90% 15%, rgb(125 211 252 / .35), transparent 70%),
+    radial-gradient(45% 40% at 70% 95%, rgb(249 168 212 / .3), transparent 70%),
+    radial-gradient(35% 30% at 5% 85%, rgb(134 239 172 / .25), transparent 70%);
   --surface: rgb(255 255 255 / .5); --surface-2: rgb(255 255 255 / .45); --surface-3: rgb(255 255 255 / .7);
   --border: rgb(255 255 255 / .75); --text: #0f172a; --muted: #475569; --grid: rgb(15 23 42 / .08);
   --accent: #4f46e5; --gold: #4f46e5; --accent-soft: rgb(79 70 229 / .12);
   --pos: #059669; --neg: #e11d48; --warn: #d97706; --shadow-lg: 0 16px 40px rgb(31 38 135 / .22);
   --topbar-bg: rgb(255 255 255 / .35);
   --chart: #6366f1, #0ea5e9, #ec4899, #f43f5e, #94a3b8, #10b981, #f59e0b, #8b5cf6, #14b8a6, #cbd5e1;
-  --logo-a: #4f46e5; --logo-b: #6366f1; --logo-c: #0ea5e9; --logo-fg1: #ffffff; --logo-fg2: #e0e7ff; --logo-i: #ffffff;
+  --logo-b: #6366f1; --logo-fg1: #ffffff;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root[data-palette="glass"]:not([data-theme="light"]) {
     --bg: #070b18;
     --bg-image:
-      radial-gradient(45% 40% at 15% 5%, rgb(109 40 217 / .55), transparent 70%),
-      radial-gradient(40% 35% at 90% 20%, rgb(14 165 233 / .45), transparent 70%),
-      radial-gradient(45% 40% at 60% 100%, rgb(219 39 119 / .45), transparent 70%),
-      radial-gradient(35% 30% at 0% 80%, rgb(16 185 129 / .3), transparent 70%);
+      radial-gradient(45% 40% at 15% 5%, rgb(109 40 217 / .28), transparent 70%),
+      radial-gradient(40% 35% at 90% 20%, rgb(14 165 233 / .22), transparent 70%),
+      radial-gradient(45% 40% at 60% 100%, rgb(219 39 119 / .22), transparent 70%),
+      radial-gradient(35% 30% at 0% 80%, rgb(16 185 129 / .15), transparent 70%);
     --surface: rgb(255 255 255 / .06); --surface-2: rgb(255 255 255 / .07); --surface-3: rgb(255 255 255 / .14);
     --border: rgb(255 255 255 / .12); --text: #f8fafc; --muted: rgb(226 232 240 / .65); --grid: rgb(255 255 255 / .07);
     --accent: #a5b4fc; --gold: #a5b4fc; --accent-soft: rgb(165 180 252 / .14);
@@ -104,10 +104,10 @@
 :root[data-palette="glass"][data-theme="dark"] {
   --bg: #070b18;
   --bg-image:
-    radial-gradient(45% 40% at 15% 5%, rgb(109 40 217 / .55), transparent 70%),
-    radial-gradient(40% 35% at 90% 20%, rgb(14 165 233 / .45), transparent 70%),
-    radial-gradient(45% 40% at 60% 100%, rgb(219 39 119 / .45), transparent 70%),
-    radial-gradient(35% 30% at 0% 80%, rgb(16 185 129 / .3), transparent 70%);
+    radial-gradient(45% 40% at 15% 5%, rgb(109 40 217 / .28), transparent 70%),
+    radial-gradient(40% 35% at 90% 20%, rgb(14 165 233 / .22), transparent 70%),
+    radial-gradient(45% 40% at 60% 100%, rgb(219 39 119 / .22), transparent 70%),
+    radial-gradient(35% 30% at 0% 80%, rgb(16 185 129 / .15), transparent 70%);
   --surface: rgb(255 255 255 / .06); --surface-2: rgb(255 255 255 / .07); --surface-3: rgb(255 255 255 / .14);
   --border: rgb(255 255 255 / .12); --text: #f8fafc; --muted: rgb(226 232 240 / .65); --grid: rgb(255 255 255 / .07);
   --accent: #a5b4fc; --gold: #a5b4fc; --accent-soft: rgb(165 180 252 / .14);
@@ -148,7 +148,7 @@
   --shadow: none; --shadow-lg: 0 12px 32px rgb(0 0 0 / .18); --radius: 14px; --radius-sm: 10px; --radius-lg: 18px;
   --fab-bg: #c8773a; --fab-border: #c8773a; --fab-icon: #ffffff;
   --chart: #c8773a, #34c759, #0a84ff, #ff3b30, #8e8e93, #af52de, #ff9500, #30b0c7, #5856d6, #c7c7cc;
-  --logo-a: #c8773a; --logo-b: #b0652c; --logo-c: #8a4c1e; --logo-fg1: #ffffff; --logo-fg2: #ffe7d3; --logo-i: #ffffff;
+  --logo-b: #b0652c; --logo-fg1: #ffffff;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -178,7 +178,7 @@
   --radius: 22px; --radius-sm: 14px; --radius-lg: 24px;
   --fab-bg: #0f5f5c; --fab-border: #0f5f5c; --fab-icon: #ffffff;
   --chart: #4f7cff, #17c3a5, #a162f7, #f5a524, #f04438, #12b76a, #0f5f5c, #ec4899, #64748b, #cbd5e1;
-  --logo-a: #0f5f5c; --logo-b: #12807b; --logo-c: #17c3a5; --logo-fg1: #ffffff; --logo-fg2: #d6fff6; --logo-i: #ffffff;
+  --logo-b: #12807b; --logo-fg1: #ffffff;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -207,10 +207,9 @@
   --accent: #5b5bf0; --gold: #5b5bf0; --accent-soft: rgb(91 91 240 / .1); --on-accent: #ffffff;
   --pos: #0e9f6e; --neg: #e5484d; --warn: #9a5b00;
   --shadow: none; --shadow-lg: 0 16px 40px rgb(14 14 20 / .16); --radius: 16px; --radius-sm: 12px; --radius-lg: 20px;
-  --hero-glow-bg: radial-gradient(60% 80% at 20% 0%, rgb(91 91 240 / .1), transparent 70%);
   --fab-bg: #5b5bf0; --fab-border: #5b5bf0; --fab-icon: #ffffff;
   --chart: #7c7cff, #3dd68c, #f5b44a, #ff7a6b, #5cc8ff, #f472b6, #a1a1b0, #22d3ee, #c084fc, #6e6e7c;
-  --logo-a: #2b2b6b; --logo-b: #4b4bd6; --logo-c: #7c7cff; --logo-fg1: #ffffff; --logo-fg2: #c9c9ff; --logo-i: #ffffff;
+  --logo-b: #4b4bd6; --logo-fg1: #ffffff;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -219,7 +218,6 @@
     --text: #ededf2; --muted: #a1a1b0; --grid: #1f1f27; --fill: #1a1a21;
     --accent: #7c7cff; --accent-soft: rgb(124 124 255 / .14); --on-accent: #0b0b0f;
     --pos: #3dd68c; --neg: #ff7a6b; --warn: #f5b44a; --shadow-lg: 0 16px 40px rgb(0 0 0 / .7);
-    --hero-glow-bg: radial-gradient(60% 80% at 20% 0%, rgb(124 124 255 / .16), transparent 70%);
     --fab-bg: #7c7cff; --fab-border: #7c7cff; --fab-icon: #0b0b0f;
     color-scheme: dark;
   }
@@ -229,7 +227,6 @@
   --text: #ededf2; --muted: #a1a1b0; --grid: #1f1f27; --fill: #1a1a21;
   --accent: #7c7cff; --accent-soft: rgb(124 124 255 / .14); --on-accent: #0b0b0f;
   --pos: #3dd68c; --neg: #ff7a6b; --warn: #f5b44a; --shadow-lg: 0 16px 40px rgb(0 0 0 / .7);
-  --hero-glow-bg: radial-gradient(60% 80% at 20% 0%, rgb(124 124 255 / .16), transparent 70%);
   --fab-bg: #7c7cff; --fab-border: #7c7cff; --fab-icon: #0b0b0f;
   color-scheme: dark;
 }
@@ -240,11 +237,11 @@
 :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi { border-radius: var(--radius); box-shadow: var(--shadow); }
 /* Tổng quan dạng Bento: ô Tài sản ròng lớn (2×2), 4 ô chỉ số nhỏ */
 :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi.hero {
-  background: var(--hero-glow-bg, none), var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
   padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; justify-content: center;
 }
-:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi.hero b { font-size: 38px; font-weight: 700; }
-:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi b { font-weight: 650; }
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi.hero b { font-size: 38px; font-weight: 600; }
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi b { font-weight: 600; }
 @media (min-width: 900px) {
   :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi.hero { grid-column: span 2; grid-row: span 2; }
@@ -253,12 +250,9 @@
 @media (max-width: 720px) {
   :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .kpi.hero b { font-size: 34px; }
 }
-:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .nw-change {
-  align-self: flex-start; padding: 3px 10px; border-radius: 99px; background: color-mix(in srgb, currentColor 12%, transparent);
-}
 /* Nút chính, nút + nổi: màu nhấn */
 :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .btn.primary {
-  background: var(--accent); border-color: var(--accent); color: var(--on-accent); min-height: 44px; font-weight: 650;
+  background: var(--accent); border-color: var(--accent); color: var(--on-accent); min-height: 44px; font-weight: 600;
 }
 :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .btn.primary:hover:not(:disabled) { border-color: var(--accent); }
 /* Nút chọn kiểu iOS: rãnh xám, nút trắng nổi */
@@ -270,26 +264,26 @@
 :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .tabs button.on { color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
 :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .bd-search { background: var(--fill); border-color: transparent; border-radius: var(--radius-sm); }
 :root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .bd-ic { background: var(--accent-soft); border-radius: 12px; }
-:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .bd-budget-num { font-size: 38px; font-weight: 700; }
+:root:is([data-palette="ios"], [data-palette="neobank"], [data-palette="bento"]) .bd-budget-num { font-size: 38px; font-weight: 600; }
 
 /* ---------- Riêng iOS: danh sách nhóm kiểu Cài đặt iPhone ---------- */
 :root[data-palette="ios"] .card, :root[data-palette="ios"] .kpi, :root[data-palette="ios"] .kpi.hero,
 :root[data-palette="ios"] .bd-day, :root[data-palette="ios"] .bd-sum span { border-color: transparent; }
 :root[data-palette="ios"] .bd-day { border-radius: 12px; padding: 0 0 0 14px; }
 :root[data-palette="ios"] .bd-day h4 {
-  margin: 0 0 0 -14px; padding: 18px 2px 6px 16px; background: var(--bg); text-transform: uppercase;
-  font-size: 12.5px; font-weight: 500; letter-spacing: .02em;
+  margin: 0 0 0 -14px; padding: 18px 2px 6px 16px; background: var(--bg);
+  font-size: 13px; font-weight: 500; color: var(--muted);
 }
 :root[data-palette="ios"] .bd-tx { border-top-color: transparent; position: relative; padding: 11px 14px 11px 0; min-height: 60px; }
 :root[data-palette="ios"] .bd-tx + .bd-tx::before { content: ''; position: absolute; left: 52px; right: 0; top: 0; border-top: .5px solid var(--border); }
 :root[data-palette="ios"] .bd-day { overflow: hidden; }
 :root[data-palette="ios"] .bd-amt { font-weight: 600; }
-:root[data-palette="ios"] .page-title { font-weight: 700; }
+:root[data-palette="ios"] .page-title { font-weight: 600; }
 :root[data-palette="ios"] .bottom-nav { background: color-mix(in srgb, var(--surface) 78%, transparent); border-top: .5px solid var(--border); }
 
 /* ---------- Riêng Thân thiện: thẻ "Còn tiêu được" màu đậm, chip tròn ---------- */
 :root[data-palette="neobank"] body { font-family: ui-rounded, 'SF Pro Rounded', 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
-:root[data-palette="neobank"] .kpi b, :root[data-palette="neobank"] .bd-budget-num { font-weight: 800; }
+:root[data-palette="neobank"] .kpi b, :root[data-palette="neobank"] .bd-budget-num { font-weight: 600; }
 :root[data-palette="neobank"] .bd-budget { background: #0f5f5c; border-color: #0f5f5c; color: #fff; }
 :root[data-palette="neobank"] .bd-budget.over { background: #b42318; border-color: #b42318; }
 :root[data-palette="neobank"] .bd-budget :is(.bd-budget-label, .bd-budget-num, .bd-budget-foot, .bd-forecast, .bd-bills, .bd-bills span, .bd-jar-note, .bd-jars-btn, .bd-budget-hint) { color: #fff; }
@@ -302,10 +296,7 @@
 :root[data-palette="neobank"] .seg, :root[data-palette="neobank"] .seg button { border-radius: 99px; }
 :root[data-palette="neobank"] .chip { background: var(--accent-soft); border-color: transparent; }
 
-/* ---------- Riêng Bento: nhãn chữ in hoa nhỏ, viền mảnh, quầng sáng sau ô chính ---------- */
-:root[data-palette="bento"] .kpi > span, :root[data-palette="bento"] .kpi.hero > span, :root[data-palette="bento"] .bd-budget-label {
-  text-transform: uppercase; letter-spacing: .06em; font-size: 11px; font-weight: 600;
-}
+/* ---------- Riêng Bento: viền mảnh ---------- */
 :root[data-palette="bento"] .card, :root[data-palette="bento"] .kpi { box-shadow: inset 0 1px 0 rgb(255 255 255 / .04); }
 :root[data-palette="bento"] .kpi b, :root[data-palette="bento"] .bd-budget-num { letter-spacing: -.02em; }
 
@@ -329,5 +320,5 @@
 .sw-glass i { background: rgb(255 255 255 / .7); box-shadow: 0 0 0 1px rgb(255 255 255 / .9); }
 .sw-ios { background: #f2f2f7; border: 1px solid #e5e5ea; } .sw-ios i { background: #c8773a; }
 .sw-neobank { background: #faf7f2; border: 1px solid #ece5da; } .sw-neobank i { background: #0f5f5c; }
-.sw-bento { background: radial-gradient(60% 80% at 20% 0%, rgb(124 124 255 / .35), transparent 70%), #0b0b0f; } .sw-bento i { background: #7c7cff; }
+.sw-bento { background: #0b0b0f; border: 1px solid #23232c; } .sw-bento i { background: #7c7cff; }
 .opt-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

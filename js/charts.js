@@ -1,6 +1,8 @@
 import { fmtMoney } from './util.js';
 import { tr, locale } from './i18n.js';
 
+const pct1 = (r) => (r * 100).toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+
 // Bảng màu phân loại — lấy theo theme đang chọn (biến CSS --chart), xem loadPalette()
 export const PALETTE = ['#b8905f', '#e3c48d', '#3aa99f', '#e05a5a', '#8c7b6b', '#5b8def', '#c46f3d', '#4caf7a', '#a06cb4', '#a89b8c'];
 
@@ -64,12 +66,12 @@ export function donut(canvas, items, { max = 9, legendPct = false } = {}) {
             // Tùy chọn: ghi % cạnh tên để đọc được ngay, không cần chạm vào biểu đồ
             ...(legendPct && {
               generateLabels: (chart) => window.Chart.overrides.doughnut.plugins.legend.labels.generateLabels(chart)
-                .map((l) => ({ ...l, text: `${l.text} ${((data[l.index].value / total) * 100).toFixed(1)}%` })),
+                .map((l) => ({ ...l, text: `${l.text} ${pct1(data[l.index].value / total)}` })),
             }),
           },
         },
         tooltip: {
-          callbacks: { label: (c) => ` ${c.label}: ${fmtMoney(c.raw)} (${((c.raw / total) * 100).toFixed(1)}%)` },
+          callbacks: { label: (c) => ` ${c.label}: ${fmtMoney(c.raw)} (${pct1(c.raw / total)})` },
         },
       },
     },

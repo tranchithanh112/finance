@@ -92,7 +92,7 @@ export function fmtPrice(n) {
 
 export function fmtPct(n, { sign = true } = {}) {
   if (n == null || !Number.isFinite(n)) return '—';
-  return (sign && n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n * 100).toFixed(2) + '%';
+  return (sign && n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n * 100).toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
 }
 
 export const pnlClass = (n) => (n > 0 ? 'pos' : n < 0 ? 'neg' : '');
